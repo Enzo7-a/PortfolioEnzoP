@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "nav-brand": "Portfolio",
       "nav-home": "ACCUEIL",
       "nav-projects": "PROJETS",
-      "nav-cv": "CV",
+      "nav-cv": "A PROPOS DE MOI",
       "nav-contact": "CONTACT",
       "pre-title": "BONJOUR,",
       "welcome-title-1": "Je suis ",
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       "nav-brand": "Portfolio",
       "nav-home": "HOME",
       "nav-projects": "PROJECTS",
-      "nav-cv": "CV",
+      "nav-cv": "ABOUT ME",
       "nav-contact": "CONTACT",
       "pre-title": "HELLO,",
       "welcome-title-1": "I'm ",
@@ -204,9 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const langButtons = document.querySelectorAll('.lang-switcher a');
   
   function changeLanguage(lang) {
-    // === NOUVELLE LIGNE AJOUTÉE ===
-    document.documentElement.lang = lang; // Met à jour la langue de la page (ex: <html lang="fr">)
-    // ================================
+    document.documentElement.lang = lang;
 
     langButtons.forEach(button => {
       if (button.getAttribute('data-lang') === lang) {
