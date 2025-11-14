@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title data-key="nav-projects">Projets</title>
+  <link rel="stylesheet" href="Assets/Css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+  <div id="progress-bar"></div>
+  <div id="mouse-glow"></div>
+  <nav class="navbar">
+    
+    <div class="nav-left">
+      <a href="index.html" class="nav-brand" data-key="nav-brand"></a>
+    </div>
+
+    <div class="nav-center">
+      <ul class="nav-links">
+        <li><a href="projets.html" class="active" data-key="nav-projects"></a></li>
+        <li><a href="index.html" data-key="nav-home"></a></li>
+        <li><a href="cv.html" data-key="nav-cv"></a></li>
+        <li><a href="contact.html" data-key="nav-contact"></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-right">
+      <ul class="lang-switcher">
+        <li><a href="#" class="active" data-lang="en">EN</a></li>
+        <li><a href="#" data-lang="fr">FR</a></li>
+      </ul>
+      </div>
+  </nav>
+
+  <main class="content">
+    
+    <section class="cv-background"> 
+      <section id="cv-section" class="cv-wrapper"> 
+        <div class="text-column">
+          <div class="cv-content-wrapper"> 
+            <header class="cv-header">
+              <h1 data-key="project-header-title"></h1>
+              <p class="pre-title" data-key="project-header-subtitle"></p>
+            </header>
+
+            <section id="project-filters" class="cv-section">
+              <input type="search" id="project-search-bar" class="search-bar" data-key="project-search-placeholder" autocomplete="off">
+            </section>
+
+            <section id="project-list" class="cv-section">
+              
+              <details class="project-item" open> 
+                <summary class="project-summary">
+                  <span data-key="proj1-title"></span>
+                  <span class="project-status in-progress" data-key="proj-status-inprogress"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj1-desc"></p>
+                  <p class="project-meta" data-key="proj1-meta"></p>
+                  
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="proj1-tag-laravel"></span>
+                      <span class="project-tag" data-key="proj1-tag-sql"></span>
+                      </div>
+                    <div class="project-actions">
+                      <a href="javascript:void(0);" id="proj1-preview-toggle" class="project-button" data-key="proj1-btn-preview"></a>
+                      <a href="Assets/Image/ClubMedPartieScriptBDD.zip" download="ClubMedPartieScriptBDD.zip" class="project-button" data-key="proj1-btn-download"></a>
+                    </div>
+                  </div>
+                  <div id="proj1-preview-container" class="project-preview-container">
+                    <p data-key="proj1-preview-desc"></p>
+                    <ul class="preview-links">
+                      <li><a href="Assets/Image/MCD1PHOTO.png" target="_blank" data-key="proj1-preview-mcd"></a></li>
+                      <li><a href="Assets/Image/MLD1PHOTO.png" target="_blank" data-key="proj1-preview-mld"></a></li>
+                      <li><a href="Assets/Image/ScriptClubMed.sql" target="_blank" data-key="proj1-preview-script"></a></li>
+                      <li><a href="Assets/Image/InsertClubMed.sql" target="_blank" data-key="proj1-preview-insert"></a></li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
+              
+              <details class="project-item">
+                <summary class="project-summary">
+                  <span data-key="proj3-title"></span>
+                  <span class="project-status completed" data-key="proj-status-completed"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj3-desc"></p>
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="proj3-tag-excel"></span>
+                      <span class="project-tag" data-key="proj3-tag-vba"></span>
+                    </div>
+                    <div class="project-actions">
+                      <a href="Assets/Image/OAD.xlsm" download="OAD.xlsm" class="project-button" data-key="proj3-btn-download"></a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+            </section>
+
+          </div> 
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <button id="back-to-top" title="Retour en haut">↑</button>
+
+  <script src="Assets/Javascript/script.js"></script>
+
+</body>
+</html>

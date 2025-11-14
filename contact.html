@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title data-key="nav-contact">Contact</title>
+  <link rel="stylesheet" href="Assets/Css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+  <div id="progress-bar"></div>
+  <div id="mouse-glow"></div>
+  <nav class="navbar">
+    
+    <div class="nav-left">
+      <a href="index.html" class="nav-brand" data-key="nav-brand"></a>
+    </div>
+
+    <div class="nav-center">
+      <ul class="nav-links">
+        <li><a href="projets.html" data-key="nav-projects"></a></li>
+        <li><a href="index.html" data-key="nav-home"></a></li>
+        <li><a href="cv.html" data-key="nav-cv"></a></li>
+        <li><a href="contact.html" class="active" data-key="nav-contact"></a></li>
+      </ul>
+    </div>
+
+    <div class="nav-right">
+      <ul class="lang-switcher">
+        <li><a href="#" class="active" data-lang="en">EN</a></li>
+        <li><a href="#" data-lang="fr">FR</a></li>
+      </ul>
+      </div>
+  </nav>
+
+  <main class="content">
+    
+    <section class="cv-background"> 
+        <section id="cv-section" class="cv-wrapper"> 
+            <div class="text-column">
+              <div class="cv-content-wrapper"> 
+                
+                <header class="cv-header">
+                  <h1 data-key="contact-header-title"></h1>
+                  <p class="pre-title" data-key="contact-header-subtitle"></p>
+                </header>
+    
+                <section id="contact-form" class="cv-section">
+                  
+                  <form id="contact-form-element" 
+                        action="https://formspree.io/f/xjkjvnjy" 
+                        method="POST">
+                    
+                    <input type="text" id="name" name="name" class="search-bar" data-key="contact-form-name" required>
+                    
+                    <input type="email" id="email" name="_replyto" class="search-bar" data-key="contact-form-email" required>
+                    
+                    <input type="text" id="subject" name="_subject" class="search-bar" data-key="contact-form-subject" required>
+                    
+                    <textarea id="message" name="message" class="search-bar" rows="6" data-key="contact-form-message" required></textarea>
+                    
+                    <div class="button-container">
+                      <button type="submit" class="cta-button" data-key="contact-form-submit"></button>
+                    </div>
+                  </form>
+
+                  <p id="form-status" class="form-status-message"></p>
+                  </section>
+
+              </div> 
+            </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="Assets/Javascript/script.js"></script>
+
+</body>
+</html>
