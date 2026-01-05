@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title data-key="nav-projects">Projets</title>
+  <link rel="stylesheet" href="Assets/Css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body id="page-projets">
+  <div id="progress-bar"></div>
+  <div id="mouse-glow"></div>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="index.html" class="nav-brand" data-key="nav-brand"></a>
+    </div>
+    <div class="nav-center">
+      <ul class="nav-links">
+        <li><a href="projets.html" class="active" data-key="nav-projects"></a></li>
+        <li><a href="index.html" data-key="nav-home"></a></li>
+        <li><a href="cv.html" data-key="nav-cv"></a></li>
+        <li><a href="contact.html" data-key="nav-contact"></a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <ul class="lang-switcher">
+        <li><a href="#" class="active" data-lang="en">EN</a></li>
+        <li><a href="#" data-lang="fr">FR</a></li>
+      </ul>
+      </div>
+  </nav>
+  <main class="content">
+    <section class="cv-background"> 
+      <section id="cv-section" class="cv-wrapper"> 
+        <div class="text-column">
+          <div class="cv-content-wrapper"> 
+            <header class="cv-header">
+              <h1 data-key="project-header-title"></h1>
+              <p class="pre-title" data-key="project-header-subtitle"></p>
+            </header>
+            <section id="project-filters" class="cv-section">
+              <input type="search" id="project-search-bar" class="search-bar" data-key="project-search-placeholder" autocomplete="off">
+              <div class="project-filter-tags" id="project-tag-filters">
+                <button class="filter-tag active" data-filter="all" data-key="filter-all"></button> 
+                <button class="filter-tag" data-filter="tag-laravel" data-key="tag-laravel"></button>
+                <button class="filter-tag" data-filter="tag-csharp" data-key="tag-csharp"></button>
+                <button class="filter-tag" data-filter="tag-wpf" data-key="tag-wpf"></button>
+                <button class="filter-tag" data-filter="tag-sql" data-key="tag-sql"></button>
+                <button class="filter-tag" data-filter="tag-git" data-key="tag-git"></button>
+                <button class="filter-tag" data-filter="tag-bpmn" data-key="tag-bpmn"></button>
+                <button class="filter-tag" data-filter="tag-html" data-key="tag-html"></button>
+                <button class="filter-tag" data-filter="tag-css" data-key="tag-css"></button>
+                <button class="filter-tag" data-filter="tag-js" data-key="tag-js"></button>
+                <button class="filter-tag" data-filter="tag-phaser" data-key="tag-phaser"></button>
+                <button class="filter-tag" data-filter="tag-excel" data-key="tag-excel"></button>
+              </div>
+            </section>
+            <section id="project-list" class="cv-section">
+              
+              <details class="project-item">
+                <summary class="project-summary">
+                  <span data-key="proj4-title"></span>
+                  <span class="project-status completed" data-key="proj-status-completed"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj4-desc"></p> <p class="project-meta" data-key="proj4-meta"></p>
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="tag-html"></span>
+                      <span class="project-tag" data-key="tag-css"></span>
+                      <span class="project-tag" data-key="tag-js"></span>
+                    </div>
+                    <div class="project-actions">
+                      <a href="Assets/Projets/Projet4.html" class="project-button" data-key="btn-view-project"></a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="project-item" open> 
+                <summary class="project-summary">
+                  <span data-key="proj1-title"></span>
+                  <span class="project-status in-progress" data-key="proj-status-inprogress"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj1-desc"></p> <p class="project-meta" data-key="proj1-meta"></p>
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="tag-laravel"></span>
+                      <span class="project-tag" data-key="tag-sql"></span>
+                      <span class="project-tag" data-key="tag-git"></span>
+                    </div>
+                    <div class="project-actions">
+                      <a href="Assets/Projets/Projet1Construction.html" class="project-button" data-key="btn-view-project"></a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="project-item">
+                <summary class="project-summary">
+                  <span data-key="proj2-title"></span>
+                  <span class="project-status completed" data-key="proj-status-completed"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj2-desc"></p> <p class="project-meta" data-key="proj2-meta"></p>
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="tag-phaser"></span>
+                      <span class="project-tag" data-key="tag-js"></span>
+                    </div>
+                    <div class="project-actions">
+                      <a href="Assets/Projets/Projet2.html" class="project-button" data-key="btn-view-project"></a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="project-item">
+                <summary class="project-summary">
+                  <span data-key="proj5-title"></span>
+                  <span class="project-status completed" data-key="proj-status-completed"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj5-desc"></p> <p class="project-meta" data-key="proj5-meta"></p>
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="tag-csharp"></span>
+                      <span class="project-tag" data-key="tag-wpf"></span>
+                      <span class="project-tag" data-key="tag-sql"></span>
+                      <span class="project-tag" data-key="tag-git"></span>
+                    </div>
+                    <div class="project-actions">
+                      <a href="Assets/Projets/Projet5.html" class="project-button" data-key="btn-view-project"></a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details class="project-item">
+                <summary class="project-summary">
+                  <span data-key="proj3-title"></span>
+                  <span class="project-status completed" data-key="proj-status-completed"></span>
+                </summary>
+                <div class="project-details">
+                  <p data-key="proj3-desc"></p> <p class="project-meta" data-key="proj3-meta"></p>
+                  <div class="project-footer">
+                    <div class="project-tags">
+                      <span class="project-tag" data-key="tag-excel"></span>
+                      <span class="project-tag" data-key="tag-vba"></span>
+                    </div>
+                    <div class="project-actions">
+                      <a href="Assets/Projets/Projet3.html" class="project-button" data-key="btn-view-project"></a>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+            </section>
+          </div> 
+        </div>
+      </section>
+    </section>
+  </main>
+  <button id="back-to-top" title="Retour en haut">↑</button>
+  <script src="Assets/Javascript/script.js"></script>
+</body>
+</html>

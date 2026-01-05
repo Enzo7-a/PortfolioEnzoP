@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Jeu Runner</title>
+  <link rel="stylesheet" href="../../Assets/Css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body id="page-projets">
+
+  <div id="mouse-glow"></div>
+  <nav class="navbar">
+    <div class="nav-left"><a href="../../index.html" class="nav-brand" data-key="nav-brand"></a></div>
+    <div class="nav-center">
+      <ul class="nav-links">
+        <li><a href="../../projets.html" class="active" data-key="nav-projects"></a></li>
+        <li><a href="../../index.html" data-key="nav-home"></a></li>
+        <li><a href="../../cv.html" data-key="nav-cv"></a></li>
+        <li><a href="../../contact.html" data-key="nav-contact"></a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <ul class="lang-switcher">
+        <li><a href="#" class="active" data-lang="en">EN</a></li>
+        <li><a href="#" data-lang="fr">FR</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="content">
+    <section class="cv-background"> 
+      <section class="cv-wrapper"> 
+        <div class="text-column">
+          <div class="cv-content-wrapper"> 
+            
+            <div style="margin-bottom: 20px;">
+                <a href="../../projets.html" class="project-button" data-key="btn-back-projects"></a>
+            </div>
+
+            <header class="project-page-header">
+                <span class="project-category-badge" data-key="p2-badge"></span>
+                <h1 style="font-size: 2.5rem; margin: 10px 0;" data-key="p2-title"></h1>
+                <p style="color: #ccc;" data-key="p2-date"></p>
+            </header>
+
+            <img src="../../Assets/Image/ImagePhaser1.png" alt="Jeu Screenshot" class="project-hero-image">
+            <img src="../../Assets/Image/ImagePhaser2.png" alt="Jeu Screenshot" class="project-hero-image-secondary">
+            
+            <div class="project-detail-grid">
+                
+                <div class="project-info-section">
+                    <h2 data-key="p2-section1-title"></h2>
+                    <p data-key="p2-desc"></p>
+
+                    <h2 data-key="p2-section2-title"></h2>
+                    <p data-key="p2-desc2"></p>
+                    <ul class="soft-skills-list">
+                        <li data-key="p2-list1"></li>
+                        <li data-key="p2-list2"></li>
+                        <li data-key="p2-list3"></li>
+                    </ul>
+                </div>
+
+                <div class="project-sidebar">
+                    <div class="project-sidebar-card">
+                        <div class="sidebar-title" data-key="tech-title"></div>
+                        <div class="tech-tags-container">
+                            <span class="tech-tag-pill" data-key="tag-phaser"></span>
+                            <span class="tech-tag-pill" data-key="tag-js"></span>
+                            <span class="tech-tag-pill" data-key="tag-html"></span>
+                        </div>
+                    </div>
+
+                    <div class="project-sidebar-card">
+                        <div class="sidebar-title" data-key="play-title"></div>
+                        <a href="https://enzo7-a.github.io/GamePhaser/" target="_blank" class="cta-button btn-full-width" data-key="btn-play-game"></a>
+                    </div>
+                </div>
+            </div>
+
+          </div> 
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="../../Assets/Javascript/script.js"></script>
+</body>
+</html>
