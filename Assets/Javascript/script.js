@@ -407,6 +407,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        const cvButton = document.querySelector('a[data-key="btn-cv"]');
+        if (cvButton) {
+            if (lang === 'en') {
+                cvButton.setAttribute('href', 'Assets/Image/EnzoPagesEN_CV.pdf');
+            } else {
+                cvButton.setAttribute('href', 'Assets/Image/EnzoPagesFR_CV.pdf');
+            }
+        }
+
         document.querySelectorAll('[data-key]').forEach(element => {
             const key = element.getAttribute('data-key');
             const translation = translations[lang] && translations[lang][key];
