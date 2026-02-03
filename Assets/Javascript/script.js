@@ -409,11 +409,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cvButton = document.querySelector('a[data-key="btn-cv"]');
         if (cvButton) {
+            console.log("Langue sélectionnée : " + lang);
             if (lang === 'en') {
                 cvButton.setAttribute('href', 'Assets/Image/EnzoPagesEN_CV.pdf');
             } else {
                 cvButton.setAttribute('href', 'Assets/Image/EnzoPagesFR_CV.pdf');
             }
+            console.log("Le lien du CV pointe vers : " + cvButton.getAttribute('href'));
         }
 
         document.querySelectorAll('[data-key]').forEach(element => {
