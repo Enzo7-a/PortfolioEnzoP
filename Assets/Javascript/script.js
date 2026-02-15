@@ -667,10 +667,59 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.forEach(el => observer.observe(el));
     }
 
+    function setupImageZoom() {
+        // 1. Créer les éléments de la modale dynamiquement
+        const modal = document.createElement('div');
+        modal.className = 'image-modal';
+        modal.innerHTML = `
+            <span class="image-modal-close">&times;</span>
+            <img class="image-modal-content" id="img-modal-content">
+        `;
+        document.body.appendChild(modal);
+
+        const modalImg = document.getElementById('img-modal-content');
+        const closeBtn = document.querySelector('.image-modal-close');
+
+        // 2. Sélectionner les images cibles (Principales, Secondaires et Miniatures)
+        const images = document.querySelectorAll('.project-hero-image, .project-hero-image-secondary, .thumb-img');
+
+        images.forEach(img => {
+            img.addEventListener('click', function() {
+                modal.style.display = "flex"; // Utiliser flex pour centrer
+                modal.style.justifyContent = "center";
+                modal.style.alignItems = "center";
+                modalImg.src = this.src;
+                document.body.style.overflow = "hidden"; // Empêcher le scroll en arrière-plan
+            });
+        });
+
+        // 3. Actions de fermeture
+        function closeModal() {
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+
+        closeBtn.onclick = closeModal;
+
+        modal.onclick = function(event) {
+            if (event.target === modal) { // Clic en dehors de l'image
+                closeModal();
+            }
+        }
+        
+        // Fermer avec la touche Echap
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" && modal.style.display === "flex") {
+                closeModal();
+            }
+        });
+    }
+
     setupLanguageSwitcher();
     setupScrollInteractions();
     setupProjectFilter();
     setupMouseGlow();
     setupFormSpreeAJAX();
     setupScrollAnimations();
+    setupImageZoom();
 });
