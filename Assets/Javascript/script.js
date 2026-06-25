@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
             "nav-projects": "PROJETS",
             "nav-cv": "A PROPOS DE MOI",
             "nav-contact": "CONTACT",
+            "footer-tagline": "Étudiant en BUT Informatique · Données & Développement.",
+            "footer-rights": "Tous droits réservés.",
             "btn-back-projects": "← Retour aux projets",
             "btn-view-project": "Voir le projet",
             "btn-download-zip": "Télécharger le ZIP",
@@ -201,6 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
             "nav-projects": "PROJECTS",
             "nav-cv": "ABOUT ME",
             "nav-contact": "CONTACT",
+            "footer-tagline": "Computer Science student · Data & Development.",
+            "footer-rights": "All rights reserved.",
             "btn-back-projects": "← Back to Projects",
             "btn-view-project": "View project",
             "btn-download-zip": "Download ZIP",
@@ -482,17 +486,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyFilters() {
-        const projects = document.querySelectorAll('.project-item');
+        const projects = document.querySelectorAll('.project-card');
         if (!projects.length) return;
 
         const searchTerm = currentSearchTerm.toLowerCase().trim();
 
         projects.forEach(project => {
-            const title = project.querySelector('.project-summary').textContent.toLowerCase();
-            const description = project.querySelector('.project-details p').textContent.toLowerCase();
-            const projectTagsText = Array.from(project.querySelectorAll('.project-tag'))
-                .map(tag => tag.textContent.toLowerCase())
-                .join(' ');
+            const titleEl = project.querySelector('.project-card-title');
+            const descEl = project.querySelector('.project-card-desc');
+            const title = (titleEl ? titleEl.textContent : '').toLowerCase();
+            const description = (descEl ? descEl.textContent : '').toLowerCase();
+            const tagEls = Array.from(project.querySelectorAll('.project-tag'));
+            const projectTagsText = tagEls.map(tag => tag.textContent.toLowerCase()).join(' ');
 
             const searchableText = title + ' ' + description + ' ' + projectTagsText;
             const matchesSearch = searchableText.includes(searchTerm);
@@ -501,18 +506,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentTagFilter === 'all') {
                 matchesTag = true;
             } else {
-                const projectTagKeys = Array.from(project.querySelectorAll('.project-tag'))
-                    .map(tag => tag.getAttribute('data-key'));
+                const projectTagKeys = tagEls.map(tag => tag.getAttribute('data-key'));
                 matchesTag = projectTagKeys.includes(currentTagFilter);
             }
 
             if (matchesSearch && matchesTag) {
-                project.style.display = 'block';
-                project.style.opacity = '0'; 
-                setTimeout(() => {
-                     project.style.opacity = '1';
-                     project.style.animation = 'fadeInUp 0.5s ease forwards';
-                }, 10);
+                project.style.display = '';
+                project.style.animation = 'fadeInUp 0.45s ease forwards';
             } else {
                 project.style.display = 'none';
             }
@@ -532,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedLang = localStorage.getItem('preferredLang');
         const initialLang = savedLang || 'fr';
         changeLanguage(initialLang);
+        document.documentElement.classList.add('lang-ready');
     }
 
     function setupScrollInteractions() {
@@ -564,18 +565,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
-    }
-
-    function setupMouseGlow() {
-        const glowElement = document.getElementById('mouse-glow');
-        if (!glowElement) return;
-        
-        glowElement.style.opacity = '1';
-
-        window.addEventListener('mousemove', (e) => {
-            glowElement.style.setProperty('--mouse-x', e.clientX + 'px');
-            glowElement.style.setProperty('--mouse-y', e.clientY + 'px');
-        });
     }
 
     function setupProjectFilter() {
@@ -668,7 +657,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupImageZoom() {
-        // 1. Créer les éléments de la modale dynamiquement
         const modal = document.createElement('div');
         modal.className = 'image-modal';
         modal.innerHTML = `
@@ -680,20 +668,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalImg = document.getElementById('img-modal-content');
         const closeBtn = document.querySelector('.image-modal-close');
 
-        // 2. Sélectionner les images cibles (Principales, Secondaires et Miniatures)
         const images = document.querySelectorAll('.project-hero-image, .project-hero-image-secondary, .thumb-img');
 
         images.forEach(img => {
             img.addEventListener('click', function() {
-                modal.style.display = "flex"; // Utiliser flex pour centrer
+                modal.style.display = "flex";
                 modal.style.justifyContent = "center";
                 modal.style.alignItems = "center";
                 modalImg.src = this.src;
-                document.body.style.overflow = "hidden"; // Empêcher le scroll en arrière-plan
+                document.body.style.overflow = "hidden";
             });
         });
 
-        // 3. Actions de fermeture
         function closeModal() {
             modal.style.display = "none";
             document.body.style.overflow = "auto";
@@ -702,12 +688,11 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn.onclick = closeModal;
 
         modal.onclick = function(event) {
-            if (event.target === modal) { // Clic en dehors de l'image
+            if (event.target === modal) {
                 closeModal();
             }
         }
         
-        // Fermer avec la touche Echap
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape" && modal.style.display === "flex") {
                 closeModal();
@@ -718,7 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupLanguageSwitcher();
     setupScrollInteractions();
     setupProjectFilter();
-    setupMouseGlow();
     setupFormSpreeAJAX();
     setupScrollAnimations();
     setupImageZoom();
