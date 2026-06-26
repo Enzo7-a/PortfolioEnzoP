@@ -159,13 +159,22 @@ document.addEventListener('DOMContentLoaded', () => {
             "cv-objective-title": "Objectif",
             "cv-objective-text": "Étudiant en deuxième année d'informatique à l'Université d'Annecy, spécialisé dans la gestion des données. À la recherche d'un stage pour appliquer mes compétences en développement logiciel et en analyse de données à des projets innovants.",
             "cv-exp-title": "Expériences Professionnelles",
+            "cv-exp0-title": "Stagiaire Développement & Data",
+            "cv-exp0-meta": "Avril 2026 - En cours | Artcast Technologies, Annecy",
+            "cv-exp0-desc": "Refonte complète du site de l'entreprise, développement d'une application web sécurisée sur borne tactile avec base de données pour la Sibra, et automatisation du titrage en direct (Python, API Confero, pilotage PowerPoint) lors des conseils municipaux.",
             "cv-exp1-title": "Projet d'équipe - Application Web & Base de Données",
             "cv-exp1-meta": "Octobre 2025 - Janvier 2026 | Université de Savoie / IUT Annecy",
             "cv-exp1-desc": "Développement d'une application web Laravel au sein d'une équipe de 4 personnes. Conception de modèles de données et de diagrammes BPMN, implémentation de modules de cryptographie et de communication, et création de tableaux de bord Power BI en utilisant Scrum.",
             "cv-exp2-title": "Agent de Péage (Contrat Saisonnier)",
             "cv-exp2-meta": "Juillet - Août 2025 | SFTRF - Modane, France",
             "cv-exp2-desc": "Traitement des paiements et assistance aux clients en français et en anglais, garantissant la précision et la fluidité du trafic.",
+            "cv-exp3-title": "Projets Académiques (SAÉ)",
+            "cv-exp3-meta": "Octobre 2024 - Janvier 2025 | Université Savoie Mont Blanc / IUT Annecy",
+            "cv-exp3-desc": "Conception d'un tableau de bord Power BI à partir d'une base PostgreSQL ; nettoyage, intégration et modélisation des données.",
             "cv-skills-tech-title": "Compétences Techniques",
+            "cv-skillcat-languages": "Langages",
+            "cv-skillcat-web": "Développement Web",
+            "cv-skillcat-data": "Données & BI",
             "cv-skill-csharp": "C#",
             "cv-skill-python": "Python",
             "cv-skill-sql": "SQL (PostgreSQL)",
@@ -191,15 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
             "cv-edu2-meta": "Obtenu en 2024 | Lycée Paul Héroult, France",
             "cv-edu2-desc": "Baccalauréat français spécialisé en Sciences et Technologies Industrielles (STI2D - Systèmes d'Information et Numérique).",
             "cv-lang-title": "Langues",
-            "cv-misc-lang": "Français (Natif), Anglais (Élémentaire, B1)",
+            "cv-misc-lang": "Français (Natif), Anglais (Élémentaire, B1), Italien (Intermédiaire, B1)",
             "cv-misc-title": "Divers (Centres d'intérêt)",
-            "cv-misc-hobby1": "<strong>Musculation :</strong> Pratique régulière (4 fois par semaine), avec un focus sur la progression, la technique et l’amélioration globale de la condition physique.",
-            "cv-misc-hobby2": "<strong>Sports mécaniques :</strong> Passion pour le rallye et la Formule 1, autant pour la performance des véhicules que pour la stratégie, la compétition et l’innovation technologique.",
+            "cv-misc-hobby1": "<strong>Musculation :</strong>",
+            "cv-misc-hobby2": "<strong>Sports mécaniques :</strong> Passion pour le rallye et la Formule 1",
             "cv-misc-hobby3": "<strong>Programmation :</strong> Développement de projets personnels (sites web, petits jeux) pour explorer de nouvelles idées, améliorer mes compétences et créer des expériences interactives.",
             "cv-contact-title": "Contact & Données Personnelles",
             "cv-contact-phone": "+33(0)620218977",
             "cv-contact-email": "Enzo.Pages@etu.univ-smb.fr",
-            "cv-contact-address": "7 Rue de la Louvatière, France",
+            "cv-contact-address": "7 Rue de la Louvatière, 74960 Cran-Gevrier",
             "cv-contact-dob": "Date de naissance : 24 Sept. 2006",
             "cv-contact-nationality": "Nationalité : Française",
             "cv-contact-license": "Permis : Permis de conduire",
@@ -369,13 +378,22 @@ document.addEventListener('DOMContentLoaded', () => {
             "cv-objective-title": "Job Objective",
             "cv-objective-text": "Second-year Computer Science student at the University of Annecy, specializing in data management. Seeking an internship to apply my skills in software development and data analysis to innovative projects.",
             "cv-exp-title": "Work Experiences",
+            "cv-exp0-title": "Dev & Data Intern",
+            "cv-exp0-meta": "April 2026 - Present | Artcast Technologies, Annecy",
+            "cv-exp0-desc": "Complete redesign of the company website, development of a secure touchscreen kiosk web application with a database for Sibra, and real-time automatic captioning (Python, Confero REST API, PowerPoint automation) during city council meetings.",
             "cv-exp1-title": "Team Project - Web Application & Database Management",
             "cv-exp1-meta": "October 2025 - January 2026 | University of Savoy / IUT Annecy - Annecy-le-Vieux, France",
             "cv-exp1-desc": "Developed a Laravel web app in a 4-person team. Designed data models and BPMN diagrams, implemented cryptography and communication modules, and created Power BI dashboards using Scrum.",
             "cv-exp2-title": "Toll Booth Operator (Temp Contract)",
             "cv-exp2-meta": "July - August 2025 | SFTRF - Société Française du Tunnel Routier du Fréjus - Modane, France",
             "cv-exp2-desc": "Processed payments and assisted customers in French and English, ensuring accuracy and smooth traffic flow.",
+            "cv-exp3-title": "Academic Projects (SAÉ)",
+            "cv-exp3-meta": "October 2024 - January 2025 | Universite Savoie Mont Blanc / IUT Annecy",
+            "cv-exp3-desc": "Design of a Power BI dashboard from a PostgreSQL database; data cleaning, integration and modeling.",
             "cv-skills-tech-title": "Technical Skills",
+            "cv-skillcat-languages": "Languages",
+            "cv-skillcat-web": "Web Development",
+            "cv-skillcat-data": "Data & BI",
             "cv-skill-csharp": "C#",
             "cv-skill-python": "Python",
             "cv-skill-sql": "SQL (PostgreSQL)",
@@ -401,15 +419,15 @@ document.addEventListener('DOMContentLoaded', () => {
             "cv-edu2-meta": "2024 | Paul Héroult High School - Saint-Jean-de-Maurienne, France",
             "cv-edu2-desc": "High School Diploma specialized in Science and Industrial Technologies (STI2D - Information and Digital Systems).",
             "cv-lang-title": "Languages",
-            "cv-misc-lang": "French (Native Speaker), English (Elementary, B1)",
+            "cv-misc-lang": "French (Native Speaker), English (Elementary, B1), Italian (Intermediate, B1)",
             "cv-misc-title": "Miscellaneous (Hobbies)",
-            "cv-misc-hobby1": "<strong>Weight Training:</strong> Regular practice (4 times a week), with a focus on progression, technique, and overall physical conditioning.",
-            "cv-misc-hobby2": "<strong>Motorsports:</strong> Passion for Rally and Formula 1, appreciating vehicle performance, strategy, competition, and technological innovation.",
+            "cv-misc-hobby1": "<strong>Weight Training:</strong>",
+            "cv-misc-hobby2": "<strong>Motorsports:</strong> Passion for Rally and Formula 1",
             "cv-misc-hobby3": "<strong>Programming:</strong> Developing personal projects (websites, small games) to explore new ideas, improve my skills, and create interactive experiences.",
             "cv-contact-title": "Personal Data",
             "cv-contact-phone": "+33(0)620218977",
             "cv-contact-email": "Enzo.Pages@etu.univ-smb.fr",
-            "cv-contact-address": "7 Rue de la Louvatière, France",
+            "cv-contact-address": "7 Rue de la Louvatière, 74960 Cran-Gevrier",
             "cv-contact-dob": "Date of Birth: Sept 24, 2006",
             "cv-contact-nationality": "Nationality: French",
             "cv-contact-license": "Car License",
@@ -682,47 +700,148 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.forEach(el => observer.observe(el));
     }
 
-    function setupImageZoom() {
+
+    function setupSkillBars() {
+        const bars = document.querySelectorAll('.skill-bar-level');
+        if (!bars.length) return;
+        const obs = new IntersectionObserver((entries, o) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('filled');
+                    o.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.3 });
+        bars.forEach(b => obs.observe(b));
+    }
+
+    function setupProjectCarousels() {
+        const carousels = document.querySelectorAll('.project-carousel');
+        if (!carousels.length) return;
+
         const modal = document.createElement('div');
         modal.className = 'image-modal';
         modal.innerHTML = `
-            <span class="image-modal-close">&times;</span>
-            <img class="image-modal-content" id="img-modal-content">
+            <span class="image-modal-close" aria-label="Fermer">&times;</span>
+            <button class="image-modal-nav prev" aria-label="Image précédente">&#10094;</button>
+            <img class="image-modal-content" id="img-modal-content" alt="">
+            <button class="image-modal-nav next" aria-label="Image suivante">&#10095;</button>
+            <div class="image-modal-counter"></div>
         `;
         document.body.appendChild(modal);
 
-        const modalImg = document.getElementById('img-modal-content');
-        const closeBtn = document.querySelector('.image-modal-close');
+        const modalImg = modal.querySelector('#img-modal-content');
+        const counter = modal.querySelector('.image-modal-counter');
+        const closeBtn = modal.querySelector('.image-modal-close');
+        const lbPrev = modal.querySelector('.image-modal-nav.prev');
+        const lbNext = modal.querySelector('.image-modal-nav.next');
 
-        const images = document.querySelectorAll('.project-hero-image, .project-hero-image-secondary, .thumb-img');
+        let lbSources = [];
+        let lbIndex = 0;
 
-        images.forEach(img => {
-            img.addEventListener('click', function() {
-                modal.style.display = "flex";
-                modal.style.justifyContent = "center";
-                modal.style.alignItems = "center";
-                modalImg.src = this.src;
-                document.body.style.overflow = "hidden";
-            });
+        function renderLightbox() {
+            modalImg.src = lbSources[lbIndex];
+            counter.textContent = (lbIndex + 1) + ' / ' + lbSources.length;
+            const multi = lbSources.length > 1;
+            lbPrev.style.display = multi ? '' : 'none';
+            lbNext.style.display = multi ? '' : 'none';
+            counter.style.display = multi ? '' : 'none';
+        }
+        function openLightbox(sources, index) {
+            lbSources = sources;
+            lbIndex = index;
+            renderLightbox();
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLightbox() {
+            modal.classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+        function lbStep(dir) {
+            lbIndex = (lbIndex + dir + lbSources.length) % lbSources.length;
+            renderLightbox();
+        }
+
+        closeBtn.onclick = closeLightbox;
+        lbPrev.onclick = (e) => { e.stopPropagation(); lbStep(-1); };
+        lbNext.onclick = (e) => { e.stopPropagation(); lbStep(1); };
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeLightbox(); });
+        document.addEventListener('keydown', (e) => {
+            if (!modal.classList.contains('open')) return;
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') lbStep(-1);
+            else if (e.key === 'ArrowRight') lbStep(1);
         });
 
-        function closeModal() {
-            modal.style.display = "none";
-            document.body.style.overflow = "auto";
-        }
+        carousels.forEach(carousel => {
+            const imgs = Array.from(carousel.querySelectorAll('img'));
+            if (!imgs.length) return;
+            const sources = imgs.map(i => i.src);
 
-        closeBtn.onclick = closeModal;
+            const track = document.createElement('div');
+            track.className = 'carousel-track';
+            imgs.forEach(img => {
+                const slide = document.createElement('div');
+                slide.className = 'carousel-slide';
+                slide.appendChild(img);
+                track.appendChild(slide);
+            });
 
-        modal.onclick = function(event) {
-            if (event.target === modal) {
-                closeModal();
+            carousel.innerHTML = '';
+            carousel.appendChild(track);
+
+            let index = 0;
+            const multi = imgs.length > 1;
+
+            const prev = document.createElement('button');
+            prev.className = 'carousel-nav prev';
+            prev.setAttribute('aria-label', 'Image précédente');
+            prev.innerHTML = '&#10094;';
+
+            const next = document.createElement('button');
+            next.className = 'carousel-nav next';
+            next.setAttribute('aria-label', 'Image suivante');
+            next.innerHTML = '&#10095;';
+
+            const dots = document.createElement('div');
+            dots.className = 'carousel-dots';
+            imgs.forEach((_, i) => {
+                const dot = document.createElement('button');
+                dot.className = 'carousel-dot';
+                dot.setAttribute('aria-label', 'Image ' + (i + 1));
+                dot.addEventListener('click', () => goTo(i));
+                dots.appendChild(dot);
+            });
+
+            function update() {
+                track.style.transform = 'translateX(' + (-index * 100) + '%)';
+                dots.querySelectorAll('.carousel-dot').forEach((d, i) =>
+                    d.classList.toggle('active', i === index));
             }
-        }
-        
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape" && modal.style.display === "flex") {
-                closeModal();
+            function goTo(i) { index = (i + imgs.length) % imgs.length; update(); }
+
+            prev.addEventListener('click', () => goTo(index - 1));
+            next.addEventListener('click', () => goTo(index + 1));
+
+            if (multi) {
+                carousel.appendChild(prev);
+                carousel.appendChild(next);
+                carousel.appendChild(dots);
             }
+
+            imgs.forEach((img, i) => {
+                img.addEventListener('click', () => openLightbox(sources, i));
+            });
+
+            let startX = 0;
+            track.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+            track.addEventListener('touchend', (e) => {
+                const dx = e.changedTouches[0].clientX - startX;
+                if (Math.abs(dx) > 40) goTo(index + (dx < 0 ? 1 : -1));
+            });
+
+            update();
         });
     }
 
@@ -731,5 +850,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupProjectFilter();
     setupFormSpreeAJAX();
     setupScrollAnimations();
-    setupImageZoom();
+    setupProjectCarousels();
+    setupSkillBars();
 });
