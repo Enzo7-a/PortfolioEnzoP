@@ -2,7 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title data-key="nav-cv">CV</title>
+  <title>Enzo Pagès · CV</title>
+  <meta name="description" content="Parcours d'Enzo Pagès : Data Analyst en alternance chez Carrier, BUT Informatique parcours AGED à l'Université Savoie Mont Blanc.">
   <link rel="stylesheet" href="Assets/Css/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -20,16 +21,15 @@
         <li><a href="projets.html" data-key="nav-projects"></a></li>
         <li><a href="index.html" data-key="nav-home"></a></li>
         <li><a href="cv.html" class="active" data-key="nav-cv"></a></li>
-        <li><a href="contact.html" data-key="nav-contact"></a></li>
       </ul>
     </div>
 
     <div class="nav-right">
       <ul class="lang-switcher">
-        <li><a href="#" class="active" data-lang="en">EN</a></li>
-        <li><a href="#" data-lang="fr">FR</a></li>
+        <li><a href="#" data-lang="en">EN</a></li>
+        <li><a href="#" class="active" data-lang="fr">FR</a></li>
       </ul>
-      </div>
+    </div>
   </nav>
 
   <main class="content">
@@ -40,160 +40,127 @@
         <div class="text-column">
           <div class="cv-content-wrapper">
 
-            <header class="cv-header cv-full-width cv-header--center">
-              <p class="pre-title" data-key="cv-header-subtitle"></p>
-              <h1 data-key="cv-header-title"></h1>
+            <header class="cv-header cv-profile">
+              <h1>Enzo Pagès</h1>
+              <p class="cv-headline" data-key="cv-headline"></p>
+              <p class="cv-location">Annecy, Auvergne-Rhône-Alpes, France</p>
+              <div class="cv-header-actions">
+                <a href="https://www.linkedin.com/in/enzopages-06e/" target="_blank" rel="noopener" class="cta-button cta-button--ghost cta-button--small" data-key="cv-btn-linkedin"></a>
+                <a href="Assets/Image/EnzoPagesFR_CV.pdf" target="_blank" rel="noopener" class="cta-button cta-button--small" data-key="btn-cv"></a>
+              </div>
             </header>
 
-            <section id="objective" class="cv-section cv-full-width">
-                <h2 data-key="cv-objective-title"></h2>
-                <p class="cv-objective-text" data-key="cv-objective-text"></p>
+            <section id="about" class="cv-section cv-about">
+              <h2 data-key="cv-about-title"></h2>
+              <p data-key="cv-about-text"></p>
             </section>
 
             <div class="cv-grid-container">
 
-                <div class="cv-left-column">
-                    <section id="experience" class="cv-section">
-                    <h2 data-key="cv-exp-title"></h2>
-                    <div class="cv-timeline">
-                        <article class="cv-item">
-                            <h3 data-key="cv-exp0-title"></h3>
-                            <p class="item-meta" data-key="cv-exp0-meta"></p>
-                            <p data-key="cv-exp0-desc"></p>
-                        </article>
-                        <article class="cv-item">
-                            <h3 data-key="cv-exp1-title"></h3>
-                            <p class="item-meta" data-key="cv-exp1-meta"></p>
-                            <p data-key="cv-exp1-desc"></p>
-                        </article>
-                        <article class="cv-item">
-                            <h3 data-key="cv-exp2-title"></h3>
-                            <p class="item-meta" data-key="cv-exp2-meta"></p>
-                            <p data-key="cv-exp2-desc"></p>
-                        </article>
-                        <article class="cv-item">
-                            <h3 data-key="cv-exp3-title"></h3>
-                            <p class="item-meta" data-key="cv-exp3-meta"></p>
-                            <p data-key="cv-exp3-desc"></p>
-                        </article>
-                    </div>
-                    </section>
+              <div class="cv-left-column">
 
-                    <section id="education" class="cv-section">
-                        <h2 data-key="cv-edu-title"></h2>
-                        <div class="cv-timeline">
-                            <article class="cv-item">
-                                <h3 data-key="cv-edu1-title"></h3>
-                                <p class="item-meta" data-key="cv-edu1-meta"></p>
-                                <p data-key="cv-edu1-desc"></p>
-                            </article>
-                            <article class="cv-item">
-                                <h3 data-key="cv-edu2-title"></h3>
-                                <p class="item-meta" data-key="cv-edu2-meta"></p>
-                                <p data-key="cv-edu2-desc"></p>
-                            </article>
-                        </div>
-                    </section>
-                </div>
+                <section id="experience" class="cv-section">
+                  <h2 data-key="cv-exp-title"></h2>
+                  <div class="cv-timeline">
 
-                <div class="cv-right-column">
-                    <section id="skills" class="cv-section cv-card">
-                        <h2 data-key="cv-skills-tech-title"></h2>
+                    <article class="cv-item">
+                      <h3><span data-key="cv-exp1-title"></span> <span class="cv-badge" data-key="cv-exp1-type"></span></h3>
+                      <p class="cv-org">Carrier HVAC</p>
+                      <p class="item-meta"><span data-key="cv-exp1-dates"></span> · <span class="cv-duration" data-since="2026-09"></span></p>
+                      <p class="item-place" data-key="cv-exp1-place"></p>
+                      <p data-key="cv-exp1-desc"></p>
+                    </article>
 
-                        <h3 class="cv-skill-cat" data-key="cv-skillcat-languages"></h3>
-                        <ul class="skills-list skills-list--single">
-                            <li>
-                                <span data-key="cv-skill-csharp"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 65%;"></div></div>
-                            </li>
-                            <li>
-                                <span data-key="cv-skill-python"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 65%;"></div></div>
-                            </li>
-                            <li>
-                                <span data-key="cv-skill-php"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 50%;"></div></div>
-                            </li>
-                        </ul>
+                    <article class="cv-item">
+                      <h3>Artcast Technologies</h3>
+                      <p class="item-meta" data-key="cv-exp2-duration"></p>
+                      <p class="item-place" data-key="cv-exp2-place"></p>
+                      <ul class="cv-roles">
+                        <li class="cv-role">
+                          <h4><span data-key="cv-exp2a-title"></span> <span class="cv-badge" data-key="cv-exp2a-type"></span></h4>
+                          <p class="item-meta" data-key="cv-exp2a-dates"></p>
+                        </li>
+                        <li class="cv-role">
+                          <h4><span data-key="cv-exp2b-title"></span> <span class="cv-badge" data-key="cv-exp2b-type"></span></h4>
+                          <p class="item-meta" data-key="cv-exp2b-dates"></p>
+                          <p data-key="cv-exp2b-desc"></p>
+                        </li>
+                      </ul>
+                    </article>
 
-                        <h3 class="cv-skill-cat" data-key="cv-skillcat-web"></h3>
-                        <ul class="skills-list skills-list--single">
-                            <li>
-                                <span data-key="cv-skill-html"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 85%;"></div></div>
-                            </li>
-                            <li>
-                                <span data-key="cv-skill-css"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 85%;"></div></div>
-                            </li>
-                            <li>
-                                <span data-key="cv-skill-js"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 80%;"></div></div>
-                            </li>
-                        </ul>
+                    <article class="cv-item">
+                      <h3><span data-key="cv-exp3-title"></span> <span class="cv-badge" data-key="cv-exp3-type"></span></h3>
+                      <p class="cv-org">SFTRF – Société Française du Tunnel Routier du Fréjus</p>
+                      <p class="item-meta" data-key="cv-exp3-dates"></p>
+                      <p class="item-place" data-key="cv-exp3-place"></p>
+                      <p data-key="cv-exp3-desc"></p>
+                    </article>
 
-                        <h3 class="cv-skill-cat" data-key="cv-skillcat-data"></h3>
-                        <ul class="skills-list skills-list--single">
-                            <li>
-                                <span data-key="cv-skill-sql"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 90%;"></div></div>
-                            </li>
-                            <li>
-                                <span data-key="cv-skill-powerbi"></span>
-                                <div class="skill-bar-container"><div class="skill-bar-level" style="--level: 50%;"></div></div>
-                            </li>
-                        </ul>
-
-                        <h2 class="cv-subhead" data-key="cv-skills-soft-title"></h2>
-                        <ul class="soft-skills-list soft-skills-chips">
-                            <li data-key="cv-skill-soft1"></li>
-                            <li data-key="cv-skill-soft2"></li>
-                            <li data-key="cv-skill-soft3"></li>
-                        </ul>
-                    </section>
-
-                    <section id="languages" class="cv-section cv-card">
-                        <h2 data-key="cv-lang-title"></h2>
-                        <ul class="contact-list icon-list lang-list">
-                            <li data-key="cv-misc-lang"></li>
-                        </ul>
-                    </section>
-
-                    <section id="other" class="cv-section cv-card">
-                        <h2 data-key="cv-misc-title"></h2>
-                        <ul class="soft-skills-list hobby-list">
-                            <li data-key="cv-misc-hobby1"></li>
-                            <li data-key="cv-misc-hobby2"></li>
-                            <li data-key="cv-misc-hobby3"></li>
-                        </ul>
-                    </section>
-                </div>
-            </div>
-
-            <div class="cv-full-width cv-bottom-grid">
-                <section id="contact" class="cv-section cv-card cv-text-left">
-                    <h2 data-key="cv-contact-title"></h2>
-                    <ul class="contact-list icon-list contact-info-list">
-                        <li data-key="cv-contact-phone"></li>
-                        <li data-key="cv-contact-email"></li>
-                        <li data-key="cv-contact-address"></li>
-                        <li data-key="cv-contact-linkedin"></li>
-                    </ul>
+                  </div>
                 </section>
 
-                <section id="references" class="cv-section cv-card cv-text-left">
-                    <h2 data-key="cv-ref-title"></h2>
-                    <div class="cv-ref-grid">
-                        <article class="cv-ref-card">
-                            <h3 class="cv-ref-name" data-key="cv-ref1-name"></h3>
-                            <p class="item-meta cv-ref-meta" data-key="cv-ref1-meta"></p>
-                        </article>
-                        <article class="cv-ref-card">
-                            <h3 class="cv-ref-name" data-key="cv-ref2-name"></h3>
-                            <p class="item-meta cv-ref-meta" data-key="cv-ref2-meta"></p>
-                        </article>
-                    </div>
+                <section id="education" class="cv-section">
+                  <h2 data-key="cv-edu-title"></h2>
+                  <div class="cv-timeline">
+                    <article class="cv-item">
+                      <h3>Université Savoie Mont Blanc</h3>
+                      <p class="cv-org" data-key="cv-edu1-degree"></p>
+                      <p class="item-meta" data-key="cv-edu1-dates"></p>
+                    </article>
+                    <article class="cv-item">
+                      <h3>Lycée Paul Héroult</h3>
+                      <p class="cv-org" data-key="cv-edu2-degree"></p>
+                      <p class="item-meta" data-key="cv-edu2-dates"></p>
+                    </article>
+                  </div>
                 </section>
+
+              </div>
+
+              <div class="cv-right-column">
+
+                <section id="skills" class="cv-section cv-card">
+                  <h2 data-key="cv-skills-title"></h2>
+                  <h3 class="cv-skill-cat" data-key="cv-skills-top"></h3>
+                  <ul class="skill-chips skill-chips--top">
+                    <li>SQL</li>
+                    <li>Python</li>
+                    <li data-key="cv-skill-analysis"></li>
+                    <li data-key="cv-skill-dbadmin"></li>
+                    <li>Extract, Transform, Load (ETL)</li>
+                  </ul>
+                  <h3 class="cv-skill-cat" data-key="cv-skills-other"></h3>
+                  <ul class="skill-chips">
+                    <li>Microsoft Power BI</li>
+                    <li>MongoDB</li>
+                    <li data-key="cv-skill-dataviz"></li>
+                    <li data-key="cv-skill-stats"></li>
+                    <li>Git</li>
+                    <li>Linux</li>
+                    <li data-key="cv-skill-webdev"></li>
+                  </ul>
+                </section>
+
+                <section id="languages" class="cv-section cv-card">
+                  <h2 data-key="cv-lang-title"></h2>
+                  <dl class="cv-defs cv-defs--lang">
+                    <div><dt data-key="cv-lang-fr"></dt><dd data-key="cv-lang-fr-level"></dd></div>
+                    <div><dt data-key="cv-lang-en"></dt><dd data-key="cv-lang-en-level"></dd></div>
+                    <div><dt data-key="cv-lang-it"></dt><dd data-key="cv-lang-it-level"></dd></div>
+                  </dl>
+                </section>
+
+                <section id="contact" class="cv-section cv-card">
+                  <h2 data-key="cv-contact-title"></h2>
+                  <dl class="cv-defs">
+                    <div><dt data-key="cv-contact-email-label"></dt><dd><a href="mailto:Enzo.Pages@etu.univ-smb.fr">Enzo.Pages@etu.univ-smb.fr</a></dd></div>
+                    <div><dt data-key="cv-contact-location-label"></dt><dd>Annecy, France</dd></div>
+                    <div><dt>LinkedIn</dt><dd><a href="https://www.linkedin.com/in/enzopages-06e/" target="_blank" rel="noopener">linkedin.com/in/enzopages-06e</a></dd></div>
+                    <div><dt>GitHub</dt><dd><a href="https://github.com/Enzo7-a" target="_blank" rel="noopener">github.com/Enzo7-a</a></dd></div>
+                  </dl>
+                </section>
+
+              </div>
             </div>
 
           </div>

@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
             "nav-home": "ACCUEIL",
             "nav-projects": "PROJETS",
             "nav-cv": "A PROPOS DE MOI",
-            "nav-contact": "CONTACT",
             "footer-tagline": "Étudiant en BUT Informatique · Données & Développement.",
             "footer-rights": "Tous droits réservés.",
             "btn-back-projects": "← Retour aux projets",
@@ -22,12 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
             "play-title": "Jouer",
             "download-title": "Téléchargement",
             "source-title": "Code Source",
-            "pre-title": "BONJOUR,",
-            "welcome-title-1": "Je suis ",
-            "welcome-title-name": "Enzo",
-            "welcome-title-2": " Pagès",
-            "welcome-subtitle": "Étudiant en deuxième année de BUT Informatique, spécialité Administration, Gestion et Exploitation des Données à Annecy.",
-            "btn-cv": "REGARDER MON CV",
             "project-header-title": "Mes Projets",
             "project-header-subtitle": "EXPLOREZ MON TRAVAIL",
             "project-search-placeholder": "Rechercher...",
@@ -144,87 +137,68 @@ document.addEventListener('DOMContentLoaded', () => {
             "p3-list3": "Contrôle de la production et des machines.",
             "p3-list4": "Analyse des pertes et optimisation des coûts.",
             
-            "contact-header-title": "Contactez-moi",
-            "contact-header-subtitle": "PRENDRE CONTACT",
-            "contact-form-name": "Votre nom",
-            "contact-form-email": "Votre email",
-            "contact-form-subject": "Sujet",
-            "contact-form-message": "Votre message...",
-            "contact-form-submit": "Envoyer le message",
-            "contact-form-success": "Merci ! Votre message a été envoyé.",
-            "contact-form-error": "Oops! Une erreur est survenue.",
-            "contact-form-error-network": "Oops! Problème de connexion réseau.",
-            "cv-header-title": "Enzo Pagès",
-            "cv-header-subtitle": "ÉTUDIANT EN INFORMATIQUE",
-            "cv-objective-title": "Objectif",
-            "cv-objective-text": "Étudiant en deuxième année d'informatique à l'Université d'Annecy, spécialisé dans la gestion des données. À la recherche d'un stage pour appliquer mes compétences en développement logiciel et en analyse de données à des projets innovants.",
-            "cv-exp-title": "Expériences Professionnelles",
-            "cv-exp0-title": "Stagiaire Développement & Data",
-            "cv-exp0-meta": "Avril 2026 - En cours | Artcast Technologies, Annecy",
-            "cv-exp0-desc": "Refonte complète du site de l'entreprise, développement d'une application web sécurisée sur borne tactile avec base de données pour la Sibra, et automatisation du titrage en direct (Python, API Confero, pilotage PowerPoint) lors des conseils municipaux.",
-            "cv-exp1-title": "Projet d'équipe - Application Web & Base de Données",
-            "cv-exp1-meta": "Octobre 2025 - Janvier 2026 | Université de Savoie / IUT Annecy",
-            "cv-exp1-desc": "Développement d'une application web Laravel au sein d'une équipe de 4 personnes. Conception de modèles de données et de diagrammes BPMN, implémentation de modules de cryptographie et de communication, et création de tableaux de bord Power BI en utilisant Scrum.",
-            "cv-exp2-title": "Agent de Péage (Contrat Saisonnier)",
-            "cv-exp2-meta": "Juillet - Août 2025 | SFTRF - Modane, France",
-            "cv-exp2-desc": "Traitement des paiements et assistance aux clients en français et en anglais, garantissant la précision et la fluidité du trafic.",
-            "cv-exp3-title": "Projets Académiques (SAÉ)",
-            "cv-exp3-meta": "Octobre 2024 - Janvier 2025 | Université Savoie Mont Blanc / IUT Annecy",
-            "cv-exp3-desc": "Conception d'un tableau de bord Power BI à partir d'une base PostgreSQL ; nettoyage, intégration et modélisation des données.",
-            "cv-skills-tech-title": "Compétences Techniques",
-            "cv-skillcat-languages": "Langages",
-            "cv-skillcat-web": "Développement Web",
-            "cv-skillcat-data": "Données & BI",
-            "cv-skill-csharp": "C#",
-            "cv-skill-python": "Python",
-            "cv-skill-sql": "SQL (PostgreSQL)",
-            "cv-skill-html": "HTML",
-            "cv-skill-css": "CSS",
-            "cv-skill-js": "JavaScript",
-            "cv-skill-php": "PHP",
-            "cv-skill-powerbi": "Power BI",
-            "cv-skill-powerplatform": "Power Platform",
-            "cv-skill-excel": "Excel/VBA",
-            "cv-skill-agile": "Méthode Agile (Scrum)",
-            "cv-skill-gantt": "Gantt",
-            "cv-skills-soft-title": "Compétences Personnelles",
-            "cv-skill-soft1": "Bonne gestion du temps et ponctualité.",
-            "cv-skill-soft2": "Autonome et capable de prendre des initiatives.",
-            "cv-skill-soft3": "Adaptable et autosuffisant.",
-            "cv-skill-soft4": "Aime apprendre de nouvelles choses.",
+
+            "hero-role": "Data Analyst en alternance chez Carrier",
+            "hero-lead": "Étudiant en 3e année de BUT Informatique à l'Université Savoie Mont Blanc, à Annecy. J'exploite et valorise les données pour optimiser les processus et appuyer la prise de décision en milieu industriel.",
+            "btn-projects": "Voir mes projets",
+            "btn-cv": "Télécharger mon CV",
+            "cv-headline": "Data Analyst chez Carrier | Étudiant en 3e année de BUT Informatique à l'USMB",
+            "cv-btn-linkedin": "Voir mon profil LinkedIn",
+            "cv-about-title": "À propos",
+            "cv-about-text": "Étudiant en 3e année de BUT Informatique à l'USMB et en alternance comme Data Analyst chez Carrier. J'exploite et valorise les données pour optimiser les processus et appuyer la prise de décision en milieu industriel. J'aimerais poursuivre en master Big Data & IA en alternance, pour évoluer vers le data engineering.",
+            "cv-exp-title": "Expérience",
+            "cv-exp1-title": "Data Analyst",
+            "cv-exp1-type": "Alternance",
+            "cv-exp1-dates": "sept. 2026 – aujourd'hui",
+            "cv-exp1-place": "Culoz-Béon, Auvergne-Rhône-Alpes · Sur site",
+            "cv-exp1-desc": "Exploitation et valorisation des données pour optimiser les processus et appuyer la prise de décision en milieu industriel.",
+            "cv-exp2-duration": "6 mois",
+            "cv-exp2-place": "Annecy, Auvergne-Rhône-Alpes · Sur site",
+            "cv-exp2a-title": "Assistant marketing Web",
+            "cv-exp2a-type": "CDD",
+            "cv-exp2a-dates": "juil. 2026 – sept. 2026 · 3 mois",
+            "cv-exp2b-title": "Stagiaire en développement Web",
+            "cv-exp2b-type": "Stage",
+            "cv-exp2b-dates": "avr. 2026 – juin 2026 · 3 mois",
+            "cv-exp2b-desc": "Refonte complète du site de l'entreprise, développement d'une application web sécurisée sur borne tactile avec base de données pour la Sibra, et automatisation du titrage en direct (Python, API Confero, pilotage PowerPoint) lors des conseils municipaux.",
+            "cv-exp3-title": "Receveur cabine péage",
+            "cv-exp3-type": "Intérimaire",
+            "cv-exp3-dates": "juil. 2025 – août 2025 · 2 mois",
+            "cv-exp3-place": "Modane, Auvergne-Rhône-Alpes · Sur site",
+            "cv-exp3-desc": "Traitement des paiements et assistance aux clients en français et en anglais, garantissant la précision et la fluidité du trafic.",
             "cv-edu-title": "Formation",
-            "cv-edu1-title": "BUT Informatique",
-            "cv-edu1-meta": "2024 - Aujourd'hui | Université de Savoie / IUT Annecy, France",
-            "cv-edu1-desc": "Bachelor Universitaire de Technologie en informatique.",
-            "cv-edu2-title": "Baccalauréat STI2D - SIN",
-            "cv-edu2-meta": "Obtenu en 2024 | Lycée Paul Héroult, France",
-            "cv-edu2-desc": "Baccalauréat français spécialisé en Sciences et Technologies Industrielles (STI2D - Systèmes d'Information et Numérique).",
+            "cv-edu1-degree": "BUT Informatique, parcours AGED – Administration, gestion et exploitation des données",
+            "cv-edu1-dates": "sept. 2024 – juil. 2027",
+            "cv-edu2-degree": "Baccalauréat STI2D (sciences et technologies de l'industrie et du développement durable), spécialité SIN – Systèmes d'information et numérique",
+            "cv-edu2-dates": "sept. 2022 – juil. 2024",
+            "cv-skills-title": "Compétences",
+            "cv-skills-top": "Principales",
+            "cv-skills-other": "Autres",
+            "cv-skill-analysis": "Analyse de données",
+            "cv-skill-dbadmin": "Administration de bases de données",
+            "cv-skill-dataviz": "Visualisation de données",
+            "cv-skill-stats": "Statistiques",
+            "cv-skill-webdev": "Développement web",
             "cv-lang-title": "Langues",
-            "cv-misc-lang": "Français (Natif), Anglais (Élémentaire, B1), Italien (Intermédiaire, B1)",
-            "cv-misc-title": "Divers (Centres d'intérêt)",
-            "cv-misc-hobby1": "<strong>Musculation :</strong>",
-            "cv-misc-hobby2": "<strong>Sports mécaniques :</strong> Passion pour le rallye et la Formule 1",
-            "cv-misc-hobby3": "<strong>Programmation :</strong> Développement de projets personnels (sites web, petits jeux) pour explorer de nouvelles idées, améliorer mes compétences et créer des expériences interactives.",
-            "cv-contact-title": "Contact & Données Personnelles",
-            "cv-contact-phone": "+33(0)620218977",
-            "cv-contact-email": "Enzo.Pages@etu.univ-smb.fr",
-            "cv-contact-address": "7 Rue de la Louvatière, 74960 Cran-Gevrier",
-            "cv-contact-dob": "Date de naissance : 24 Sept. 2006",
-            "cv-contact-nationality": "Nationalité : Française",
-            "cv-contact-license": "Permis : Permis de conduire",
-            "cv-contact-linkedin": "linkedin.com/in/enzopages-06e",
-            "cv-ref-title": "Références",
-            "cv-ref1-name": "Luc DAMAS",
-            "cv-ref1-meta": "Professeur Associé de Programmation | luc.damas@etu.univ-smb.fr",
-            "cv-ref2-name": "Stéphanie VIBRAC",
-            "cv-ref2-meta": "Maître de conférences en anglais, Coordinatrice internationale | stephanie.vibrac@etu.univ-smb.fr"
+            "cv-lang-fr": "Français",
+            "cv-lang-fr-level": "Bilingue ou langue natale",
+            "cv-lang-en": "Anglais",
+            "cv-lang-en-level": "Capacité professionnelle fonctionnelle",
+            "cv-lang-it": "Italien",
+            "cv-lang-it-level": "Capacité professionnelle limitée",
+            "cv-contact-title": "Contact",
+            "cv-contact-email-label": "E-mail",
+            "cv-contact-location-label": "Localisation",
+            "dur-month": "mois",
+            "dur-months": "mois",
+            "dur-year": "an",
+            "dur-years": "ans"
         },
         en: {
             "nav-brand": "Portfolio",
             "nav-home": "HOME",
             "nav-projects": "PROJECTS",
             "nav-cv": "ABOUT ME",
-            "nav-contact": "CONTACT",
             "footer-tagline": "Computer Science student · Data & Development.",
             "footer-rights": "All rights reserved.",
             "btn-back-projects": "← Back to Projects",
@@ -240,12 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
             "play-title": "Play",
             "download-title": "Download",
             "source-title": "Source Code",
-            "pre-title": "HELLO,",
-            "welcome-title-1": "I'm ",
-            "welcome-title-name": "Enzo",
-            "welcome-title-2": " Pagès",
-            "welcome-subtitle": "Second-year student in a Bachelor of Technology (BUT) in Computer Science, specializing in Data Administration, Management, and Processing, in Annecy.",
-            "btn-cv": "CHECK MY CV",
             "footer-linkedin": "LinkedIn",
             "project-header-title": "My Projects",
             "project-header-subtitle": "EXPLORE MY WORK",
@@ -363,80 +331,62 @@ document.addEventListener('DOMContentLoaded', () => {
             "p3-list3": "Production and machine control.",
             "p3-list4": "Loss analysis and cost optimization.",
             
-            "contact-header-title": "Contact Me",
-            "contact-header-subtitle": "GET IN TOUCH",
-            "contact-form-name": "Your Name",
-            "contact-form-email": "Your Email",
-            "contact-form-subject": "Subject",
-            "contact-form-message": "Your Message...",
-            "contact-form-submit": "Send Message",
-            "contact-form-success": "Thank you! Your message has been sent.",
-            "contact-form-error": "Oops! There was a problem.",
-            "contact-form-error-network": "Oops! Network connection error.",
-            "cv-header-title": "Enzo Pagès",
-            "cv-header-subtitle": "IT STUDENT",
-            "cv-objective-title": "Job Objective",
-            "cv-objective-text": "Second-year Computer Science student at the University of Annecy, specializing in data management. Seeking an internship to apply my skills in software development and data analysis to innovative projects.",
-            "cv-exp-title": "Work Experiences",
-            "cv-exp0-title": "Dev & Data Intern",
-            "cv-exp0-meta": "April 2026 - Present | Artcast Technologies, Annecy",
-            "cv-exp0-desc": "Complete redesign of the company website, development of a secure touchscreen kiosk web application with a database for Sibra, and real-time automatic captioning (Python, Confero REST API, PowerPoint automation) during city council meetings.",
-            "cv-exp1-title": "Team Project - Web Application & Database Management",
-            "cv-exp1-meta": "October 2025 - January 2026 | University of Savoy / IUT Annecy - Annecy-le-Vieux, France",
-            "cv-exp1-desc": "Developed a Laravel web app in a 4-person team. Designed data models and BPMN diagrams, implemented cryptography and communication modules, and created Power BI dashboards using Scrum.",
-            "cv-exp2-title": "Toll Booth Operator (Temp Contract)",
-            "cv-exp2-meta": "July - August 2025 | SFTRF - Société Française du Tunnel Routier du Fréjus - Modane, France",
-            "cv-exp2-desc": "Processed payments and assisted customers in French and English, ensuring accuracy and smooth traffic flow.",
-            "cv-exp3-title": "Academic Projects (SAÉ)",
-            "cv-exp3-meta": "October 2024 - January 2025 | Universite Savoie Mont Blanc / IUT Annecy",
-            "cv-exp3-desc": "Design of a Power BI dashboard from a PostgreSQL database; data cleaning, integration and modeling.",
-            "cv-skills-tech-title": "Technical Skills",
-            "cv-skillcat-languages": "Languages",
-            "cv-skillcat-web": "Web Development",
-            "cv-skillcat-data": "Data & BI",
-            "cv-skill-csharp": "C#",
-            "cv-skill-python": "Python",
-            "cv-skill-sql": "SQL (PostgreSQL)",
-            "cv-skill-html": "HTML",
-            "cv-skill-css": "CSS",
-            "cv-skill-js": "JavaScript",
-            "cv-skill-php": "PHP",
-            "cv-skill-powerbi": "Power BI",
-            "cv-skill-powerplatform": "Power Platform",
-            "cv-skill-excel": "Excel/VBA",
-            "cv-skill-agile": "Agile Method (Scrum)",
-            "cv-skill-gantt": "Gantt",
-            "cv-skills-soft-title": "Soft Skills",
-            "cv-skill-soft1": "I have good time management skills and am punctual.",
-            "cv-skill-soft2": "I am self-directed and able to take initiative.",
-            "cv-skill-soft3": "I am adaptable and self-sufficient.",
-            "cv-skill-soft4": "Love learning new things.",
+
+            "hero-role": "Data Analyst apprentice at Carrier",
+            "hero-lead": "Third-year Computer Science (BUT) student at Université Savoie Mont Blanc in Annecy. I turn data into insight to optimise processes and support decision-making in an industrial setting.",
+            "btn-projects": "See my projects",
+            "btn-cv": "Download my CV",
+            "cv-headline": "Data Analyst at Carrier | Third-year Computer Science (BUT) student at USMB",
+            "cv-btn-linkedin": "View my LinkedIn profile",
+            "cv-about-title": "About",
+            "cv-about-text": "Third-year Computer Science (BUT) student at Université Savoie Mont Blanc, working as a Data Analyst apprentice at Carrier. I use and add value to data to optimise processes and support decision-making in an industrial setting. Next, I'd like to do a work-study Master's in Big Data & AI and move towards data engineering.",
+            "cv-exp-title": "Experience",
+            "cv-exp1-title": "Data Analyst",
+            "cv-exp1-type": "Apprenticeship",
+            "cv-exp1-dates": "Sep 2026 – Present",
+            "cv-exp1-place": "Culoz-Béon, Auvergne-Rhône-Alpes · On-site",
+            "cv-exp1-desc": "Using and adding value to data to optimise processes and support decision-making in an industrial setting.",
+            "cv-exp2-duration": "6 mos",
+            "cv-exp2-place": "Annecy, Auvergne-Rhône-Alpes · On-site",
+            "cv-exp2a-title": "Web Marketing Assistant",
+            "cv-exp2a-type": "Fixed-term",
+            "cv-exp2a-dates": "Jul 2026 – Sep 2026 · 3 mos",
+            "cv-exp2b-title": "Web Development Intern",
+            "cv-exp2b-type": "Internship",
+            "cv-exp2b-dates": "Apr 2026 – Jun 2026 · 3 mos",
+            "cv-exp2b-desc": "Complete redesign of the company website, development of a secure touchscreen kiosk web application with a database for Sibra, and real-time automatic captioning (Python, Confero REST API, PowerPoint automation) during city council meetings.",
+            "cv-exp3-title": "Toll Booth Operator",
+            "cv-exp3-type": "Temp",
+            "cv-exp3-dates": "Jul 2025 – Aug 2025 · 2 mos",
+            "cv-exp3-place": "Modane, Auvergne-Rhône-Alpes · On-site",
+            "cv-exp3-desc": "Processed payments and assisted customers in French and English, ensuring accuracy and smooth traffic flow.",
             "cv-edu-title": "Education",
-            "cv-edu1-title": "Technical Bachelor's Degree in computer science",
-            "cv-edu1-meta": "2024 - Today | University of Savoy / IUT Annecy, France",
-            "cv-edu1-desc": "University Bachelor of Technology in Computer Science.",
-            "cv-edu2-title": "French Baccalaureate",
-            "cv-edu2-meta": "2024 | Paul Héroult High School - Saint-Jean-de-Maurienne, France",
-            "cv-edu2-desc": "High School Diploma specialized in Science and Industrial Technologies (STI2D - Information and Digital Systems).",
+            "cv-edu1-degree": "BUT in Computer Science (Bachelor of Technology), AGED track – Data administration, management and exploitation",
+            "cv-edu1-dates": "Sep 2024 – Jul 2027",
+            "cv-edu2-degree": "French Baccalaureate STI2D (industrial science, technology and sustainable development), SIN specialty – Digital and information systems",
+            "cv-edu2-dates": "Sep 2022 – Jul 2024",
+            "cv-skills-title": "Skills",
+            "cv-skills-top": "Top skills",
+            "cv-skills-other": "Other skills",
+            "cv-skill-analysis": "Data analysis",
+            "cv-skill-dbadmin": "Database administration",
+            "cv-skill-dataviz": "Data visualisation",
+            "cv-skill-stats": "Statistics",
+            "cv-skill-webdev": "Web development",
             "cv-lang-title": "Languages",
-            "cv-misc-lang": "French (Native Speaker), English (Elementary, B1), Italian (Intermediate, B1)",
-            "cv-misc-title": "Miscellaneous (Hobbies)",
-            "cv-misc-hobby1": "<strong>Weight Training:</strong>",
-            "cv-misc-hobby2": "<strong>Motorsports:</strong> Passion for Rally and Formula 1",
-            "cv-misc-hobby3": "<strong>Programming:</strong> Developing personal projects (websites, small games) to explore new ideas, improve my skills, and create interactive experiences.",
-            "cv-contact-title": "Personal Data",
-            "cv-contact-phone": "+33(0)620218977",
-            "cv-contact-email": "Enzo.Pages@etu.univ-smb.fr",
-            "cv-contact-address": "7 Rue de la Louvatière, 74960 Cran-Gevrier",
-            "cv-contact-dob": "Date of Birth: Sept 24, 2006",
-            "cv-contact-nationality": "Nationality: French",
-            "cv-contact-license": "Car License",
-            "cv-contact-linkedin": "LinkedIn: linkedin.com/in/enzopages-06e",
-            "cv-ref-title": "References",
-            "cv-ref1-name": "Luc DAMAS",
-            "cv-ref1-meta": "Programming Associate Professor | luc.damas@etu.univ-smb.fr",
-            "cv-ref2-name": "Stéphanie VIBRAC",
-            "cv-ref2-meta": "English Lecturer, International Coordinator | stephanie.vibrac@etu.univ-smb.fr"
+            "cv-lang-fr": "French",
+            "cv-lang-fr-level": "Native or bilingual proficiency",
+            "cv-lang-en": "English",
+            "cv-lang-en-level": "Professional working proficiency",
+            "cv-lang-it": "Italian",
+            "cv-lang-it-level": "Limited working proficiency",
+            "cv-contact-title": "Contact",
+            "cv-contact-email-label": "Email",
+            "cv-contact-location-label": "Location",
+            "dur-month": "mo",
+            "dur-months": "mos",
+            "dur-year": "yr",
+            "dur-years": "yrs"
         }
     };
 
@@ -455,25 +405,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const cvButton = document.querySelector('a[data-key="btn-cv"]');
-        if (cvButton) {
-            console.log("Langue sélectionnée : " + lang);
-            if (lang === 'en') {
-                cvButton.setAttribute('href', 'Assets/Image/EnzoPagesEN_CV.pdf');
-            } else {
-                cvButton.setAttribute('href', 'Assets/Image/EnzoPagesFR_CV.pdf');
-            }
-            console.log("Le lien du CV pointe vers : " + cvButton.getAttribute('href'));
-        }
+        const cvFile = lang === 'en' ? 'Assets/Image/EnzoPagesEN_CV.pdf' : 'Assets/Image/EnzoPagesFR_CV.pdf';
+        document.querySelectorAll('a[data-key="btn-cv"]').forEach(link => link.setAttribute('href', cvFile));
 
         document.querySelectorAll('[data-key]').forEach(element => {
             const key = element.getAttribute('data-key');
             const translation = translations[lang] && translations[lang][key];
             if (translation) {
-                if (element.id === 'typing-text') {
-                    element.setAttribute('data-text', translation);
-                    element.innerHTML = '<span class="cursor"></span>';
-                } else if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && element.type !== 'submit' && element.type !== 'button') {
+                if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && element.type !== 'submit' && element.type !== 'button') {
                     element.placeholder = translation;
                 } else {
                     element.innerHTML = translation;
@@ -481,52 +420,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        localStorage.setItem('preferredLang', lang);
+        updateDurations(lang);
 
-        if (document.getElementById('typing-text')) {
-            typingEffect(document.getElementById('typing-text'));
-        }
-        
+        try { localStorage.setItem('preferredLang', lang); } catch (e) {}
+
         setTimeout(applyFilters, 50);
     }
 
-    function typingEffect(element) {
-        if (!element) return;
-        const text = element.getAttribute('data-text');
-        if (!text) return;
-
-        let i = 0;
-        element.innerHTML = '<span class="cursor"></span>';
-        element.classList.add('typing');
-        element.classList.remove('typing-done');
-
-        const cursor = element.querySelector('.cursor');
-
-        function type() {
-            if (i < text.length) {
-                const char = text.charAt(i);
-                const textNode = document.createTextNode(char);
-                element.insertBefore(textNode, cursor);
-                i++;
-
-                const elementRect = element.getBoundingClientRect();
-                const elementBottom = elementRect.bottom;
-                const windowHeight = window.innerHeight;
-
-                if (elementBottom > windowHeight - 100) {
-                    window.scrollBy({
-                        top: 2,
-                        behavior: 'auto'
-                    });
-                }
-
-                setTimeout(type, 20);
-            } else {
-                element.classList.remove('typing');
-                element.classList.add('typing-done');
-            }
-        }
-        type();
+    // Durée d'un poste en cours, comptée comme LinkedIn (mois de début inclus).
+    function updateDurations(lang) {
+        const t = translations[lang] || translations.fr;
+        const now = new Date();
+        document.querySelectorAll('[data-since]').forEach(el => {
+            const [y, m] = el.getAttribute('data-since').split('-').map(Number);
+            const total = (now.getFullYear() - y) * 12 + (now.getMonth() + 1 - m) + 1;
+            const years = Math.floor(total / 12);
+            const months = total % 12;
+            const parts = [];
+            if (years) parts.push(years + ' ' + (years > 1 ? t['dur-years'] : t['dur-year']));
+            if (months) parts.push(months + ' ' + (months > 1 ? t['dur-months'] : t['dur-month']));
+            el.textContent = parts.join(' ');
+        });
     }
 
     function applyFilters() {
@@ -636,50 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function setupFormSpreeAJAX() {
-        const form = document.getElementById('contact-form-element');
-        const status = document.getElementById('form-status');
-
-        if (!form || !status) {
-            return;
-        }
-
-        async function handleSubmit(event) {
-            event.preventDefault();
-
-            const data = new FormData(event.target);
-            const currentLang = localStorage.getItem('preferredLang') || 'en';
-
-            try {
-                const response = await fetch(event.target.action, {
-                    method: form.method,
-                    body: data,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    status.innerHTML = translations[currentLang]["contact-form-success"];
-                    status.className = 'form-status-message success';
-                    form.reset();
-                } else {
-                    status.innerHTML = translations[currentLang]["contact-form-error"];
-                    status.className = 'form-status-message error';
-                }
-            } catch (error) {
-                status.innerHTML = translations[currentLang]["contact-form-error-network"];
-                status.className = 'form-status-message error';
-            }
-            setTimeout(() => {
-                status.innerHTML = "";
-                status.className = 'form-status-message';
-            }, 5000);
-        }
-
-        form.addEventListener("submit", handleSubmit);
-    }
-
     function setupScrollAnimations() {
         const observerOptions = {
             root: null,
@@ -700,20 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.forEach(el => observer.observe(el));
     }
 
-
-    function setupSkillBars() {
-        const bars = document.querySelectorAll('.skill-bar-level');
-        if (!bars.length) return;
-        const obs = new IntersectionObserver((entries, o) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('filled');
-                    o.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.3 });
-        bars.forEach(b => obs.observe(b));
-    }
 
     function setupProjectCarousels() {
         const carousels = document.querySelectorAll('.project-carousel');
@@ -848,8 +704,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupLanguageSwitcher();
     setupScrollInteractions();
     setupProjectFilter();
-    setupFormSpreeAJAX();
     setupScrollAnimations();
     setupProjectCarousels();
-    setupSkillBars();
 });
