@@ -1147,8 +1147,8 @@ html.lang-ready .lang-switcher a.active {
 }
 
 .project-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 24px;
 }
 
@@ -1267,6 +1267,43 @@ html.lang-ready .lang-switcher a.active {
 .project-card .project-button:hover {
     background: var(--accent-gradient);
     color: var(--on-accent);
+}
+
+/* Grands écrans : chaque projet sur une ligne, image à gauche, texte à droite */
+@media (min-width: 1025px) {
+    .project-card {
+        flex-direction: row;
+    }
+
+    .project-card-media {
+        flex: 0 0 42%;
+        aspect-ratio: auto;
+        min-height: 260px;
+    }
+
+    .project-card-media img {
+        position: absolute;
+        inset: 0;
+        object-position: left top;
+    }
+
+    .project-card-body {
+        gap: 14px;
+        padding: 28px 32px;
+    }
+
+    .project-card-title {
+        font-size: 1.45rem;
+    }
+
+    .project-card-desc {
+        font-size: 1rem;
+        max-width: 62ch;
+    }
+
+    .project-card:hover {
+        transform: translateY(-4px);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
