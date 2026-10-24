@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
             "nav-brand": "Portfolio",
             "nav-home": "ACCUEIL",
             "nav-projects": "PROJETS",
-            "nav-cv": "A PROPOS DE MOI",
+            "nav-cv": "À PROPOS DE MOI",
             "footer-tagline": "Étudiant en BUT Informatique · Données & Développement.",
             "footer-rights": "Tous droits réservés.",
             "btn-back-projects": "← Retour aux projets",
@@ -493,6 +493,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('lang-ready');
     }
 
+    // Menu déroulant sur mobile (bouton à trois traits).
+    function setupMobileNav() {
+        const nav = document.querySelector('.navbar');
+        const toggle = nav && nav.querySelector('.nav-toggle');
+        if (!toggle) return;
+
+        const setOpen = (open) => {
+            nav.classList.toggle('menu-open', open);
+            toggle.setAttribute('aria-expanded', String(open));
+        };
+
+        toggle.addEventListener('click', () => setOpen(!nav.classList.contains('menu-open')));
+        nav.querySelectorAll('.nav-links a').forEach(link => link.addEventListener('click', () => setOpen(false)));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && nav.classList.contains('menu-open')) {
+                setOpen(false);
+                toggle.focus();
+            }
+        });
+        document.addEventListener('click', (e) => {
+            if (!nav.contains(e.target)) setOpen(false);
+        });
+        const desktop = window.matchMedia('(min-width: 761px)');
+        const onChange = (e) => { if (e.matches) setOpen(false); };
+        if (desktop.addEventListener) desktop.addEventListener('change', onChange);
+        else if (desktop.addListener) desktop.addListener(onChange);
+    }
+
     function setupScrollInteractions() {
         const progressBar = document.getElementById('progress-bar');
         const backToTopButton = document.getElementById('back-to-top');
@@ -702,6 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setupLanguageSwitcher();
+    setupMobileNav();
     setupScrollInteractions();
     setupProjectFilter();
     setupScrollAnimations();

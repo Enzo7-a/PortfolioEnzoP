@@ -9,7 +9,7 @@
 <body id="page-projets">
   <nav class="navbar">
     <div class="nav-left"><a href="../../index.html" class="nav-brand" data-key="nav-brand"></a></div>
-    <div class="nav-center">
+    <div class="nav-center" id="nav-menu">
       <ul class="nav-links">
         <li><a href="../../projets.html" class="active" data-key="nav-projects"></a></li>
         <li><a href="../../index.html" data-key="nav-home"></a></li>
@@ -21,6 +21,7 @@
         <li><a href="#" class="active" data-lang="en">EN</a></li>
         <li><a href="#" data-lang="fr">FR</a></li>
       </ul>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
   </nav>
 
@@ -30,14 +31,14 @@
         <div class="text-column">
           <div class="cv-content-wrapper"> 
             
-            <div style="margin-bottom: 20px;">
+            <div class="project-back">
                 <a href="../../projets.html" class="project-button" data-key="btn-back-projects"></a>
             </div>
 
             <header class="project-page-header">
                 <span class="project-category-badge" data-key="p1-badge"></span>
-                <h1 style="font-size: 2.5rem; margin: 10px 0;" data-key="p1-title"></h1>
-                <p style="color: #ccc;" data-key="p1-date"></p>
+                <h1 class="project-title" data-key="p1-title"></h1>
+                <p class="project-date" data-key="p1-date"></p>
             </header>
             <div class="project-carousel">
           <img src="../../Assets/Image/ImageLaravel1.png" alt="Laravel Main" class="carousel-img" loading="lazy">
