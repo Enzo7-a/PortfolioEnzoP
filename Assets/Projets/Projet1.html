@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <title>Club Med</title>
+  <script>
+    (function () {
+      var d = document.documentElement;
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var seen = false, skipAll = false;
+      try {
+        seen = sessionStorage.getItem('introSeen:' + location.pathname) === '1';
+        skipAll = sessionStorage.getItem('introSkipAll') === '1';
+      } catch (e) {}
+      if (reduce || ((seen || skipAll) && !d.hasAttribute('data-intro-always'))) return;
+      var raw = ['intro', 'raw-bg-img', 'raw-bg-blur', 'raw-glass', 'raw-content', 'raw-chrome',
+                 'raw-name-pos', 'raw-name-font', 'raw-name-size',
+                 'raw-title-pos', 'raw-title-font', 'raw-title-size'];
+      raw.forEach(function (c) { d.classList.add(c); });
+      setTimeout(function () {
+        if (!d.classList.contains('intro-running')) raw.forEach(function (c) { d.classList.remove(c); });
+      }, 3000);
+    })();
+  </script>
   <link rel="stylesheet" href="../../Assets/Css/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -95,5 +114,7 @@
   </main>
 
   <script src="../../Assets/Javascript/script.js"></script>
+
+  <script src="../../Assets/Javascript/intro.js"></script>
 </body>
 </html>

@@ -151,7 +151,6 @@ html.lang-ready .lang-switcher a.active {
     border-radius: 2px;
 }
 
-/* Bouton menu (visible seulement sur mobile) */
 .nav-toggle {
     display: none;
     position: relative;
@@ -257,7 +256,6 @@ html.lang-ready .lang-switcher a.active {
         gap: 0;
     }
 
-    /* Accueil en premier dans le menu mobile */
     .nav-links li:nth-child(2) { order: -1; }
 
     .nav-links a {
@@ -1269,7 +1267,6 @@ html.lang-ready .lang-switcher a.active {
     color: var(--on-accent);
 }
 
-/* Grands écrans : chaque projet sur une ligne, image à gauche, texte à droite */
 @media (min-width: 1025px) {
     .project-card {
         flex-direction: row;
@@ -1458,8 +1455,6 @@ html.lang-ready .lang-switcher a.active {
     .image-modal-nav.next { right: 10px; }
 }
 
-/* ---------- Page CV (alignée sur LinkedIn) ---------- */
-
 .cv-profile {
     padding-bottom: 2rem;
     margin-bottom: 2.5rem;
@@ -1519,7 +1514,6 @@ html.lang-ready .lang-switcher a.active {
     margin-bottom: 1.5rem;
 }
 
-/* Frise expérience / formation */
 .cv-timeline {
     position: relative;
     padding-left: 26px;
@@ -1598,7 +1592,6 @@ html.lang-ready .lang-switcher a.active {
     white-space: nowrap;
 }
 
-/* Postes successifs dans une même entreprise */
 .cv-roles {
     list-style: none;
     margin-top: 1rem;
@@ -1647,7 +1640,6 @@ html.lang-ready .lang-switcher a.active {
     margin-top: 0.5rem;
 }
 
-/* Compétences */
 .cv-skill-cat {
     font-size: 0.9rem;
     font-weight: 600;
@@ -1683,7 +1675,6 @@ html.lang-ready .lang-switcher a.active {
     border-color: rgba(227, 199, 159, 0.55);
 }
 
-/* Langues et contact */
 .cv-defs {
     display: grid;
     gap: 0.9rem;
@@ -1732,8 +1723,6 @@ html.lang-ready .lang-switcher a.active {
     .cv-content-wrapper { padding: 28px 20px; }
 }
 
-/* ---------- Mobile : pages Projets, détail projet et CV ---------- */
-
 @media (max-width: 700px) {
     .cv-wrapper {
         padding: 84px 12px 56px;
@@ -1757,7 +1746,6 @@ html.lang-ready .lang-switcher a.active {
         flex: 1 1 auto;
     }
 
-    /* Filtres : une seule ligne qui défile, fondu à droite pour signaler la suite */
     .project-filter-tags {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -1786,7 +1774,6 @@ html.lang-ready .lang-switcher a.active {
         padding: 18px;
     }
 
-    /* Page détail d'un projet */
     .project-page-header {
         padding-top: 0.5rem;
         margin-bottom: 2rem;
@@ -1835,7 +1822,6 @@ html.lang-ready .lang-switcher a.active {
     }
 }
 
-/* Écrans tactiles : pas d'effets de survol qui restent "collés" après un tap */
 @media (hover: none) {
     .project-card:hover {
         transform: none;
@@ -1858,11 +1844,361 @@ html.lang-ready .lang-switcher a.active {
     }
 }
 
-/* Très petits écrans : frise du CV moins indentée */
 @media (max-width: 420px) {
     .cv-timeline { padding-left: 20px; }
     .cv-item::before { left: -20px; }
     .cv-roles { padding-left: 16px; }
     .cv-role::before { left: -16px; }
     .cv-role:not(:last-child)::after { left: -13px; }
+}
+
+html.intro {
+    --raw-serif: "Times New Roman", Times, serif;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --snap: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.intro .hero,
+html.intro .navbar,
+html.intro .welcome-socials,
+html.intro .project-card,
+html.intro-done .hero,
+html.intro-done .navbar,
+html.intro-done .welcome-socials,
+html.intro-done .project-card {
+    animation: none;
+}
+
+html.intro .cv-content-wrapper,
+html.intro .cv-section,
+html.intro-done .cv-content-wrapper,
+html.intro-done .cv-section {
+    animation: none;
+    opacity: 1;
+}
+
+html.intro .overlay,
+html.intro .cv-wrapper::before {
+    transition: opacity 0.32s ease, filter 0.4s ease;
+}
+
+html.intro .overlay::after {
+    transition: opacity 0.4s ease;
+}
+
+html.intro .hero,
+html.intro .cv-content-wrapper {
+    transition: opacity 0.26s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+html.intro .hero-name,
+html.intro .cv-header h1,
+html.intro .project-title {
+    transition:
+        transform 0.42s var(--spring),
+        font-size 0.38s var(--spring),
+        line-height 0.38s var(--snap),
+        margin 0.38s var(--snap),
+        letter-spacing 0.3s ease;
+}
+
+html.intro .navbar {
+    transition: opacity 0.25s ease, transform 0.45s var(--spring);
+}
+
+html.intro .intro-anim {
+    transition: none !important;
+}
+
+html.intro .hero-name,
+html.intro .cv-header h1,
+html.intro .project-title {
+    width: fit-content;
+    max-width: 100%;
+}
+
+html.intro .project-title {
+    margin-inline: auto;
+}
+
+html.intro {
+    --raw-name-move: translate(min(34vw, 520px), -24vh) rotate(-4deg);
+    --raw-title-move: translate(min(24vw, 360px), 7vh) rotate(-3deg);
+}
+
+@media (max-width: 600px) {
+    html.intro {
+        --raw-name-move: translate(18vw, -9vh) rotate(-4deg);
+        --raw-title-move: translate(8vw, 5vh) rotate(-3deg);
+    }
+}
+
+html.raw-bg-img .overlay,
+html.raw-bg-img .cv-wrapper::before {
+    opacity: 0;
+}
+
+html.raw-bg-blur .overlay,
+html.raw-bg-blur .cv-wrapper::before {
+    filter: none;
+}
+
+html.raw-bg-blur .overlay::after {
+    opacity: 0;
+}
+
+html.raw-content .hero,
+html.raw-content .cv-content-wrapper {
+    opacity: 0;
+}
+
+html.raw-glass .cv-content-wrapper {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+html.raw-name-pos .hero-name { transform: var(--raw-name-move); }
+
+html.raw-name-font .hero-name {
+    font-family: var(--raw-serif);
+    letter-spacing: 0;
+}
+
+html.raw-name-size .hero-name {
+    font-size: 2.2rem;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+}
+
+html.raw-title-pos .cv-header h1,
+html.raw-title-pos .project-title { transform: var(--raw-title-move); }
+
+html.raw-title-font .cv-header h1,
+html.raw-title-font .project-title {
+    font-family: var(--raw-serif);
+    letter-spacing: 0;
+}
+
+html.raw-title-size .cv-header h1,
+html.raw-title-size .project-title {
+    font-size: 2rem;
+    line-height: 1.15;
+}
+
+html.intro .cv-timeline.intro-line::before {
+    transform: scaleY(var(--line, 1));
+    transform-origin: top;
+}
+
+html.intro .cv-item.intro-dot::before {
+    transform: scale(var(--dot, 1));
+}
+
+html.raw-chrome .navbar {
+    opacity: 0;
+    transform: translateY(-100%);
+    pointer-events: none;
+}
+
+.intro-selected {
+    outline: 2px solid #4c8dff;
+    outline-offset: 6px;
+}
+
+.intro-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3000;
+    width: 100%;
+    overflow: hidden;
+    overflow: clip;
+    pointer-events: none;
+}
+
+.intro-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3000;
+    width: 26px;
+    height: 26px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+    will-change: transform;
+}
+
+.intro-cursor.is-visible { opacity: 1; }
+
+.intro-cursor-icon,
+.intro-cursor svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.intro-cursor svg {
+    transform-origin: 3px 2px;
+    transition: transform 0.1s ease;
+}
+
+.intro-cursor.is-pressed svg { transform: scale(0.82); }
+
+.intro-cursor-label {
+    position: absolute;
+    top: 21px;
+    left: 15px;
+    padding: 3px 8px 4px;
+    border-radius: 3px 10px 10px 10px;
+    background: var(--c, #4c8dff);
+    color: var(--ink, #fff);
+    font: 600 11px/1.1 'Inter', sans-serif;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.intro-ripple {
+    position: absolute;
+    z-index: 2999;
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border: 2px solid var(--c, #4c8dff);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: intro-ripple 0.4s ease-out forwards;
+}
+
+@keyframes intro-ripple {
+    from { opacity: 0.9; transform: scale(0.3); }
+    to { opacity: 0; transform: scale(1.5); }
+}
+
+.intro-panel {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 2998;
+    width: 290px;
+    padding: 12px 14px;
+    font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #e8e6e1;
+    background: #171b20;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    transform-origin: top right;
+    transition: opacity 0.18s ease, transform 0.3s var(--spring);
+    pointer-events: none;
+}
+
+.intro-panel.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+.intro-panel-sel {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    color: #8fb4ff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.intro-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 -6px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.intro-row > span:first-child { color: #9aa3ad; }
+
+.intro-row > span:last-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.intro-row.is-changing { background-color: rgba(76, 141, 255, 0.24); }
+
+.intro-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.intro-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: currentColor;
+    animation: intro-blink 0.8s steps(1) infinite;
+}
+
+@keyframes intro-blink {
+    50% { opacity: 0; }
+}
+
+.intro-skip {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3001;
+    padding: 9px 16px;
+    font: 600 0.85rem/1 'Inter', sans-serif;
+    color: #ffffff;
+    background: rgba(23, 27, 32, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: opacity 0.25s ease;
+}
+
+.intro-skip:focus-visible {
+    outline: 2px solid #4c8dff;
+    outline-offset: 3px;
+}
+
+.intro-skip.is-hidden { opacity: 0; pointer-events: none; }
+
+html.intro-instant *,
+html.intro-instant *::before,
+html.intro-instant *::after {
+    transition: none !important;
+}
+
+@media (max-width: 600px) {
+    .intro-panel {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        font-size: 12px;
+    }
+
+    .intro-cursor-label {
+        padding: 2px 6px 3px;
+        font-size: 10px;
+    }
+
+    .intro-skip {
+        right: 16px;
+        bottom: 16px;
+    }
 }
