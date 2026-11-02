@@ -10,7 +10,7 @@
       var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       var seen = false, skipAll = false;
       try {
-        seen = sessionStorage.getItem('introSeen:' + location.pathname) === '1';
+        seen = sessionStorage.getItem('introSeen:' + location.pathname.replace(/(index)?\.html?$/i, '')) === '1';
         skipAll = sessionStorage.getItem('introSkipAll') === '1';
       } catch (e) {}
       if (reduce || ((seen || skipAll) && !d.hasAttribute('data-intro-always'))) return;

@@ -665,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function markSeen() {
-        try { sessionStorage.setItem('introSeen:' + location.pathname, '1'); } catch (e) {}
+        try { sessionStorage.setItem('introSeen:' + location.pathname.replace(/(index)?\.html?$/i, ''), '1'); } catch (e) {}
     }
 
     function finish(instant) {
