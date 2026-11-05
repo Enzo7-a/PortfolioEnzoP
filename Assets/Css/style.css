@@ -2202,3 +2202,163 @@ html.intro-instant *::after {
         bottom: 16px;
     }
 }
+
+.ascii-egg {
+    position: fixed;
+    left: 14px;
+    bottom: 14px;
+    z-index: 900;
+    width: 34px;
+    height: 34px;
+    padding: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--accent);
+    opacity: 0.32;
+    cursor: pointer;
+    transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.25s ease;
+}
+
+.ascii-egg svg { display: block; width: 100%; height: 100%; }
+
+.ascii-egg:hover,
+.ascii-egg:focus-visible {
+    opacity: 1;
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+html.raw-chrome .ascii-egg { opacity: 0; pointer-events: none; }
+
+html.ascii-open { overflow: hidden; }
+
+.ascii-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(3, 5, 8, 0.72);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.ascii-overlay.is-open { opacity: 1; }
+
+.ascii-window {
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: #05080b;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    transform: translateY(14px) scale(0.97);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ascii-overlay.is-open .ascii-window { transform: none; }
+
+.ascii-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.03);
+    font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    color: var(--text-color-secondary);
+}
+
+.ascii-dots { display: flex; gap: 6px; }
+.ascii-dots i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
+.ascii-dots i:nth-child(2) { background: #febc2e; }
+.ascii-dots i:nth-child(3) { background: #28c840; }
+
+.ascii-title {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: center;
+    opacity: 0.75;
+}
+
+.ascii-close {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.ascii-close:hover,
+.ascii-close:focus-visible { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+.ascii-body { padding: 14px 16px 12px; }
+
+.ascii-prompt,
+.ascii-caption {
+    margin: 0;
+    font: 500 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    color: var(--text-color-secondary);
+}
+
+.ascii-user { color: var(--accent); }
+
+.ascii-caret {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.05em;
+    margin-left: 2px;
+    vertical-align: -0.15em;
+    background: var(--accent);
+    animation: ascii-blink 1s steps(1) infinite;
+}
+
+.ascii-overlay.is-typed .ascii-caret { display: none; }
+
+@keyframes ascii-blink { 50% { opacity: 0; } }
+
+.ascii-art {
+    margin: 10px 0 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace;
+    font-weight: 700;
+    white-space: pre;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.ascii-caption {
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.ascii-overlay.is-done .ascii-caption { opacity: 0.6; }
+
+@media (max-width: 600px) {
+    .ascii-egg {
+        left: 10px;
+        bottom: 10px;
+        opacity: 0.6;
+        background: rgba(8, 12, 16, 0.6);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+    }
+    .ascii-overlay { padding: 10px; }
+    .ascii-body { padding: 12px 10px 10px; }
+    .ascii-prompt { font-size: 12px; }
+}
