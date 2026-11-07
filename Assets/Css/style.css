@@ -2362,3 +2362,238 @@ html.ascii-open { overflow: hidden; }
     .ascii-body { padding: 12px 10px 10px; }
     .ascii-prompt { font-size: 12px; }
 }
+
+.diorama-egg {
+    position: fixed;
+    left: 14px;
+    bottom: 52px;
+    z-index: 900;
+    width: 34px;
+    height: 34px;
+    padding: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--accent);
+    opacity: 0.32;
+    cursor: pointer;
+    transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.25s ease;
+}
+
+.diorama-egg svg { display: block; width: 100%; height: 100%; }
+
+.diorama-egg:hover,
+.diorama-egg:focus-visible {
+    opacity: 1;
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+html.raw-chrome .diorama-egg { opacity: 0; pointer-events: none; }
+
+html.diorama-open { overflow: hidden; }
+
+.diorama-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(3, 5, 8, 0.72);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.diorama-overlay.is-open { opacity: 1; }
+
+.diorama-window {
+    position: relative;
+    width: min(1180px, 100%);
+    height: min(780px, 100%);
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    transform: translateY(14px) scale(0.97);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.diorama-overlay.is-open .diorama-window { transform: none; }
+
+.diorama-stage { position: absolute; inset: 0; }
+
+.diorama-sky {
+    position: absolute;
+    inset: 0;
+    transition: opacity 1.4s ease;
+}
+
+.diorama-sky--boat {
+    opacity: 0;
+    background:
+        radial-gradient(38% 26% at 74% 14%, rgba(150, 172, 196, 0.22), transparent),
+        radial-gradient(90% 60% at 50% 100%, rgba(30, 52, 60, 0.55), transparent),
+        linear-gradient(180deg, #0b1116 0%, #121b22 40%, #18242b 70%, #0a1014 100%);
+}
+
+.diorama-overlay[data-scene="boat"] .diorama-sky--boat { opacity: 1; }
+
+.diorama-sky--day {
+    opacity: 0;
+    background:
+        radial-gradient(55% 40% at 30% 18%, rgba(255, 246, 214, 0.9), transparent),
+        radial-gradient(120% 95% at 50% 32%, #f1f4e4 0%, #cfe2cd 52%, #9fc0a6 100%);
+}
+
+.diorama-overlay[data-scene="forest"] .diorama-sky--day { opacity: 1; }
+
+.diorama-canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.7s ease;
+}
+
+.diorama-canvas:active { cursor: grabbing; }
+
+.diorama-overlay.is-ready .diorama-canvas { opacity: 1; }
+
+.diorama-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 24px;
+    text-align: center;
+    font: 500 14px/1.4 'Inter', sans-serif;
+    color: #6b6458;
+    transition: opacity 0.4s ease;
+}
+
+.diorama-overlay.is-ready .diorama-loading { opacity: 0; }
+
+.diorama-btn {
+    position: absolute;
+    top: 14px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    color: #3b372f;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+}
+
+.diorama-btn:hover,
+.diorama-btn:focus-visible { transform: scale(1.06); background: #fff; }
+
+.diorama-btn svg { width: 20px; height: 20px; }
+
+.diorama-close { right: 14px; }
+
+/* Flèches pour passer d'un diorama à l'autre */
+.diorama-nav { top: 50%; margin-top: -20px; }
+.diorama-prev { left: 14px; }
+.diorama-next { right: 14px; }
+.diorama-nav svg { width: 22px; height: 22px; }
+
+.diorama-overlay.is-night .diorama-btn {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(22, 32, 52, 0.7);
+    color: #e2e9f6;
+}
+
+.diorama-caption {
+    position: absolute;
+    left: 22px;
+    bottom: 18px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    color: #2f4237;
+    pointer-events: none;
+    transition: color 1.4s ease;
+}
+
+.diorama-caption em { font: italic 400 19px/1.2 Georgia, 'Times New Roman', serif; }
+.diorama-caption span { font: 500 11px/1.3 'Inter', sans-serif; opacity: 0.65; }
+
+.diorama-overlay.is-night .diorama-caption { color: #d5dceb; }
+
+.diorama-count {
+    margin-right: 8px;
+    font: 600 11px/1 'Inter', sans-serif;
+    font-style: normal;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+    vertical-align: 2px;
+}
+
+/* Petite mention : ces dioramas ont été faits avec l'IA */
+.diorama-ai {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-width: 300px;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e9f6;
+    font: 500 11px/1.35 'Inter', sans-serif;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    transition: background-color 1s ease, color 1s ease;
+}
+
+.diorama-ai strong { font-size: 12px; font-weight: 700; }
+.diorama-ai span { opacity: 0.75; }
+
+.diorama-overlay:not(.is-night) .diorama-ai {
+    background: rgba(255, 255, 255, 0.55);
+    color: #2f4237;
+}
+
+@media (max-width: 600px) {
+    .diorama-egg {
+        left: 10px;
+        bottom: 50px;
+        opacity: 0.6;
+        background: rgba(8, 12, 16, 0.6);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+    }
+
+    .diorama-overlay { padding: 8px; }
+    .diorama-caption { left: 14px; bottom: 12px; }
+    .diorama-caption em { font-size: 16px; }
+    .diorama-ai { max-width: calc(100% - 80px); padding: 6px 10px; font-size: 10px; }
+    .diorama-ai strong { font-size: 11px; }
+    .diorama-nav { width: 34px; height: 34px; margin-top: -17px; }
+    .diorama-prev { left: 8px; }
+    .diorama-next { right: 8px; }
+}
