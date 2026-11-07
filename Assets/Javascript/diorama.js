@@ -1136,9 +1136,11 @@ void main() {
 
         // --- Caméra ---
         const target = V(0.25, 1.0, 0.1);
+        // Vue de départ : un peu en hauteur sur la clairière
+        const HOME_EL = 0.62;
         let az = -0.5;
-        let el = 0.34;
-        let zoom = 1;
+        let el = HOME_EL;
+        let zoom = 0.88;
         let fit = 26;
         let lastInput = -10;
         let touched = false;
@@ -1228,7 +1230,7 @@ void main() {
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(16.4 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
-            if (!touched && camera.aspect < 0.8) el = 0.6;
+            if (!touched) zoom = camera.aspect < 0.8 ? 1 : 0.88;
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
@@ -1263,7 +1265,13 @@ void main() {
             uniforms.uTime.value = t;
 
 
-            if (!still && clock - lastInput > 3 && !pointers.size) az += Math.cos(t * 0.16) * 0.016 * dt * 6;
+            // Au repos : tour complet et lent, en revenant doucement à la hauteur de départ
+            if (!still && !pointers.size) {
+                const idle = clamp((clock - lastInput - 3) / 2, 0, 1);
+                const ease = idle * idle * (3 - 2 * idle);
+                az += 0.06 * dt * ease;
+                el += (HOME_EL - el) * Math.min(1, dt * 0.8) * ease;
+            }
             const dist = fit * zoom;
             camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
             camera.lookAt(target);
@@ -2462,7 +2470,7 @@ void main() {
         const NEAR = V(B0.x, 0.1, B0.z);
         const target = FAR.clone();
         // Vue de départ : en hauteur, en plongée sur le bateau
-        const HOME_EL = 1.05;
+        const HOME_EL = 0.74;
         let az = -0.75;
         let el = HOME_EL;
         let zoom = 1;
