@@ -2388,16 +2388,23 @@ html.diorama-open { overflow: hidden; }
     vertical-align: 2px;
 }
 
-/* Petite mention : ces dioramas ont été faits avec l'IA */
-.diorama-ai {
+/* Colonne en haut à gauche : mention IA + mode révision */
+.diorama-side {
     position: absolute;
     top: 14px;
     left: 14px;
     z-index: 2;
     display: flex;
     flex-direction: column;
+    gap: 8px;
+    width: min(300px, calc(100% - 80px));
+}
+
+/* Mention : ces dioramas ont été faits avec l'IA */
+.diorama-ai {
+    display: flex;
+    flex-direction: column;
     gap: 3px;
-    max-width: 300px;
     margin: 0;
     padding: 8px 12px;
     border-radius: 12px;
@@ -2418,6 +2425,144 @@ html.diorama-open { overflow: hidden; }
     color: #2f4237;
 }
 
+/* Mode révision */
+.diorama-study {
+    --s-bg: rgba(22, 32, 52, 0.62);
+    --s-fg: #e2e9f6;
+    --s-line: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    border: 1px solid var(--s-line);
+    border-radius: 14px;
+    background: var(--s-bg);
+    color: var(--s-fg);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: background-color 1s ease, color 1s ease, border-color 1s ease;
+}
+
+.diorama-overlay:not(.is-night) .diorama-study {
+    --s-bg: rgba(255, 255, 255, 0.62);
+    --s-fg: #2f4237;
+    --s-line: rgba(0, 0, 0, 0.08);
+}
+
+.diorama-study-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+}
+
+.diorama-study-toggle:hover,
+.diorama-study-toggle:focus-visible { background: rgba(127, 127, 127, 0.12); }
+
+.diorama-study-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(127, 127, 127, 0.16);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.diorama-study-icon svg { width: 17px; height: 17px; }
+
+.diorama-overlay.is-study .diorama-study-icon {
+    background: var(--accent);
+    color: #fff;
+}
+
+.diorama-study-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.diorama-study-text b { font: 700 12px/1.2 'Inter', sans-serif; }
+.diorama-study-text small { font: 500 10.5px/1.3 'Inter', sans-serif; opacity: 0.7; }
+
+.diorama-player {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 12px;
+    border-top: 1px solid var(--s-line);
+}
+
+.diorama-overlay.is-study .diorama-player { display: flex; }
+
+.diorama-track {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font: 500 11px/1.3 'Inter', sans-serif;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.diorama-mini {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.diorama-overlay:not(.has-player) .diorama-mini { display: none; }
+
+.diorama-mini:hover,
+.diorama-mini:focus-visible { background: rgba(127, 127, 127, 0.18); }
+.diorama-mini svg { width: 14px; height: 14px; }
+
+/* Petit égaliseur qui bouge pendant la musique */
+.diorama-eq { display: flex; align-items: flex-end; gap: 2px; flex: none; height: 12px; }
+.diorama-eq i { width: 3px; height: 30%; border-radius: 1px; background: var(--accent); }
+.diorama-overlay.is-playing .diorama-eq i { animation: diorama-eq 0.9s ease-in-out infinite alternate; }
+.diorama-eq i:nth-child(2) { animation-delay: -0.3s !important; }
+.diorama-eq i:nth-child(3) { animation-delay: -0.6s !important; }
+
+@keyframes diorama-eq {
+    from { height: 25%; }
+    to { height: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diorama-overlay.is-playing .diorama-eq i { animation: none; height: 70%; }
+}
+
+/* Lecteur YouTube caché : seul le son compte */
+.diorama-yt {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* En révision, le reste de l'interface se fait discret */
+.diorama-nav,
+.diorama-caption { transition: opacity 0.6s ease; }
+.diorama-ai { transition: background-color 1s ease, color 1s ease, opacity 0.6s ease; }
+
+.diorama-overlay.is-study .diorama-nav,
+.diorama-overlay.is-study .diorama-caption span { opacity: 0.25; }
+.diorama-overlay.is-study .diorama-ai { opacity: 0.45; }
+
+.diorama-overlay.is-study .diorama-nav:hover,
+.diorama-overlay.is-study .diorama-nav:focus-visible { opacity: 1; }
+
 @media (max-width: 600px) {
     .diorama-egg {
         left: 10px;
@@ -2431,7 +2576,9 @@ html.diorama-open { overflow: hidden; }
     .diorama-overlay { padding: 8px; }
     .diorama-caption { left: 14px; bottom: 12px; }
     .diorama-caption em { font-size: 16px; }
-    .diorama-ai { max-width: calc(100% - 80px); padding: 6px 10px; font-size: 10px; }
+    .diorama-side { top: 10px; left: 10px; width: calc(100% - 70px); gap: 6px; }
+    .diorama-ai { padding: 6px 10px; font-size: 10px; }
+    .diorama-study-toggle { padding: 7px 10px; }
     .diorama-ai strong { font-size: 11px; }
     .diorama-nav { width: 34px; height: 34px; margin-top: -17px; }
     .diorama-prev { left: 8px; }
