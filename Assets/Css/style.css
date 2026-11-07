@@ -2412,7 +2412,6 @@ html.diorama-open { overflow: hidden; }
     display: flex;
     flex-direction: column-reverse;
     align-items: flex-end;
-    max-width: min(320px, calc(100% - 28px));
     border: 1px solid var(--a-line);
     border-radius: 18px;
     background: var(--a-bg);
@@ -2458,17 +2457,24 @@ html.diorama-open { overflow: hidden; }
 .diorama-ai-icon { transition: transform 0.3s ease; }
 
 .diorama-ai-more {
+    --w: min(290px, calc(100vw - 72px));
+    width: 0;
     max-height: 0;
     overflow: hidden;
-    padding: 0 14px;
     opacity: 0;
-    transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.3s ease;
+    transition: width 0.4s ease, max-height 0.4s ease, opacity 0.25s ease;
 }
 
+/* Le texte garde sa largeur pendant l'animation : pas de retour à la ligne qui saute */
+.diorama-ai-more > * { width: var(--w); padding: 0 14px; box-sizing: border-box; }
+.diorama-ai-more strong { padding-top: 12px; }
+.diorama-ai-more p { padding-bottom: 2px; }
+
 .diorama-overlay.is-ai-open .diorama-ai-more {
-    max-height: 200px;
-    padding: 12px 14px 2px;
+    width: var(--w);
+    max-height: 220px;
     opacity: 1;
+    transition: width 0.4s ease, max-height 0.4s ease, opacity 0.3s ease 0.1s;
 }
 
 .diorama-ai-more strong { display: block; font: 700 12.5px/1.3 'Inter', sans-serif; }
@@ -2545,13 +2551,23 @@ html.diorama-open { overflow: hidden; }
 .diorama-overlay.is-study .diorama-player { display: flex; }
 
 .diorama-track {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
     flex: 1;
     min-width: 0;
+}
+
+.diorama-track b,
+.diorama-track small {
     overflow: hidden;
-    font: 500 11px/1.3 'Inter', sans-serif;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
+
+.diorama-track b { font: 600 11.5px/1.3 'Inter', sans-serif; }
+.diorama-track small { font: 500 10.5px/1.3 'Inter', sans-serif; opacity: 0.65; }
+.diorama-track small:empty { display: none; }
 
 .diorama-mini {
     display: grid;

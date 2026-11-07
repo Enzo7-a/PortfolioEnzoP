@@ -118,7 +118,7 @@
                         </button>
                         <div class="diorama-player">
                             <span class="diorama-eq" aria-hidden="true"><i></i><i></i><i></i></span>
-                            <span class="diorama-track" aria-live="polite"></span>
+                            <span class="diorama-track" aria-live="polite"><b></b><small></small></span>
                             <button type="button" class="diorama-mini diorama-pp" aria-label="${t.studyPause}">${ICON_PAUSE}</button>
                             <button type="button" class="diorama-mini diorama-skip" aria-label="${t.studyNext}">${ICON_NEXT}</button>
                         </div>
@@ -260,7 +260,13 @@
     function studyMode(o, t) {
         const btn = o.querySelector('.diorama-study-toggle');
         const small = btn.querySelector('small');
-        const track = o.querySelector('.diorama-track');
+        const trackEl = o.querySelector('.diorama-track');
+        const trackTitle = trackEl.querySelector('b');
+        const trackAuthor = trackEl.querySelector('small');
+        // Affiche un message, ou le titre + l'artiste du morceau
+        const track = {
+            set textContent(msg) { trackTitle.textContent = msg; trackAuthor.textContent = ''; },
+        };
         const pp = o.querySelector('.diorama-pp');
         const host = o.querySelector('.diorama-yt');
         let player = null;
@@ -275,7 +281,10 @@
         };
         const title = () => {
             const d = player && player.getVideoData && player.getVideoData();
-            if (d && d.title) track.textContent = d.title;
+            if (!d || !d.title) return;
+            trackTitle.textContent = d.title;
+            trackAuthor.textContent = (d.author || '').replace(/ - Topic$/, '');
+            trackEl.title = d.author ? `${d.title} — ${trackAuthor.textContent}` : d.title;
         };
         // Choisit un morceau au hasard dans la playlist (sauf celui en cours)
         const random = () => {
