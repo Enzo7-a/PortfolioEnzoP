@@ -2400,30 +2400,79 @@ html.diorama-open { overflow: hidden; }
     width: min(300px, calc(100% - 80px));
 }
 
-/* Mention : ces dioramas ont été faits avec l'IA */
+/* Mention IA : petite pastille en bas à droite, qui s'agrandit au clic */
 .diorama-ai {
+    --a-bg: rgba(22, 32, 52, 0.62);
+    --a-fg: #e2e9f6;
+    --a-line: rgba(255, 255, 255, 0.12);
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 2;
     display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin: 0;
-    padding: 8px 12px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #e2e9f6;
-    font: 500 11px/1.35 'Inter', sans-serif;
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
-    pointer-events: none;
-    transition: background-color 1s ease, color 1s ease;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    max-width: min(320px, calc(100% - 28px));
+    border: 1px solid var(--a-line);
+    border-radius: 18px;
+    background: var(--a-bg);
+    color: var(--a-fg);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: background-color 1s ease, color 1s ease, border-color 1s ease, opacity 0.6s ease;
 }
-
-.diorama-ai strong { font-size: 12px; font-weight: 700; }
-.diorama-ai span { opacity: 0.75; }
 
 .diorama-overlay:not(.is-night) .diorama-ai {
-    background: rgba(255, 255, 255, 0.55);
-    color: #2f4237;
+    --a-bg: rgba(255, 255, 255, 0.62);
+    --a-fg: #2f4237;
+    --a-line: rgba(0, 0, 0, 0.08);
 }
+
+.diorama-ai-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 8px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: inherit;
+    font: 600 11px/1 'Inter', sans-serif;
+    cursor: pointer;
+}
+
+.diorama-ai-icon {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+}
+
+.diorama-ai-icon svg { width: 13px; height: 13px; }
+
+.diorama-ai-toggle:hover .diorama-ai-icon,
+.diorama-ai-toggle:focus-visible .diorama-ai-icon { transform: rotate(20deg) scale(1.08); }
+.diorama-ai-icon { transition: transform 0.3s ease; }
+
+.diorama-ai-more {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 14px;
+    opacity: 0;
+    transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.3s ease;
+}
+
+.diorama-overlay.is-ai-open .diorama-ai-more {
+    max-height: 200px;
+    padding: 12px 14px 2px;
+    opacity: 1;
+}
+
+.diorama-ai-more strong { display: block; font: 700 12.5px/1.3 'Inter', sans-serif; }
+.diorama-ai-more p { margin: 4px 0 0; font: 500 11.5px/1.45 'Inter', sans-serif; opacity: 0.8; }
 
 /* Mode révision */
 .diorama-study {
@@ -2558,7 +2607,7 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay.is-study .diorama-nav,
 .diorama-overlay.is-study .diorama-caption span { opacity: 0.25; }
-.diorama-overlay.is-study .diorama-ai { opacity: 0.45; }
+.diorama-overlay.is-study:not(.is-ai-open) .diorama-ai { opacity: 0.6; }
 
 .diorama-overlay.is-study .diorama-nav:hover,
 .diorama-overlay.is-study .diorama-nav:focus-visible { opacity: 1; }
@@ -2574,12 +2623,12 @@ html.diorama-open { overflow: hidden; }
     }
 
     .diorama-overlay { padding: 8px; }
-    .diorama-caption { left: 14px; bottom: 12px; }
+    .diorama-caption { left: 14px; right: 120px; bottom: 12px; }
     .diorama-caption em { font-size: 16px; }
-    .diorama-side { top: 10px; left: 10px; width: calc(100% - 70px); gap: 6px; }
-    .diorama-ai { padding: 6px 10px; font-size: 10px; }
+    .diorama-side { top: 10px; left: 10px; width: calc(100% - 70px); }
+    .diorama-ai { right: 10px; bottom: 10px; }
+    .diorama-overlay.is-ai-open .diorama-caption { opacity: 0; }
     .diorama-study-toggle { padding: 7px 10px; }
-    .diorama-ai strong { font-size: 11px; }
     .diorama-nav { width: 34px; height: 34px; margin-top: -17px; }
     .diorama-prev { left: 8px; }
     .diorama-next { right: 8px; }
