@@ -41,7 +41,7 @@
         studyError: 'The music could not load.',
         studyMissing: 'Playlist not configured yet.',
         forestTitle: 'The living forest.',
-        forestHelp: touch() ? 'Drag to turn · pinch to zoom · tap the boars or the pond' : 'Drag to turn · scroll to zoom · click the boars or the pond',
+        forestHelp: touch() ? 'Drag to turn · pinch to zoom · tap the animals or the pond' : 'Drag to turn · scroll to zoom · click the animals or the pond',
         boatTitle: 'Lost at sea.',
         boatHelp: touch() ? 'Drag to turn · pinch to zoom · tap the boat, the water or the sky' : 'Drag to turn · scroll to zoom · click the boat, the water or the sky',
     } : {
@@ -66,7 +66,7 @@
         studyError: 'La musique n\'a pas pu se charger.',
         studyMissing: 'Playlist pas encore configurée.',
         forestTitle: 'La forêt vivante.',
-        forestHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche les sangliers ou l\'étang' : 'Glisse pour tourner · molette pour zoomer · clique sur les sangliers ou l\'étang',
+        forestHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche les animaux ou l\'étang' : 'Glisse pour tourner · molette pour zoomer · clique sur les animaux ou l\'étang',
         boatTitle: 'Perdu au large.',
         boatHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le bateau, l\'eau ou le ciel' : 'Glisse pour tourner · molette pour zoomer · clique sur le bateau, l\'eau ou le ciel',
     });
@@ -429,6 +429,17 @@
             }
             return d;
         };
+        // Le chemin des cerfs : une boucle dans le pré, devant, jusqu'au bord de l'étang
+        const deerTrail = new THREE.CatmullRomCurve3([
+            [-1.0, 4.2], [0.2, 4.5], [1.6, 4.35], [3.0, 4.45], [4.3, 4.0],
+            [4.4, 3.15], [3.3, 3.05], [2.0, 3.35], [0.6, 3.7], [-0.5, 3.75],
+        ].map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal');
+        const deerPts = deerTrail.getSpacedPoints(140);
+        const deerD = (x, z) => {
+            let d = Infinity;
+            for (const p of deerPts) d = Math.min(d, Math.hypot(x - p.x, z - p.z));
+            return d;
+        };
         const bumps = (x, z) => Math.sin(x * 1.3 + Math.sin(z * 0.7) * 2) * 0.5 + Math.sin(z * 1.1 - x * 0.4) * 0.35 + Math.sin((x + z) * 2.7) * 0.15;
         const mound = (x, z) => {
             let m = 0;
@@ -704,17 +715,19 @@
         const nearGiantTrunk = (x, z, pad) => GIANTS.some(g => Math.hypot(x - g.x, z - g.z) < g.r * 1.25 + pad);
         const inClearing = (x, z, pad = 0) => Math.hypot(x - CLEAR.x, z - CLEAR.z) < 1.95 + pad;
         const spots = [];
-        const want = phone ? 30 : 44;
-        for (let tries = 0; tries < 4000 && spots.length < want; tries++) {
-            const x = rr(-HALF + 0.4, HALF - 0.4);
-            const z = rr(-HALF + 0.4, HALF - 0.4);
-            if (pondD(x, z) < 0.55 || pathD(x, z) < 0.4 || inClearing(x, z) || nearGiantTrunk(x, z, 0.35)) continue;
-            const s = rr(0.85, 1.45);
-            if (spots.some(p => Math.hypot(p.x - x, p.z - z) < 0.48 * (p.s + s))) continue;
-            spots.push({ x, z, s, y: height(x, z) - 0.03, kind: rand() < 0.62 ? 'pine' : 'round', phase: rr(0, 6.28), yaw: rr(0, 6.28) });
+        const want = phone ? 46 : 72;
+        for (let tries = 0; tries < 6000 && spots.length < want; tries++) {
+            const x = rr(-HALF + 0.35, HALF - 0.35);
+            const z = rr(-HALF + 0.35, HALF - 0.35);
+            if (pondD(x, z) < 0.5 || pathD(x, z) < 0.38 || inClearing(x, z) || nearGiantTrunk(x, z, 0.3) || deerD(x, z) < 0.55) continue;
+            const s = rr(0.75, 1.45);
+            if (spots.some(p => Math.hypot(p.x - x, p.z - z) < 0.42 * (p.s + s))) continue;
+            const k = rand();
+            spots.push({ x, z, s, y: height(x, z) - 0.03, kind: k < 0.5 ? 'pine' : k < 0.8 ? 'round' : 'birch', phase: rr(0, 6.28), yaw: rr(0, 6.28) });
         }
         const pines = spots.filter(p => p.kind === 'pine');
         const rounds = spots.filter(p => p.kind === 'round');
+        const birches = spots.filter(p => p.kind === 'birch');
         const parts = [{ mesh: crownMesh, list: crowns, sway: 0.4 }];
         const part = (geo, mat, list, tint) => {
             const m = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));
@@ -740,12 +753,40 @@
         part(at(new THREE.CylinderGeometry(0.05, 0.08, 0.6, 5), 0.3), woodMat, rounds, () => color(0x6a4630));
         part(at(new THREE.IcosahedronGeometry(0.42, 0), 0.88), leafMat, rounds, (p) => roundColor(p).clone());
         part(at(new THREE.IcosahedronGeometry(0.28, 0), 1.12, 0.17, 0.06), leafMat, rounds, (p) => roundColor(p).clone().offsetHSL(0, 0.02, 0.05));
+        // Bouleaux : tronc blanc fin, feuillage clair en petites boules
+        const BIRCH = [0x8fbf55, 0xa3c95e, 0x7fb04c].map(color);
+        const birchColor = (p) => p.c || (p.c = BIRCH[Math.floor(hash(p.x, p.z) * BIRCH.length)]);
+        part(at(new THREE.CylinderGeometry(0.035, 0.05, 1.1, 6), 0.55), woodMat, birches, () => color(0xe9e4d8));
+        part(at(new THREE.CylinderGeometry(0.052, 0.052, 0.04, 6), 0.32), woodMat, birches, () => color(0x2f2b28));
+        part(at(new THREE.CylinderGeometry(0.044, 0.044, 0.03, 6), 0.71), woodMat, birches, () => color(0x2f2b28));
+        part(at(new THREE.IcosahedronGeometry(0.27, 0), 1.12, 0.05, 0), leafMat, birches, (p) => birchColor(p).clone());
+        part(at(new THREE.IcosahedronGeometry(0.2, 0), 1.36, -0.08, 0.06), leafMat, birches, (p) => birchColor(p).clone().offsetHSL(0, 0, 0.05));
+        part(at(new THREE.IcosahedronGeometry(0.18, 0), 0.96, -0.14, -0.1), leafMat, birches, (p) => birchColor(p).clone().offsetHSL(0, 0, -0.03));
+
+        // Buissons (certains avec des baies) qui comblent le sous-bois
+        const bushes = [];
+        for (let tries = 0; tries < 5000 && bushes.length < (phone ? 40 : 70); tries++) {
+            const x = rr(-HALF + 0.2, HALF - 0.2);
+            const z = rr(-HALF + 0.2, HALF - 0.2);
+            if (pondD(x, z) < 0.3 || pathD(x, z) < 0.3 || inClearing(x, z, -0.25) || nearGiantTrunk(x, z, 0.05) || deerD(x, z) < 0.4) continue;
+            if (spots.some(p => Math.hypot(p.x - x, p.z - z) < 0.22 * p.s) || bushes.some(b => Math.hypot(b.x - x, b.z - z) < 0.3)) continue;
+            bushes.push({ x, z, y: height(x, z) - 0.02, s: rr(0.7, 1.25), yaw: rr(0, 6.28), phase: rr(0, 6.28), berry: rand() < 0.3 });
+        }
+        const BUSH = [0x4a8a3c, 0x568f40, 0x3f7a36, 0x63a24a].map(color);
+        const bushColor = (p) => p.c || (p.c = BUSH[Math.floor(hash(p.x * 1.7, p.z) * BUSH.length)]);
+        part(at(new THREE.IcosahedronGeometry(0.2, 0).scale(1.15, 0.8, 1.05), 0.12), leafMat, bushes, (p) => bushColor(p).clone());
+        part(at(new THREE.IcosahedronGeometry(0.14, 0), 0.2, 0.13, 0.05), leafMat, bushes, (p) => bushColor(p).clone().offsetHSL(0, 0, 0.05));
+        part(at(new THREE.IcosahedronGeometry(0.12, 0), 0.1, -0.15, -0.06), leafMat, bushes, (p) => bushColor(p).clone().offsetHSL(0, 0, -0.03));
+        const berryBushes = bushes.filter(b => b.berry);
+        const berryGeo = mergeLeaf([[0.12, 0.2, 0.14], [-0.14, 0.17, 0.1], [0.04, 0.27, -0.12], [0.2, 0.12, -0.05], [-0.06, 0.24, 0.16], [-0.18, 0.1, -0.1]]
+            .map(([x, y, z]) => new THREE.IcosahedronGeometry(0.025, 0).translate(x, y, z)));
+        part(berryGeo, flat(WHITE, { roughness: 0.4 }), berryBushes, (p) => color(hash(p.z, p.x) < 0.6 ? 0xc8323a : 0x3b3a7a));
 
         const ferns = [];
-        for (let tries = 0; tries < 3000 && ferns.length < (phone ? 70 : 130); tries++) {
+        for (let tries = 0; tries < 5000 && ferns.length < (phone ? 120 : 220); tries++) {
             const x = rr(-HALF + 0.15, HALF - 0.15);
             const z = rr(-HALF + 0.15, HALF - 0.15);
-            if (pondD(x, z) < 0.25 || pathD(x, z) < 0.25 || inClearing(x, z, -0.35) || nearGiantTrunk(x, z, 0)) continue;
+            if (pondD(x, z) < 0.25 || pathD(x, z) < 0.25 || inClearing(x, z, -0.35) || nearGiantTrunk(x, z, 0) || deerD(x, z) < 0.2) continue;
             ferns.push({ x, z, y: height(x, z), s: rr(0.7, 1.35), yaw: rr(0, 6.28), phase: rr(0, 6.28) });
         }
         const fernMesh = new THREE.InstancedMesh(fernGeometry(), flat(WHITE, { side: THREE.DoubleSide }), ferns.length);
@@ -806,6 +847,33 @@
         // Petits champignons au pied des arbres
         instanced(new THREE.CylinderGeometry(0.015, 0.02, 0.08, 5).translate(0, 0.04, 0), flat(0xefe8da), shrooms, null, false);
         instanced(new THREE.SphereGeometry(0.05, 7, 3, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.08, 0), flat(WHITE), shrooms, (p) => color(hash(p.x, p.z) < 0.5 ? 0xc0442f : 0xb98a52), false);
+
+        // Touffes d'herbe partout sur la terre ferme
+        const tufts = [];
+        for (let tries = 0; tries < 6000 && tufts.length < (phone ? 180 : 340); tries++) {
+            const x = rr(-HALF + 0.08, HALF - 0.08);
+            const z = rr(-HALF + 0.08, HALF - 0.08);
+            if (pondD(x, z) < 0.12 || pathD(x, z) < 0.12 || nearGiantTrunk(x, z, -0.1)) continue;
+            tufts.push({ x, z, y: height(x, z) - 0.01, s: rr(0.6, 1.3), yaw: rr(0, 6.28), phase: rr(0, 6.28) });
+        }
+        const tuftMesh = new THREE.InstancedMesh(tuftGeometry(), flat(WHITE, { side: THREE.DoubleSide }), Math.max(1, tufts.length));
+        const GRASS = [0x6fa64c, 0x7fb556, 0x5e9443, 0x8cbd5a].map(color);
+        tufts.forEach((p, i) => tuftMesh.setColorAt(i, GRASS[Math.floor(hash(p.x * 2.3, p.z * 1.1) * GRASS.length)]));
+        tuftMesh.receiveShadow = true;
+        scene.add(tuftMesh);
+
+        // Quelques souches moussues
+        const stumps = [];
+        for (let tries = 0; tries < 600 && stumps.length < 4; tries++) {
+            const x = rr(-4.5, 4.5);
+            const z = rr(-4.5, 4.5);
+            if (pondD(x, z) < 0.5 || pathD(x, z) < 0.35 || inClearing(x, z, 0.1) || nearGiantTrunk(x, z, 0.2) || deerD(x, z) < 0.45) continue;
+            if (spots.some(p => Math.hypot(p.x - x, p.z - z) < 0.35) || stumps.some(p => Math.hypot(p.x - x, p.z - z) < 1.5)) continue;
+            stumps.push({ x, z, y: height(x, z) - 0.02, s: rr(0.8, 1.2), yaw: rr(0, 6.28) });
+        }
+        instanced(new THREE.CylinderGeometry(0.13, 0.17, 0.22, 8).translate(0, 0.11, 0), flat(0x6a4a33), stumps, null, true);
+        instanced(new THREE.CylinderGeometry(0.11, 0.11, 0.012, 8).translate(0, 0.226, 0), flat(0xc9a676), stumps, null, false);
+        instanced(new THREE.SphereGeometry(0.1, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.2, 0.5, 1).translate(0.06, 0.2, 0.02), flat(0x5d8f45), stumps, null, false);
 
         // --- Étang : plantes, roseaux, nénuphars, poissons ---
         const weeds = [];
@@ -998,6 +1066,162 @@
         boars.forEach((b, i) => {
             trail.getPointAt(((family.s - (b.lag || 0)) / trailLen % 1 + 1) % 1, b.pos);
         });
+
+        // --- Une famille de cerfs : le cerf devant, la biche, puis le faon ---
+        // Ils font le tour du pré, s'arrêtent pour brouter ou boire au bord de l'étang ;
+        // le cerf relève souvent la tête pour surveiller. Un clic : ils se figent puis détalent.
+        const deerLen = deerTrail.getLength();
+        const v0 = new THREE.Vector3();
+        const antlerMat = flat(0xe3d3b3);
+        const deerLight = flat(0xeadcc0);
+        const deerDark = flat(0x2a211c);
+        function makeDeer(kind) {
+            const g = new THREE.Group();
+            const body = new THREE.Group();
+            g.add(body);
+            const coat = flat(kind === 'fawn' ? 0xb57a42 : kind === 'stag' ? 0x8d5631 : 0xa56c3c);
+            const torso = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 1).scale(0.72, 0.78, 1.6), coat);
+            torso.position.y = 0.08;
+            const belly = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 1).scale(0.82, 0.55, 1.6), deerLight);
+            belly.position.y = 0.025;
+            const rump = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0).scale(1, 1, 0.5), deerLight);
+            rump.position.set(0, 0.1, -0.235);
+            body.add(torso, belly, rump);
+            const tail = new THREE.Group();
+            tail.position.set(0, 0.16, -0.25);
+            tail.add(new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.07, 5).translate(0, -0.035, 0), coat));
+            body.add(tail);
+            // Le cou pivote à l'épaule : c'est lui qui baisse la tête pour brouter
+            const neck = new THREE.Group();
+            neck.position.set(0, 0.13, 0.19);
+            body.add(neck);
+            neck.add(limb(V(0, 0, 0), V(0, 0.2, 0.08), 0.058, 0.04, coat));
+            const head = new THREE.Group();
+            head.position.set(0, 0.2, 0.08);
+            neck.add(head);
+            head.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0).scale(0.85, 0.9, 1.1), coat));
+            head.add(new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.045, 0.11, 6).rotateX(Math.PI / 2).translate(0, -0.022, 0.08), coat));
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), deerDark);
+            nose.position.set(0, -0.022, 0.138);
+            head.add(nose);
+            const ears = [-1, 1].map((sd) => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.011, 5, 4), eyeMat);
+                eye.position.set(sd * 0.042, 0.012, 0.03);
+                head.add(eye);
+                const ear = new THREE.Group();
+                ear.position.set(sd * 0.045, 0.045, -0.02);
+                ear.rotation.z = -sd * 1.0;
+                ear.add(new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.085, 4).scale(1, 1, 0.5).translate(0, 0.04, 0), coat));
+                head.add(ear);
+                if (kind === 'stag') {
+                    // Les bois : une perche et ses andouillers
+                    head.add(limb(V(sd * 0.025, 0.05, -0.01), V(sd * 0.09, 0.2, -0.045), 0.012, 0.009, antlerMat));
+                    head.add(limb(V(sd * 0.032, 0.07, -0.014), V(sd * 0.038, 0.1, 0.05), 0.007, 0.004, antlerMat));
+                    head.add(limb(V(sd * 0.058, 0.13, -0.028), V(sd * 0.075, 0.18, 0.04), 0.008, 0.005, antlerMat));
+                    head.add(limb(V(sd * 0.09, 0.2, -0.045), V(sd * 0.15, 0.27, -0.02), 0.008, 0.004, antlerMat));
+                    head.add(limb(V(sd * 0.09, 0.2, -0.045), V(sd * 0.075, 0.3, -0.08), 0.007, 0.004, antlerMat));
+                }
+                return { ear, sd };
+            });
+            if (kind === 'fawn') {
+                // Les taches claires du faon
+                [[-0.05, 0.13], [0.05, 0.1], [-0.04, 0.0], [0.045, -0.03], [-0.05, -0.12], [0.05, -0.15], [0, 0.04]].forEach(([x, z]) => {
+                    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.014, 5, 3), deerLight);
+                    dot.position.set(x, 0.19 - Math.abs(x) * 0.6, z);
+                    body.add(dot);
+                });
+            }
+            const legs = [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sz]) => {
+                const hip = new THREE.Group();
+                hip.position.set(sx * 0.065, 0.0, sz * 0.17);
+                hip.add(new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.024, 0.36, 5).translate(0, -0.18, 0), coat));
+                hip.add(new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.03, 0.036).translate(0, -0.36, 0.006), deerDark));
+                body.add(hip);
+                return { hip, phase: sx * sz > 0 ? 0 : Math.PI };
+            });
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            const sz = kind === 'stag' ? 1.18 : kind === 'doe' ? 1.0 : 0.62;
+            g.scale.setScalar(sz);
+            scene.add(g);
+            return { g, body, neck, head, ears, legs, tail, kind, s: sz, pos: V(0, 0, 0), heading: 0, gait: 0, move: 0, graze: 0, ph: rr(0, 6.28) };
+        }
+        const deer = [makeDeer('stag'), makeDeer('doe'), makeDeer('fawn')];
+        deer[0].lag = 0;
+        deer[0].side = 0;
+        deer[1].lag = 0.75;
+        deer[1].side = 0.05;
+        deer[2].lag = 1.25;
+        deer[2].side = -0.12;
+        const herd = { s: rr(0, deerLen), state: 'walk', until: rr(4, 7), scare: 0 };
+        deer.forEach((d) => {
+            deerTrail.getPointAt((((herd.s - d.lag) / deerLen) % 1 + 1) % 1, d.pos);
+            deerTrail.getTangentAt((((herd.s - d.lag) / deerLen) % 1 + 1) % 1, v0);
+            d.heading = Math.atan2(v0.x, v0.z);
+        });
+
+        // --- Des lapins qui sautillent au bord des clairières ---
+        const rabbits = [];
+        [[-1.9, 2.6], [2.6, 2.75], [1.1, 3.05]].slice(0, phone ? 2 : 3).forEach(([hx, hz], i) => {
+            const g = new THREE.Group();
+            g.rotation.order = 'YXZ';
+            const fur = flat(i % 2 ? 0xa58866 : 0x8c7055);
+            const bod = new THREE.Mesh(new THREE.SphereGeometry(0.06, 7, 5).scale(0.85, 0.85, 1.15), fur);
+            bod.position.y = 0.06;
+            const head = new THREE.Group();
+            head.position.set(0, 0.105, 0.065);
+            head.add(new THREE.Mesh(new THREE.SphereGeometry(0.04, 7, 5).scale(0.9, 0.95, 1.1), fur));
+            const ears = [-1, 1].map((sd) => {
+                const ear = new THREE.Group();
+                ear.position.set(sd * 0.016, 0.03, -0.01);
+                ear.rotation.set(-0.25, 0, -sd * 0.12);
+                ear.add(new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.08, 0.008).translate(0, 0.04, 0), fur));
+                head.add(ear);
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.008, 5, 3), eyeMat);
+                eye.position.set(sd * 0.03, 0.01, 0.022);
+                head.add(eye);
+                return ear;
+            });
+            const puff = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 4), deerLight);
+            puff.position.set(0, 0.075, -0.07);
+            g.add(bod, head, puff);
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            g.scale.setScalar(1.15);
+            scene.add(g);
+            const at0 = V(hx, 0, hz);
+            rabbits.push({ g, head, ears, home: at0.clone(), from: at0.clone(), to: at0.clone(), k: 1, dur: 0.28, hops: 0, rest: rr(0.5, 3), heading: rr(0, 6.28), bolt: 0, ph: rr(0, 6.28) });
+        });
+        function rabbitTarget(r, far) {
+            for (let k = 0; k < 30; k++) {
+                const a = rr(0, 6.28);
+                const d = far ? rr(0.6, 1.0) : rr(0.15, 0.6);
+                const x = clamp(r.home.x + Math.cos(a) * d, -4.8, 4.8);
+                const z = clamp(r.home.z + Math.sin(a) * d, -4.8, 4.8);
+                if (pondD(x, z) > 0.2 && !nearGiantTrunk(x, z, 0.05)) return V(x, 0, z);
+            }
+            return r.home.clone();
+        }
+
+        // --- Des oiseaux qui tournent au-dessus de la canopée ---
+        const birds = [];
+        for (let i = 0; i < (phone ? 3 : 5); i++) {
+            const g = new THREE.Group();
+            const mat = flat(i === 1 ? 0x41516b : 0x3a3533);
+            g.add(new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.13, 5).rotateX(Math.PI / 2), mat));
+            if (i === 2) {
+                const chest = new THREE.Mesh(new THREE.SphereGeometry(0.024, 5, 4), flat(0xd0663a));
+                chest.position.set(0, -0.008, 0.03);
+                g.add(chest);
+            }
+            const wings = [-1, 1].map((sd) => {
+                const piv = new THREE.Group();
+                piv.add(new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.055).rotateX(-Math.PI / 2).translate(sd * 0.075, 0, -0.005), flat(i === 1 ? 0x4c5f7e : 0x4a4441, { side: THREE.DoubleSide })));
+                g.add(piv);
+                return { piv, sd };
+            });
+            g.rotation.order = 'YXZ';
+            scene.add(g);
+            birds.push({ g, wings, cx: rr(-1.2, 1.2), cz: rr(-1.5, 0.8), r: rr(2.6, 3.8), h: rr(4.3, 5.4), w: rr(0.28, 0.42) * (i % 2 ? 1 : -1), a: rr(0, 6.28), ph: rr(0, 6.28) });
+        }
 
         // --- Des papillons qui volent entre les fleurs ---
         const butterflies = [];
@@ -1201,6 +1425,10 @@ void main() {
         const ndc = new THREE.Vector2();
         const boarTargets = [];
         boars.forEach((bo) => bo.g.traverse((m) => { if (m.isMesh) boarTargets.push(m); }));
+        const deerTargets = [];
+        deer.forEach((d) => d.g.traverse((m) => { if (m.isMesh) deerTargets.push(m); }));
+        const rabbitTargets = [];
+        rabbits.forEach((r) => r.g.traverse((m) => { if (m.isMesh) { m.userData.rabbit = r; rabbitTargets.push(m); } }));
         function tap(e) {
             const r = canvas.getBoundingClientRect();
             ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -1210,6 +1438,24 @@ void main() {
                 family.scare = 2.2;
                 boars.forEach((bo) => { if (bo.baby) bo.hop = 1; });
                 dirtAt(mom.g.position.clone().add(V(0, 0.05, 0)), 8, 1.2);
+                return;
+            }
+            // Les cerfs se figent, la tête haute, puis s'enfuient en bondissant
+            if (ray.intersectObjects(deerTargets, false).length) {
+                if (herd.scare <= 0) herd.scare = 3.4;
+                return;
+            }
+            // Un lapin touché détale, et ceux d'à côté aussi
+            const hitRabbit = ray.intersectObjects(rabbitTargets, false)[0];
+            if (hitRabbit) {
+                const r0 = hitRabbit.object.userData.rabbit;
+                rabbits.forEach((r) => {
+                    if (r === r0 || Math.hypot(r.g.position.x - r0.g.position.x, r.g.position.z - r0.g.position.z) < 1.6) {
+                        r.bolt = 2.5;
+                        r.rest = 0;
+                        r.hops = 0;
+                    }
+                });
                 return;
             }
             const w = ray.intersectObject(water)[0];
@@ -1304,6 +1550,14 @@ void main() {
                 fernMesh.setMatrixAt(i, m4);
             });
             fernMesh.instanceMatrix.needsUpdate = true;
+            tufts.forEach((p, i) => {
+                q.setFromAxisAngle(windAxis, Math.sin(t * 1.8 + p.phase) * 0.12);
+                qYaw.setFromAxisAngle(up, p.yaw);
+                q.multiply(qYaw);
+                m4.compose(v3.set(p.x, p.y, p.z), q, sc.setScalar(p.s));
+                tuftMesh.setMatrixAt(i, m4);
+            });
+            tuftMesh.instanceMatrix.needsUpdate = true;
             reeds.forEach((p, i) => {
                 q.setFromAxisAngle(windAxis, Math.sin(t * 1.6 + p.phase) * 0.09);
                 qYaw.setFromAxisAngle(up, p.yaw);
@@ -1427,6 +1681,105 @@ void main() {
                 const swing = Math.min(1, b.baby ? 1 : (walking ? 1 : 0)) * 0.45;
                 b.legs.forEach((l) => { l.hip.rotation.x = Math.sin(b.gait + l.phase) * swing; });
                 b.tail.rotation.z = Math.sin(t * (b.baby ? 9 : 4) + i) * 0.4;
+            });
+
+            // Les cerfs : marche, broutage, alerte puis fuite
+            herd.scare = Math.max(0, herd.scare - dt);
+            const alert = herd.scare > 2.6;
+            const fleeing = herd.scare > 0 && !alert;
+            if (t > herd.until && herd.scare <= 0) {
+                herd.state = herd.state === 'walk' ? 'graze' : 'walk';
+                herd.until = t + (herd.state === 'walk' ? rr(5, 9) : rr(4, 7));
+            }
+            const herdSpeed = alert ? 0 : fleeing ? 0.95 * Math.min(1, herd.scare) + 0.2 : herd.state === 'walk' ? 0.2 : 0;
+            herd.s += dt * herdSpeed;
+            deer.forEach((d, i) => {
+                const u = (((herd.s - d.lag) / deerLen) % 1 + 1) % 1;
+                deerTrail.getPointAt(u, v4);
+                deerTrail.getTangentAt(u, v3);
+                v4.x += v3.z * d.side;
+                v4.z -= v3.x * d.side;
+                d.pos.lerp(v4, Math.min(1, dt * 5));
+                const want = Math.atan2(v3.x, v3.z);
+                d.heading += Math.atan2(Math.sin(want - d.heading), Math.cos(want - d.heading)) * Math.min(1, dt * 3);
+                d.move += ((herdSpeed > 0 ? 1 : 0) - d.move) * Math.min(1, dt * 4);
+                d.gait += dt * herdSpeed * (fleeing ? 30 : 34) / d.s;
+                // Brouter : le cou plonge vers l'herbe ; le cerf relève souvent la tête pour surveiller
+                const watch = d.kind === 'stag' && Math.sin(t * 0.55 + d.ph) > 0.35;
+                const wantGraze = herd.state === 'graze' && herd.scare <= 0 && !watch ? 1 : 0;
+                d.graze += (wantGraze - d.graze) * Math.min(1, dt * 2.2);
+                const chew = d.graze > 0.8 ? Math.sin(t * 6 + d.ph) * 0.06 : 0;
+                d.neck.rotation.x = d.graze * 1.45 - (herd.scare > 0 ? 0.3 : 0) + Math.sin(t * 1.2 + d.ph) * 0.03 * (1 - d.graze);
+                d.head.rotation.x = d.graze * 0.35 + chew;
+                d.head.rotation.y = watch && herd.state === 'graze' ? Math.sin(t * 0.8 + d.ph) * 0.5 : 0;
+                d.ears.forEach(({ ear, sd }) => {
+                    const flick = Math.pow(Math.max(0, Math.sin(t * 1.1 + d.ph * 3 + sd)), 24) * 0.7;
+                    ear.rotation.z = -sd * (herd.scare > 0 ? 0.55 : 1.0) + sd * flick;
+                });
+                const run = fleeing ? 1 : 0;
+                const swing = d.move * (0.45 + run * 0.4);
+                d.legs.forEach((l) => { l.hip.rotation.x = Math.sin(d.gait + l.phase + (run && l.hip.position.z < 0 ? 0.6 : 0)) * swing; });
+                d.tail.rotation.x = herd.scare > 0 ? -1.3 : Math.sin(t * 2 + d.ph) * 0.15;
+                const ground = height(d.pos.x, d.pos.z);
+                const bound = run * Math.abs(Math.sin(d.gait)) * 0.09 * d.s + Math.abs(Math.sin(d.gait)) * 0.008 * d.s * d.move;
+                d.g.position.set(d.pos.x, ground + 0.375 * d.s + bound, d.pos.z);
+                d.g.rotation.y = d.heading;
+                d.body.rotation.x = run * Math.sin(d.gait) * 0.08;
+            });
+
+            // Les lapins : petits bonds, pause, reniflent, repartent
+            rabbits.forEach((r) => {
+                r.bolt = Math.max(0, r.bolt - dt);
+                if (r.k < 1) {
+                    r.k = Math.min(1, r.k + dt / r.dur);
+                } else if (r.hops > 0) {
+                    r.hops--;
+                    r.from.copy(r.g.position);
+                    r.from.y = 0;
+                    v3.subVectors(r.goal, r.from);
+                    v3.y = 0;
+                    const step = Math.min(v3.length(), r.bolt > 0 ? 0.3 : 0.16);
+                    if (step < 0.02) r.hops = 0;
+                    else {
+                        r.heading = Math.atan2(v3.x, v3.z);
+                        r.to.copy(r.from).addScaledVector(v3.normalize(), step);
+                        r.k = 0;
+                        r.dur = r.bolt > 0 ? 0.2 : 0.28;
+                    }
+                } else if (r.bolt > 0) {
+                    r.goal = rabbitTarget(r, true);
+                    r.hops = 6;
+                } else {
+                    r.rest -= dt;
+                    if (r.rest <= 0) {
+                        r.goal = rabbitTarget(r, false);
+                        r.hops = 2 + Math.floor(rr(0, 4));
+                        r.rest = rr(1.5, 4.5);
+                    }
+                }
+                const k = r.k;
+                const x = r.from.x + (r.to.x - r.from.x) * k;
+                const z = r.from.z + (r.to.z - r.from.z) * k;
+                const air = k < 1 ? Math.sin(k * Math.PI) : 0;
+                r.g.position.set(x, height(x, z) + air * (r.bolt > 0 ? 0.1 : 0.065), z);
+                r.g.rotation.y = r.heading;
+                r.g.rotation.x = k < 1 ? -Math.cos(k * Math.PI) * 0.3 : 0;
+                // Au repos : le museau renifle et les oreilles bougent
+                r.head.rotation.x = k >= 1 ? Math.sin(t * 9 + r.ph) * 0.05 + 0.08 : -0.1;
+                r.ears.forEach((ear, j) => { ear.rotation.x = -0.25 - (k < 1 ? 0.35 : Math.pow(Math.max(0, Math.sin(t * 1.4 + r.ph + j)), 20) * 0.4); });
+            });
+
+            // Les oiseaux : grands cercles, battements par moments, planés le reste du temps
+            birds.forEach((b) => {
+                b.a += b.w * dt;
+                const x = b.cx + Math.cos(b.a) * b.r;
+                const z = b.cz + Math.sin(b.a) * b.r;
+                b.g.position.set(x, b.h + Math.sin(t * 0.7 + b.ph) * 0.25, z);
+                b.g.rotation.y = Math.atan2(-Math.sin(b.a) * Math.sign(b.w), Math.cos(b.a) * Math.sign(b.w));
+                b.g.rotation.z = -Math.sign(b.w) * 0.35;
+                const flapping = Math.sin(t * 0.9 + b.ph) > -0.2;
+                const flap = flapping ? Math.sin(t * 15 + b.ph) * 0.75 : 0.12;
+                b.wings.forEach(({ piv, sd }) => { piv.rotation.z = sd * flap; });
             });
 
             // Papillons
@@ -1576,6 +1929,42 @@ void main() {
                     pos.setXYZ(k, p.x, p.y, p.z);
                 }
             }
+            g.computeVertexNormals();
+            return g;
+        }
+
+        // Réunit plusieurs petites géométries en une seule (positions + normales)
+        function mergeLeaf(geos) {
+            const pos = [];
+            const nor = [];
+            geos.forEach((g) => {
+                const n = g.index ? g.toNonIndexed() : g;
+                n.computeVertexNormals();
+                pos.push(...n.attributes.position.array);
+                nor.push(...n.attributes.normal.array);
+                if (n !== g) n.dispose();
+                g.dispose();
+            });
+            const out = new THREE.BufferGeometry();
+            out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+            return out;
+        }
+
+        // Une touffe : cinq brins fins qui partent en étoile
+        function tuftGeometry() {
+            const pos = [];
+            for (let k = 0; k < 5; k++) {
+                const a = k * 1.257 + 0.3;
+                const lean = 0.035 + (k % 2) * 0.02;
+                const h = 0.13 + (k % 3) * 0.035;
+                const cx = Math.cos(a);
+                const cz = Math.sin(a);
+                const w = 0.018;
+                pos.push(-cz * w, 0, cx * w, cz * w, 0, -cx * w, cx * lean, h, cz * lean);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
             g.computeVertexNormals();
             return g;
         }
