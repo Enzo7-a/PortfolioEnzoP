@@ -2264,6 +2264,15 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-stage { position: absolute; inset: 0; }
 
+/* Une vignette douce, la même sur tous les dioramas : le regard reste au centre, l'ensemble paraît plus calme */
+.diorama-stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 95% at 50% 45%, transparent 58%, rgba(12, 14, 24, 0.26) 100%);
+}
+
 .diorama-sky {
     position: absolute;
     inset: 0;
@@ -2273,44 +2282,44 @@ html.diorama-open { overflow: hidden; }
 .diorama-sky--boat {
     opacity: 0;
     background:
-        radial-gradient(38% 26% at 74% 14%, rgba(150, 172, 196, 0.22), transparent),
-        radial-gradient(90% 60% at 50% 100%, rgba(30, 52, 60, 0.55), transparent),
-        linear-gradient(180deg, #0b1116 0%, #121b22 40%, #18242b 70%, #0a1014 100%);
+        radial-gradient(34% 24% at 74% 14%, rgba(176, 196, 226, 0.28), transparent),
+        radial-gradient(90% 55% at 50% 100%, rgba(40, 70, 90, 0.45), transparent),
+        linear-gradient(180deg, #111b2b 0%, #1a2a3f 42%, #22354b 70%, #131e2c 100%);
 }
 
 .diorama-overlay[data-scene="boat"] .diorama-sky--boat { opacity: 1; }
 
-/* Forêt sous la pluie : ciel gris-vert, plus sombre vers le bas, avec une lueur d'éclair de temps en temps */
+/* Forêt sous une pluie fine : un matin brumeux gris-vert, avec une lueur lointaine de temps en temps */
 .diorama-sky--day {
     opacity: 0;
     background:
-        radial-gradient(60% 42% at 50% 16%, rgba(168, 192, 186, 0.38), transparent),
-        radial-gradient(120% 80% at 50% 115%, rgba(14, 24, 21, 0.85), transparent 65%),
-        linear-gradient(180deg, #4a615a 0%, #374c45 45%, #24342f 100%);
-    filter: brightness(calc(1 + var(--flash, 0) * 0.55));
+        radial-gradient(60% 42% at 50% 14%, rgba(214, 226, 214, 0.55), transparent),
+        radial-gradient(120% 80% at 50% 115%, rgba(30, 44, 38, 0.6), transparent 65%),
+        linear-gradient(180deg, #8ea39a 0%, #6f857c 45%, #4b5f57 100%);
+    filter: brightness(calc(1 + var(--flash, 0) * 0.35));
 }
 
 .diorama-overlay[data-scene="forest"] .diorama-sky--day { opacity: 1; }
 
-/* Le phare : pleine nuit, une brume grise vers l'horizon, et la lueur des éclairs */
+/* Le phare : une nuit bleue, une brume vers l'horizon, et la lueur lointaine des éclairs */
 .diorama-sky--storm {
     opacity: 0;
     background:
-        radial-gradient(80% 30% at 50% 60%, rgba(120, 132, 140, 0.16), transparent),
-        radial-gradient(110% 70% at 50% 0%, rgba(3, 4, 6, 0.9), transparent 70%),
-        linear-gradient(180deg, #07090b 0%, #0e1215 40%, #1a1f23 60%, #0d1013 82%, #060708 100%);
-    filter: brightness(calc(1 + var(--flash, 0) * 1.2));
+        radial-gradient(80% 30% at 50% 60%, rgba(120, 140, 166, 0.18), transparent),
+        radial-gradient(110% 70% at 50% 0%, rgba(8, 12, 22, 0.75), transparent 70%),
+        linear-gradient(180deg, #0d1420 0%, #142030 40%, #1e2b3b 62%, #121b27 84%, #0b111a 100%);
+    filter: brightness(calc(1 + var(--flash, 0) * 0.7));
 }
 
 .diorama-overlay[data-scene="lighthouse"] .diorama-sky--storm { opacity: 1; }
 
-/* Le désert : un grand ciel bleu, plus pâle et doré vers l'horizon, le soleil en haut à gauche */
+/* Le désert à l'heure dorée : un ciel lavande qui passe au pêche, le soleil bas à gauche */
 .diorama-sky--desert {
     opacity: 0;
     background:
-        radial-gradient(28% 22% at 22% 16%, rgba(255, 246, 220, 0.85), transparent),
-        radial-gradient(90% 40% at 50% 72%, rgba(250, 226, 178, 0.55), transparent),
-        linear-gradient(180deg, #5f9dd0 0%, #8fbfe0 36%, #cfe0e4 58%, #f0dcb2 74%, #d9b585 100%);
+        radial-gradient(22% 18% at 18% 56%, rgba(255, 222, 170, 0.9), transparent),
+        radial-gradient(70% 34% at 30% 62%, rgba(255, 196, 140, 0.45), transparent),
+        linear-gradient(180deg, #7d84b6 0%, #a99cc0 30%, #d9aeb2 48%, #f3c29a 62%, #f6d2a4 74%, #d8a47c 100%);
 }
 
 .diorama-overlay[data-scene="desert"] .diorama-sky--desert { opacity: 1; }

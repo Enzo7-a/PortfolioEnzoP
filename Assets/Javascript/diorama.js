@@ -92,6 +92,9 @@
         snowHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le chalet, les sapins ou le bonhomme de neige' : 'Glisse pour tourner · molette pour zoomer · clique sur le chalet, les sapins ou le bonhomme de neige',
     });
 
+    // Vitesse de la rotation automatique au repos : lente, la même pour tous les dioramas
+    const IDLE_SPIN = 0.03;
+
     // Les dioramas, dans l'ordre des flèches
     const SCENES = [
         { id: 'forest', build: (THREE, stage) => buildForest(THREE, stage) },
@@ -1417,16 +1420,16 @@ void main() {
             rings.push({ m, t: 1, max: 0.5, dur: 1 });
         }
         // --- Pluie : des traits fins poussés par le vent, des éclaboussures au sol, des ronds sur l'étang ---
-        const RAIN = phone ? 450 : 900;
+        const RAIN = phone ? 260 : 520;
         const RAIN_TOP = 8.5;
-        const RAIN_SPEED = 7.5;
+        const RAIN_SPEED = 5.5;
         const DRIFT_X = 0.12;
         const DRIFT_Z = 0.05;
         const DROP = 0.3;
         const rainPos = new Float32Array(RAIN * 6);
         const rainGeo = new THREE.BufferGeometry();
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xd2e1e6, transparent: true, opacity: 0.4, depthWrite: false }));
+        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xdfe8ea, transparent: true, opacity: 0.26, depthWrite: false }));
         rain.frustumCulled = false;
         rain.renderOrder = 7;
         scene.add(rain);
@@ -1466,10 +1469,10 @@ void main() {
         const target = V(0.25, 1.0, 0.1);
         // Vue de départ : dans le décor, à hauteur de la clairière
         const HOME_EL = 0.42;
-        const HOME_ZOOM = () => (camera.aspect < 0.8 ? 0.5 : 0.38);
+        const HOME_ZOOM = () => (camera.aspect < 0.8 ? 0.7 : 0.54);
         let az = -0.5;
         let el = HOME_EL;
-        let zoom = 0.38;
+        let zoom = 0.54;
         let fit = 26;
         let lastInput = -10;
         let touched = false;
@@ -1620,7 +1623,7 @@ void main() {
             if (!still && !pointers.size) {
                 const idle = clamp((clock - lastInput - 3) / 2, 0, 1);
                 const ease = idle * idle * (3 - 2 * idle);
-                az += 0.06 * dt * ease;
+                az += IDLE_SPIN * dt * ease;
                 el += (HOME_EL - el) * Math.min(1, dt * 0.8) * ease;
             }
             const dist = fit * zoom;
@@ -1983,11 +1986,11 @@ void main() {
             // Éclair lointain : deux lueurs rapides qui éclairent la scène et le fond
             if (!still && t > storm.next) {
                 storm.flash = 1;
-                storm.next = t + rr(14, 28);
+                storm.next = t + rr(32, 55);
             }
-            storm.flash = Math.max(0, storm.flash - dt * 1.8);
+            storm.flash = Math.max(0, storm.flash - dt * 0.7);
             const fl = storm.flash;
-            const glow = fl > 0.75 ? fl : fl > 0.55 ? 0.15 : fl > 0.35 ? fl * 1.3 : fl * 0.4;
+            const glow = Math.sin(fl * Math.PI) * 0.35;
             hemi.intensity = HEMI + glow * 0.9;
             stage.style.setProperty('--flash', glow.toFixed(3));
 
@@ -2373,7 +2376,7 @@ void main() {
         const uFlash = { value: 0 };
 
         // --- Nuit d'orage : une lune voilée, et la lumière des éclairs ---
-        const hemi = new THREE.HemisphereLight(0x46627e, 0x081018, 0.85);
+        const hemi = new THREE.HemisphereLight(0x5a7698, 0x10202c, 1.05);
         scene.add(hemi);
         const moon = new THREE.DirectionalLight(0x8eaad0, 0.8);
         moon.position.set(6, 9, -5);
@@ -2918,15 +2921,15 @@ totalEmissiveRadiance += vec3(0.14, 0.22, 0.28) * fres * 0.6 + vec3(0.5, 0.6, 0.
         }
 
         // --- La pluie, poussée par le vent ---
-        const RAIN = phone ? 260 : 520;
+        const RAIN = phone ? 170 : 340;
         const rainPos = new Float32Array(RAIN * 6);
         const rainGeo = new THREE.BufferGeometry();
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xa9bfd4, transparent: true, opacity: 0.32, depthWrite: false }));
+        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xb4c6da, transparent: true, opacity: 0.22, depthWrite: false }));
         rain.frustumCulled = false;
         rain.renderOrder = 9;
         scene.add(rain);
-        const WIND = V(2.2, -9.5, 0.9);
+        const WIND = V(1.2, -7.0, 0.5);
         const drops = Array.from({ length: RAIN }, () => ({ x: rr(-6.5, 5.5), y: rr(-0.2, 7.5), z: rr(-6, 5.5), s: rr(0.85, 1.15) }));
 
         // --- Le projecteur du bateau balaie la mer ---
@@ -3012,11 +3015,11 @@ void main() {
         const NEAR = V(B0.x, 0.1, B0.z);
         const target = FAR.clone();
         // Vue de départ : en hauteur, en plongée sur le bateau
-        const HOME_EL = 0.74;
+        const HOME_EL = 0.5;
         let az = -0.75;
         let el = HOME_EL;
         // Vue de départ : tout près du bateau
-        let zoom = 0.3;
+        let zoom = 0.46;
         let fit = 24;
         let lastInput = -10;
         let touched = false;
@@ -3091,7 +3094,7 @@ void main() {
             if (!w) {
                 if (!still && clock - storm.t0 > 1.2) {
                     lightning();
-                    storm.next = clock + rr(6, 10);
+                    storm.next = clock + rr(26, 44);
                 }
                 return;
             }
@@ -3106,7 +3109,7 @@ void main() {
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(13 / tanV / 2, (camera.aspect < 0.8 ? 15.5 : 16) / (tanV * camera.aspect) / 2);
-            if (!touched) zoom = camera.aspect < 0.8 ? 0.42 : 0.3;
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.62 : 0.46;
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
@@ -3139,7 +3142,7 @@ void main() {
             // Au repos : tour complet et lent autour du diorama, en revenant doucement à la hauteur de départ
             if (!still && !pointers.size) {
                 const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
-                az += 0.06 * dt * idle;
+                az += IDLE_SPIN * dt * idle;
                 el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
             }
             target.lerpVectors(NEAR, FAR, smooth(clamp((zoom - 0.2) / 0.8, 0, 1)));
@@ -3232,19 +3235,16 @@ void main() {
             sky.rotation.y = az;
             if (!still && t > storm.next) {
                 lightning();
-                storm.next = t + rr(6, 11);
+                storm.next = t + rr(26, 44);
             }
             const since = t - storm.t0;
-            let flash = 0;
-            if (since < 0.08) flash = 1;
-            else if (since < 0.17) flash = 0.2;
-            else if (since < 0.26) flash = 0.75;
-            else if (since < 1.2) flash = 0.75 * Math.exp(-(since - 0.26) * 7);
-            hemi.intensity = 0.85 + flash * 1.6;
-            flashLight.intensity = flash * 2.2;
+            // Une lueur lointaine et douce : elle monte vite, puis s'éteint lentement
+            const flash = since < 0 ? 0 : since < 0.18 ? (since / 0.18) * 0.42 : 0.42 * Math.exp(-(since - 0.18) * 2.6);
+            hemi.intensity = 1.05 + flash * 0.9;
+            flashLight.intensity = flash * 1.2;
             uFlash.value = flash;
-            boltMat.opacity = since < 0.08 ? 1 : since < 0.17 ? 0.35 : since < 0.3 ? 0.9 : 0;
-            renderer.setClearColor(0x9fb2d6, flash * 0.16);
+            boltMat.opacity = since < 0 ? 0 : 0.5 * Math.exp(-since * 5);
+            renderer.setClearColor(0x9fb2d6, flash * 0.08);
 
             // Pluie
             for (let i = 0; i < RAIN; i++) {
@@ -3494,16 +3494,16 @@ void main() {
         stage.appendChild(renderer.domElement);
         const scene = new THREE.Scene();
         // La nuit grise : le lointain se perd dans le noir (le dessous de l'eau, lui, garde sa propre teinte)
-        scene.fog = new THREE.Fog(0x161b1f, 20, 50);
+        scene.fog = new THREE.Fog(0x18202c, 20, 50);
         const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 400);
         const uTime = { value: 0 };
         const uFlash = { value: 0 };
 
         // --- Pleine nuit : une lueur froide et faible, c'est le phare qui éclaire ---
-        const HEMI = 0.6;
-        const hemi = new THREE.HemisphereLight(0x6f8090, 0x0a0d10, HEMI);
+        const HEMI = 0.78;
+        const hemi = new THREE.HemisphereLight(0x7488a6, 0x101820, HEMI);
         scene.add(hemi);
-        const key = new THREE.DirectionalLight(0x9fb2c8, 0.5);
+        const key = new THREE.DirectionalLight(0xa6b8d6, 0.62);
         key.position.set(-7, 7, -6);
         key.castShadow = true;
         key.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
@@ -4045,7 +4045,7 @@ void main() {
         }
 
         // --- La pluie, la brume légère au ras de l'eau ---
-        const RAIN = phone ? 280 : 560;
+        const RAIN = phone ? 180 : 360;
         const rainPos = new Float32Array(RAIN * 6);
         const rainGeo = new THREE.BufferGeometry();
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
@@ -4393,7 +4393,7 @@ void main() {
             if (!w) {
                 if (!still && clock - storm.t0 > 1.2) {
                     lightning();
-                    storm.next = clock + rr(6, 10);
+                    storm.next = clock + rr(26, 44);
                 }
                 return;
             }
@@ -4443,7 +4443,7 @@ void main() {
             // Au repos : tour lent autour du phare, en revenant doucement à la hauteur de départ
             if (!still && !pointers.size) {
                 const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
-                az += 0.05 * dt * idle;
+                az += IDLE_SPIN * dt * idle;
                 el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
             }
             target.lerpVectors(NEAR, FAR, smooth(clamp((zoom - 0.3) / 0.7, 0, 1)));
@@ -4640,18 +4640,15 @@ void main() {
             sky.rotation.y = az;
             if (!still && t > storm.next) {
                 lightning();
-                storm.next = t + rr(7, 13);
+                storm.next = t + rr(26, 44);
             }
             const since = t - storm.t0;
-            let flash = 0;
-            if (since < 0.08) flash = 1;
-            else if (since < 0.17) flash = 0.2;
-            else if (since < 0.26) flash = 0.75;
-            else if (since < 1.2) flash = 0.75 * Math.exp(-(since - 0.26) * 7);
-            hemi.intensity = HEMI + flash * 1.6;
-            flashLight.intensity = flash * 2.2;
+            // Une lueur lointaine et douce : elle monte vite, puis s'éteint lentement
+            const flash = since < 0 ? 0 : since < 0.18 ? (since / 0.18) * 0.42 : 0.42 * Math.exp(-(since - 0.18) * 2.6);
+            hemi.intensity = HEMI + flash * 0.9;
+            flashLight.intensity = flash * 1.2;
             uFlash.value = flash;
-            boltMat.opacity = since < 0.08 ? 1 : since < 0.17 ? 0.35 : since < 0.3 ? 0.9 : 0;
+            boltMat.opacity = since < 0 ? 0 : 0.5 * Math.exp(-since * 5);
             stage.style.setProperty('--flash', (flash * 0.6).toFixed(3));
 
             // Pluie
@@ -4924,24 +4921,24 @@ void main() {
         stage.appendChild(renderer.domElement);
         const scene = new THREE.Scene();
         // Une brume de chaleur, couleur de sable, qui adoucit le lointain
-        scene.fog = new THREE.Fog(0xead8b2, 20, 50);
+        scene.fog = new THREE.Fog(0xe7c3a0, 20, 50);
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
         const uTime = { value: 0 };
 
         // --- Plein soleil ---
-        const SUN = V(-7, 9, 5);
+        const SUN = V(-9, 4.6, 6.5);
         const sunDir = SUN.clone().normalize();
-        const hemi = new THREE.HemisphereLight(0xc4def2, 0xd9b98a, 0.95);
+        const hemi = new THREE.HemisphereLight(0xc6b8d8, 0xd2a07a, 0.85);
         scene.add(hemi);
-        const sun = new THREE.DirectionalLight(0xfff0d4, 2.5);
+        const sun = new THREE.DirectionalLight(0xffc285, 2.5);
         sun.position.copy(SUN);
         sun.castShadow = true;
         sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
-        Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 });
+        Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 });
         sun.shadow.bias = -0.0005;
         sun.shadow.normalBias = 0.03;
         scene.add(sun);
-        const bounce = new THREE.DirectionalLight(0xf2d6a8, 0.35);
+        const bounce = new THREE.DirectionalLight(0xf0b88a, 0.3);
         bounce.position.set(6, 3, -6);
         scene.add(bounce);
 
@@ -4968,8 +4965,8 @@ void main() {
             envScene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
             return tex;
         }
-        const envMap = skyEnv(0x6fa6d6, 0xf3e2bd, 0xc9a46e);
-        const goldEnv = skyEnv(0xfff1d6, 0xffe2a8, 0xb98a50);
+        const envMap = skyEnv(0x8c90c4, 0xf6c99c, 0xb98a60);
+        const goldEnv = skyEnv(0xf3d6b8, 0xffcf96, 0xa87a4c);
         pmrem.dispose();
 
         // --- Le sol : sable, sable mouillé, herbe de l'oasis, fond de l'eau, dalles du parvis ---
@@ -5062,7 +5059,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         const wp = waterGeo.attributes.position;
         const waveIdx = [];
         for (let i = 0; i < wp.count; i++) if (height(wp.getX(i), wp.getZ(i)) < WATER + 0.1) waveIdx.push(i);
-        const water = new THREE.Mesh(waterGeo, new THREE.MeshStandardMaterial({ color: 0x2e8a86, transparent: true, opacity: 0.8, roughness: 0.06, metalness: 0.1, flatShading: true, envMap, envMapIntensity: 0.9, depthWrite: false }));
+        const water = new THREE.Mesh(waterGeo, new THREE.MeshStandardMaterial({ color: 0x3e7d84, transparent: true, opacity: 0.78, roughness: 0.06, metalness: 0.1, flatShading: true, envMap, envMapIntensity: 0.9, depthWrite: false }));
         water.position.y = WATER;
         water.renderOrder = 2;
         scene.add(water);
@@ -5461,7 +5458,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         const HOME_EL = 0.36;
         let az = 0.6;
         let el = HOME_EL;
-        let zoom = 0.45;
+        let zoom = 0.56;
         let fit = 26;
         let lastInput = -10;
         let touched = false;
@@ -5549,7 +5546,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(14 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
-            if (!touched) zoom = camera.aspect < 0.8 ? 0.62 : 0.45;
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.74 : 0.56;
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
@@ -5583,7 +5580,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             // Au repos : tour lent, en revenant doucement à la hauteur de départ
             if (!still && !pointers.size) {
                 const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
-                az += 0.05 * dt * idle;
+                az += IDLE_SPIN * dt * idle;
                 el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
             }
             const dist = fit * zoom;
@@ -5613,10 +5610,10 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             }
             const shine = Math.pow(Math.max(0, best), 10);
             const twinkle = 0.85 + 0.15 * Math.sin(t * 5.3) * Math.sin(t * 3.1);
-            const gs = (0.55 + shine * 1.8 + flare * 2.2) * twinkle;
+            const gs = (0.3 + shine * 0.7 + flare * 1.6) * twinkle;
             glint.scale.setScalar(gs);
-            glint.material.opacity = clamp(0.45 + shine * 0.8 + flare, 0, 1);
-            capMat.emissiveIntensity = bandMat.emissiveIntensity = 0.4 + shine * 0.6 + flare * 1.2;
+            glint.material.opacity = clamp(0.22 + shine * 0.4 + flare * 0.8, 0, 1);
+            capMat.emissiveIntensity = bandMat.emissiveIntensity = 0.2 + shine * 0.3 + flare * 1.0;
 
             // Palmiers et papyrus dans le vent chaud
             palms.forEach((p) => {
@@ -7051,7 +7048,7 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
 
             if (!still && !pointers.size) {
                 const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
-                az += 0.05 * dt * idle;
+                az += IDLE_SPIN * dt * idle;
                 el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
             }
             const dist = fit * zoom;
@@ -7524,9 +7521,9 @@ void main() {
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
 
         // --- Lumière d'après-midi : le soleil entre par les fenêtres de gauche ---
-        const hemi = new THREE.HemisphereLight(0xfff3e2, 0x8a6a50, 1.25);
+        const hemi = new THREE.HemisphereLight(0xfbeedc, 0x8f7258, 1.3);
         scene.add(hemi);
-        const sun = new THREE.DirectionalLight(0xffe2b0, 2.9);
+        const sun = new THREE.DirectionalLight(0xffd9a6, 2.45);
         sun.position.set(-11, 7.5, 3.2);
         sun.target.position.set(0, 0, 0);
         sun.castShadow = true;
@@ -8493,7 +8490,7 @@ void main() {
 
             if (!still && !pointers.size) {
                 const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
-                az += 0.045 * dt * idle;
+                az += IDLE_SPIN * dt * idle;
                 el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
             }
             const dist = fit * zoom;
