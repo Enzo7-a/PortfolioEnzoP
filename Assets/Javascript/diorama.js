@@ -13,7 +13,6 @@
     const ICON_STUDY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="13" width="4.5" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="16.5" y="13" width="4.5" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
     const ICON_AI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c.5 3.9 2.6 6 6.5 6.5-3.9.5-6 2.6-6.5 6.5-.5-3.9-2.6-6-6.5-6.5 3.9-.5 6-2.6 6.5-6.5Z" fill="currentColor"/><path d="M18.5 15.5c.2 1.6 1 2.4 2.5 2.5-1.5.2-2.3 1-2.5 2.5-.2-1.5-1-2.3-2.5-2.5 1.5-.1 2.3-.9 2.5-2.5Z" fill="currentColor"/></svg>';
     const ICON_SHUFFLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h3.2c2 0 3.3 1 4.4 2.6l2 3c1.1 1.6 2.4 2.4 4.4 2.4h3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M3.5 17h3.2c1.6 0 2.7-.6 3.7-1.7M14.2 8.6c.9-1 2-1.6 3.6-1.6h2.7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="m18.2 4.6 2.6 2.4-2.6 2.4M18.2 12.6l2.6 2.4-2.6 2.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const ICON_EXPAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="m4.5 4.5 4.5 4.5M19.5 4.5 15 9M4.5 19.5 9 15M19.5 19.5 15 15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
     const ICON_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
     const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" fill="currentColor"/></svg>';
     const ICON_NEXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5v13l9-6.5Z" fill="currentColor"/><path d="M18 5.5v13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
@@ -44,8 +43,6 @@
         studyMissing: 'Playlist not configured yet.',
         shuffle: 'Shuffle',
         shuffleHelp: 'Change diorama with every new song',
-        extend: 'Extend',
-        extendHelp: 'Stretch the scene as far as the eye can see',
         forestTitle: 'The living forest.',
         forestHelp: touch() ? 'Drag to turn · pinch to zoom · tap the animals or the pond' : 'Drag to turn · scroll to zoom · click the animals or the pond',
         boatTitle: 'Lost at sea.',
@@ -73,8 +70,6 @@
         studyMissing: 'Playlist pas encore configurée.',
         shuffle: 'Aléatoire',
         shuffleHelp: 'Change de diorama à chaque nouvelle musique',
-        extend: 'Étendre',
-        extendHelp: 'Étendre la scène à perte de vue',
         forestTitle: 'La forêt vivante.',
         forestHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche les animaux ou l\'étang' : 'Glisse pour tourner · molette pour zoomer · clique sur les animaux ou l\'étang',
         boatTitle: 'Perdu au large.',
@@ -83,15 +78,9 @@
 
     // Les dioramas, dans l'ordre des flèches
     const SCENES = [
-        { id: 'forest', build: (THREE, stage, opts) => buildForest(THREE, stage, opts) },
-        { id: 'boat', build: (THREE, stage, opts) => buildBoat(THREE, stage, opts) },
+        { id: 'forest', build: (THREE, stage) => buildForest(THREE, stage) },
+        { id: 'boat', build: (THREE, stage) => buildBoat(THREE, stage) },
     ];
-
-    // Petites préférences gardées d'une visite à l'autre (si le navigateur le permet)
-    const pref = {
-        get(k) { try { return localStorage.getItem('diorama:' + k) === '1'; } catch (e) { return false; } },
-        set(k, v) { try { localStorage.setItem('diorama:' + k, v ? '1' : '0'); } catch (e) { /* rien */ } },
-    };
 
     let egg;
     let overlay = null;
@@ -149,9 +138,6 @@
                     <button type="button" class="diorama-chip diorama-shuffle" aria-pressed="false" title="${t.shuffleHelp}">
                         <span class="diorama-chip-icon">${ICON_SHUFFLE}</span><span class="diorama-chip-text">${t.shuffle}</span>
                     </button>
-                    <button type="button" class="diorama-chip diorama-extend" aria-pressed="false" title="${t.extendHelp}">
-                        <span class="diorama-chip-icon">${ICON_EXPAND}</span><span class="diorama-chip-text">${t.extend}</span>
-                    </button>
                     <div class="diorama-ai">
                         <button type="button" class="diorama-ai-toggle" aria-expanded="false" aria-controls="diorama-ai-more">
                             <span class="diorama-ai-icon">${ICON_AI}</span><span>${t.ai}</span>
@@ -176,12 +162,9 @@
         const skipBtn = o.querySelector('.diorama-skip');
         const aiBtn = o.querySelector('.diorama-ai-toggle');
         const shuffleBtn = o.querySelector('.diorama-shuffle');
-        const extendBtn = o.querySelector('.diorama-extend');
-        const buttons = [studyBtn, ppBtn, skipBtn, prevBtn, nextBtn, shuffleBtn, extendBtn, aiBtn, closeBtn];
+        const buttons = [studyBtn, ppBtn, skipBtn, prevBtn, nextBtn, shuffleBtn, aiBtn, closeBtn];
         // Aléatoire : à chaque nouvelle musique, on change de diorama
         let shuffle = false;
-        // Étendre : la scène n'a plus de bords (gardé pour la prochaine visite)
-        let extended = pref.get('extended');
         const study = studyMode(o, t, {
             onTrack: () => {
                 if (!shuffle || SCENES.length < 2) return;
@@ -190,11 +173,6 @@
                 show(i);
             },
         });
-        const setPressed = (b, v) => {
-            b.setAttribute('aria-pressed', String(v));
-            b.classList.toggle('is-on', v);
-        };
-        setPressed(extendBtn, extended);
         let THREE = null;
         let token = 0;
 
@@ -204,12 +182,9 @@
             o.querySelector('.diorama-caption span').textContent = t[id + 'Help'];
         };
         // Passe d'un diorama à l'autre : l'ancien s'efface, le nouveau se construit
-        const show = async (i, keepView) => {
-            // En restant sur le même diorama (bouton Étendre), on garde l'angle de vue
-            const view = keepView && scene3d && scene3d.view ? scene3d.view() : null;
+        const show = async (i) => {
             current = (i + SCENES.length) % SCENES.length;
             const mine = ++token;
-            o.classList.toggle('is-extended', extended);
             o.dataset.scene = SCENES[current].id;
             o.classList.add('is-night');
             caption();
@@ -222,7 +197,7 @@
             }
             if (overlay !== o || mine !== token || !THREE) return;
             try {
-                scene3d = SCENES[current].build(THREE, stage, { extended, view });
+                scene3d = SCENES[current].build(THREE, stage);
                 o.classList.add('is-ready');
             } catch (e) {
                 console.error('Diorama :', e);
@@ -267,15 +242,10 @@
         });
         shuffleBtn.addEventListener('click', () => {
             shuffle = !shuffle;
-            setPressed(shuffleBtn, shuffle);
+            shuffleBtn.setAttribute('aria-pressed', String(shuffle));
+            shuffleBtn.classList.toggle('is-on', shuffle);
             // Sans musique, l'aléatoire ne servirait à rien : on la lance
             if (shuffle && !study.isOn()) study.toggle();
-        });
-        extendBtn.addEventListener('click', () => {
-            extended = !extended;
-            pref.set('extended', extended);
-            setPressed(extendBtn, extended);
-            show(current, true);
         });
         ppBtn.addEventListener('click', () => study.playPause());
         skipBtn.addEventListener('click', () => study.next());
@@ -451,10 +421,8 @@
     // fouiller la terre ; des papillons volent entre les fleurs, les poissons
     // tournent dans l'étang et les feuilles tombent doucement.
     // ---------------------------------------------------------------------
-    function buildForest(THREE, stage, opts = {}) {
+    function buildForest(THREE, stage) {
         const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
-        // Mode étendu : plus de bloc, la forêt continue à perte de vue
-        const EXT = !!opts.extended;
         const S = 10;
         const HALF = S / 2;
         const WATER = -0.28;
@@ -480,7 +448,7 @@
         const MAIN = GIANTS[0];
         // La clairière où se promènent les sangliers, devant le grand arbre
         const CLEAR = { x: MAIN.x + FX * 2.6, z: MAIN.z + FZ * 2.6 };
-        const PATH = [[13, 5.6], [8.6, 3.6], [5.2, 2.6], [3.6, 2.2], [2.2, 1.5], [1.0, 1.0]];
+        const PATH = [[5.2, 2.6], [3.6, 2.2], [2.2, 1.5], [1.0, 1.0]];
         const pondD = (x, z) => {
             let d = Infinity;
             for (const [cx, cz, r] of PONDS) d = Math.min(d, Math.hypot(x - cx, z - cz) - r);
@@ -579,69 +547,31 @@
         const BED = color(0xb7a676);
         const DEEP = color(0x6f8466);
         const tmp = new THREE.Color();
-        // Colore chaque triangle du sol : chemin, clairière, terre au pied des géants, mousse, sable, fond de l'étang
-        function paintTerrain(geo, drop = 0) {
-            const pp = geo.attributes.position;
-            const cc = new Float32Array(pp.count * 3);
-            for (let f = 0; f < pp.count; f += 3) {
-                const x = (pp.getX(f) + pp.getX(f + 1) + pp.getX(f + 2)) / 3;
-                const y = (pp.getY(f) + pp.getY(f + 1) + pp.getY(f + 2)) / 3 + drop;
-                const z = (pp.getZ(f) + pp.getZ(f + 1) + pp.getZ(f + 2)) / 3;
-                const h = hash(x, z);
-                if (y > WATER + 0.1) {
-                    const nearGiant = GIANTS.some(g => Math.hypot(x - g.x, z - g.z) < 1.5 * g.r);
-                    if (pathD(x, z) < 0.17) tmp.copy(PATHC[h < 0.5 ? 0 : 1]);
-                    else if (Math.hypot(x - CLEAR.x, z - CLEAR.z) < 1.5) tmp.copy(CLEARC[Math.floor(h * CLEARC.length)]);
-                    else if (nearGiant && h < 0.45) tmp.copy(SOIL[h < 0.22 ? 0 : 1]);
-                    else tmp.copy(MOSS[Math.floor(h * MOSS.length)]);
-                } else if (y > WATER - 0.08) {
-                    tmp.copy(SAND);
-                } else {
-                    tmp.copy(BED).lerp(DEEP, clamp((WATER - y) / 1.2, 0, 1));
-                }
-                for (let k = 0; k < 3; k++) tmp.toArray(cc, (f + k) * 3);
+        for (let f = 0; f < tp.count; f += 3) {
+            const x = (tp.getX(f) + tp.getX(f + 1) + tp.getX(f + 2)) / 3;
+            const y = (tp.getY(f) + tp.getY(f + 1) + tp.getY(f + 2)) / 3;
+            const z = (tp.getZ(f) + tp.getZ(f + 1) + tp.getZ(f + 2)) / 3;
+            const h = hash(x, z);
+            if (y > WATER + 0.1) {
+                const nearGiant = GIANTS.some(g => Math.hypot(x - g.x, z - g.z) < 1.5 * g.r);
+                if (pathD(x, z) < 0.17) tmp.copy(PATHC[h < 0.5 ? 0 : 1]);
+                else if (Math.hypot(x - CLEAR.x, z - CLEAR.z) < 1.5) tmp.copy(CLEARC[Math.floor(h * CLEARC.length)]);
+                else if (nearGiant && h < 0.45) tmp.copy(SOIL[h < 0.22 ? 0 : 1]);
+                else tmp.copy(MOSS[Math.floor(h * MOSS.length)]);
+            } else if (y > WATER - 0.08) {
+                tmp.copy(SAND);
+            } else {
+                tmp.copy(BED).lerp(DEEP, clamp((WATER - y) / 1.2, 0, 1));
             }
-            geo.setAttribute('color', new THREE.BufferAttribute(cc, 3));
+            for (let k = 0; k < 3; k++) tmp.toArray(tc, (f + k) * 3);
         }
-        paintTerrain(terrainGeo);
+        terrainGeo.setAttribute('color', new THREE.BufferAttribute(tc, 3));
         terrainGeo.computeVertexNormals();
         const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
         decorate(terrainMat);
         const terrain = new THREE.Mesh(terrainGeo, terrainMat);
         terrain.receiveShadow = true;
         scene.add(terrain);
-
-        // Mode étendu : le sol continue tout autour, aussi fin que le bloc près de lui, puis plus grossier au loin
-        // (le grand morceau est un peu plus bas et passe sous le premier : aucune fente entre les deux)
-        function groundPatch(R, cell, hole, drop) {
-            const n = Math.round((2 * R) / cell);
-            const g0 = new THREE.PlaneGeometry(2 * R, 2 * R, n, n);
-            g0.rotateX(-Math.PI / 2);
-            const p0 = g0.attributes.position;
-            for (let i = 0; i < p0.count; i++) p0.setY(i, height(p0.getX(i), p0.getZ(i)) - drop);
-            const g1 = g0.toNonIndexed();
-            g0.dispose();
-            const src = g1.attributes.position.array;
-            const keep = [];
-            for (let i = 0; i < src.length; i += 9) {
-                const cx = (src[i] + src[i + 3] + src[i + 6]) / 3;
-                const cz = (src[i + 2] + src[i + 5] + src[i + 8]) / 3;
-                if (Math.abs(cx) < hole && Math.abs(cz) < hole) continue;
-                for (let k = 0; k < 9; k++) keep.push(src[i + k]);
-            }
-            g1.dispose();
-            const g = new THREE.BufferGeometry();
-            g.setAttribute('position', new THREE.Float32BufferAttribute(keep, 3));
-            paintTerrain(g, drop);
-            g.computeVertexNormals();
-            const m = new THREE.Mesh(g, terrainMat);
-            m.receiveShadow = true;
-            scene.add(m);
-        }
-        if (EXT) {
-            groundPatch(10, S / N, HALF, 0);
-            groundPatch(80, 2.5, 7.5, 0.14);
-        }
 
         // --- Côtés du bloc : couches de terre, et l'eau vue en coupe ---
         const strata = strataTexture();
@@ -655,9 +585,6 @@
             { x0: -HALF, z0: -HALF, dx: 0, dz: 1 },
         ];
         const rimPts = [];
-        const block = new THREE.Group();
-        block.visible = !EXT;
-        scene.add(block);
         const TOPSOIL = color(0x4f3b2a);
         const GLASS_TOP = color(0x9fe9ec);
         const GLASS_BOTTOM = color(0x2a98a6);
@@ -688,18 +615,17 @@
                 if (top < WATER - 0.005) rimPts.push([ei, i, x, z]);
             }
             const normal = [-e.dz, 0, e.dx];
-            block.add(strip(body, bodyUv, null, normal, sideMat, true));
-            block.add(strip(lip, null, lipCol, normal, lipMat, true));
-            // L'étang vu en coupe : passe après la surface de l'eau, donc vu du dessus il reste caché sous elle
+            scene.add(strip(body, bodyUv, null, normal, sideMat, true));
+            scene.add(strip(lip, null, lipCol, normal, lipMat, true));
             const g = strip(glass, null, glassCol, normal, glassMat, false);
             g.renderOrder = 3;
-            block.add(g);
+            scene.add(g);
         });
         const bottomGeo = new THREE.PlaneGeometry(S, S);
         bottomGeo.rotateX(Math.PI / 2);
         const bottom = new THREE.Mesh(bottomGeo, new THREE.MeshStandardMaterial({ color: 0x5d4330 }));
         bottom.position.y = BASE;
-        block.add(bottom);
+        scene.add(bottom);
 
         const rim = [];
         for (let k = 1; k < rimPts.length; k++) {
@@ -713,28 +639,25 @@
         rimGeo.setAttribute('position', new THREE.Float32BufferAttribute(rim, 3));
         const rimLines = new THREE.LineSegments(rimGeo, new THREE.LineBasicMaterial({ color: 0xbfd8ff, transparent: true, opacity: 0.45, fog: false }));
         rimLines.renderOrder = 4;
-        block.add(rimLines);
+        scene.add(rimLines);
 
         const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,0,0,0.45)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false, fog: false }));
         contact.rotation.x = -Math.PI / 2;
         contact.position.set(0.8, BASE - 0.02, -0.4);
-        block.add(contact);
+        scene.add(contact);
 
         // --- Eau ---
         const WSEG = phone ? 36 : 48;
-        const waterGeo = EXT ? new THREE.PlaneGeometry(9, 9, WSEG, WSEG) : new THREE.PlaneGeometry(S, S, WSEG, WSEG);
+        const waterGeo = new THREE.PlaneGeometry(S, S, WSEG, WSEG);
         waterGeo.rotateX(-Math.PI / 2);
-        if (EXT) waterGeo.translate(-3.5, 0, 3.5);
         const wp = waterGeo.attributes.position;
         const waves = [];
-        const LIM = EXT ? Infinity : HALF - 1e-3;
         for (let i = 0; i < wp.count; i++) {
             const x = wp.getX(i);
             const z = wp.getZ(i);
-            if (Math.abs(x) < LIM && Math.abs(z) < LIM && height(x, z) < WATER + 0.12) waves.push(i);
+            if (Math.abs(x) < HALF - 1e-3 && Math.abs(z) < HALF - 1e-3 && height(x, z) < WATER + 0.12) waves.push(i);
         }
-        // La surface écrit sa profondeur : vu du dessus, on ne devine plus la coupe de l'étang au bord du bloc
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x1b6676, transparent: true, opacity: 0.86, roughness: 0.14, metalness: 0.05, flatShading: true, depthWrite: true });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x1b6676, transparent: true, opacity: 0.86, roughness: 0.14, metalness: 0.05, flatShading: true, depthWrite: false });
         const water = new THREE.Mesh(waterGeo, waterMat);
         water.position.y = WATER;
         water.receiveShadow = true;
@@ -989,82 +912,6 @@
         instanced(new THREE.CylinderGeometry(0.13, 0.17, 0.22, 8).translate(0, 0.11, 0), flat(0x6a4a33), stumps, null, true);
         instanced(new THREE.CylinderGeometry(0.11, 0.11, 0.012, 8).translate(0, 0.226, 0), flat(0xc9a676), stumps, null, false);
         instanced(new THREE.SphereGeometry(0.1, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.2, 0.5, 1).translate(0.06, 0.2, 0.02), flat(0x5d8f45), stumps, null, false);
-
-        // --- Mode étendu : la forêt continue tout autour du bloc ---
-        if (EXT) {
-            const inBlock = (x, z, pad) => Math.abs(x) < HALF + pad && Math.abs(z) < HALF + pad;
-            const RN = phone ? 13 : 18;
-            const RF = phone ? 34 : 46;
-            const near = [];
-            const far = [];
-            // Près du bloc : des arbres comme ceux du bloc, sur une grille un peu bousculée
-            for (let gx = -RN; gx <= RN; gx += 1.25) {
-                for (let gz = -RN; gz <= RN; gz += 1.25) {
-                    const x = gx + rr(-0.5, 0.5);
-                    const z = gz + rr(-0.5, 0.5);
-                    if (inBlock(x, z, 0.25) || pondD(x, z) < 0.6 || pathD(x, z) < 0.45 || rand() < 0.12) continue;
-                    const k2 = rand();
-                    near.push({ x, z, y: height(x, z) - 0.03, s: rr(0.8, 1.55), yaw: rr(0, 6.28), kind: k2 < 0.55 ? 'pine' : k2 < 0.82 ? 'round' : 'birch' });
-                }
-            }
-            // Plus loin : des silhouettes simples, qui se perdent dans la brume
-            for (let gx = -RF; gx <= RF; gx += 2.1) {
-                for (let gz = -RF; gz <= RF; gz += 2.1) {
-                    if (Math.max(Math.abs(gx), Math.abs(gz)) <= RN) continue;
-                    const x = gx + rr(-0.8, 0.8);
-                    const z = gz + rr(-0.8, 0.8);
-                    if (pathD(x, z) < 0.6 || rand() < 0.15) continue;
-                    far.push({ x, z, y: height(x, z) - 0.05, s: rr(1.2, 2.2), yaw: rr(0, 6.28), kind: rand() < 0.65 ? 'pine' : 'round' });
-                }
-            }
-            const nPine = near.filter(p => p.kind === 'pine');
-            const nRound = near.filter(p => p.kind === 'round');
-            const nBirch = near.filter(p => p.kind === 'birch');
-            const brown = () => color(0x5e3f2a);
-            instanced(new THREE.CylinderGeometry(0.05, 0.075, 0.36, 5).translate(0, 0.18, 0), woodMat, nPine, brown, true);
-            instanced(new THREE.ConeGeometry(0.43, 0.62, 7).translate(0, 0.6, 0), leafMat, nPine, (p) => pineColor(p).clone(), true);
-            instanced(new THREE.ConeGeometry(0.34, 0.54, 7).translate(0, 0.9, 0), leafMat, nPine, (p) => pineColor(p).clone().offsetHSL(0, 0, 0.03), true);
-            instanced(new THREE.ConeGeometry(0.23, 0.44, 7).translate(0, 1.18, 0), leafMat, nPine, (p) => pineColor(p).clone().offsetHSL(0, 0, 0.06), true);
-            instanced(new THREE.CylinderGeometry(0.05, 0.08, 0.6, 5).translate(0, 0.3, 0), woodMat, nRound, () => color(0x6a4630), true);
-            instanced(new THREE.IcosahedronGeometry(0.42, 0).translate(0, 0.88, 0), leafMat, nRound, (p) => roundColor(p).clone(), true);
-            instanced(new THREE.IcosahedronGeometry(0.28, 0).translate(0.17, 1.12, 0.06), leafMat, nRound, (p) => roundColor(p).clone().offsetHSL(0, 0.02, 0.05), true);
-            instanced(new THREE.CylinderGeometry(0.035, 0.05, 1.1, 6).translate(0, 0.55, 0), woodMat, nBirch, () => color(0xe9e4d8), true);
-            instanced(new THREE.IcosahedronGeometry(0.27, 0).translate(0.05, 1.12, 0), leafMat, nBirch, (p) => birchColor(p).clone(), true);
-            instanced(new THREE.IcosahedronGeometry(0.2, 0).translate(-0.08, 1.36, 0.06), leafMat, nBirch, (p) => birchColor(p).clone().offsetHSL(0, 0, 0.05), true);
-            const fPine = far.filter(p => p.kind === 'pine');
-            const fRound = far.filter(p => p.kind === 'round');
-            instanced(new THREE.ConeGeometry(0.45, 1.25, 6).translate(0, 0.75, 0), leafMat, fPine, (p) => pineColor(p).clone(), false);
-            instanced(new THREE.ConeGeometry(0.3, 0.7, 6).translate(0, 1.35, 0), leafMat, fPine, (p) => pineColor(p).clone().offsetHSL(0, 0, 0.04), false);
-            instanced(new THREE.IcosahedronGeometry(0.5, 0).translate(0, 0.95, 0), leafMat, fRound, (p) => roundColor(p).clone(), false);
-            instanced(new THREE.CylinderGeometry(0.05, 0.08, 0.5, 4).translate(0, 0.25, 0), woodMat, fRound, () => color(0x6a4630), false);
-
-            // Sous-bois tout autour : buissons, fougères, herbe
-            const RB = phone ? 9 : 11;
-            const xBush = [];
-            const xFern = [];
-            const xTuft = [];
-            const spot = (pad) => {
-                const x = rr(-RB, RB);
-                const z = rr(-RB, RB);
-                return inBlock(x, z, pad) || pondD(x, z) < 0.25 || pathD(x, z) < 0.25 ? null : { x, z };
-            };
-            for (let i = 0; i < (phone ? 260 : 480); i++) {
-                const q0 = spot(0.15);
-                if (q0) xBush.push({ x: q0.x, z: q0.z, y: height(q0.x, q0.z) - 0.02, s: rr(0.7, 1.3), yaw: rr(0, 6.28) });
-            }
-            for (let i = 0; i < (phone ? 420 : 900); i++) {
-                const q0 = spot(0.05);
-                if (q0) xFern.push({ x: q0.x, z: q0.z, y: height(q0.x, q0.z), s: rr(0.7, 1.35), yaw: rr(0, 6.28) });
-            }
-            for (let i = 0; i < (phone ? 500 : 1100); i++) {
-                const q0 = spot(0.02);
-                if (q0) xTuft.push({ x: q0.x, z: q0.z, y: height(q0.x, q0.z) - 0.01, s: rr(0.6, 1.3), yaw: rr(0, 6.28) });
-            }
-            instanced(new THREE.IcosahedronGeometry(0.2, 0).scale(1.15, 0.8, 1.05).translate(0, 0.12, 0), leafMat, xBush, (p) => bushColor(p).clone(), true);
-            instanced(new THREE.IcosahedronGeometry(0.14, 0).translate(0.13, 0.2, 0.05), leafMat, xBush, (p) => bushColor(p).clone().offsetHSL(0, 0, 0.05), true);
-            instanced(fernGeometry(), flat(WHITE, { side: THREE.DoubleSide }), xFern, (p) => color([0x5d9a45, 0x4f8a3f, 0x6aab4e, 0x447a37][Math.floor(hash(p.x, p.z) * 4)]), false);
-            instanced(tuftGeometry(), flat(WHITE, { side: THREE.DoubleSide }), xTuft, (p) => GRASS[Math.floor(hash(p.x * 2.3, p.z * 1.1) * GRASS.length)], false);
-        }
 
         // --- Étang : plantes, roseaux, nénuphars, poissons ---
         const weeds = [];
@@ -1466,10 +1313,10 @@ void main() {
 
         const mistTex = radialTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
         const mists = [];
-        for (let i = 0; i < (phone ? 7 : 12) * (EXT ? 3 : 1); i++) {
+        for (let i = 0; i < (phone ? 7 : 12); i++) {
             const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: 0xa9bdb6, transparent: true, opacity: 0.2, depthWrite: false, fog: false }));
-            const x = EXT ? rr(-13, 13) : rr(-4, 4);
-            const z = EXT ? rr(-13, 13) : rr(-4, 4);
+            const x = rr(-4, 4);
+            const z = rr(-4, 4);
             sp.scale.set(rr(2.5, 4), rr(0.9, 1.4), 1);
             sp.position.set(x, Math.max(WATER, height(x, z)) + rr(0.25, 0.9), z);
             scene.add(sp);
@@ -1481,7 +1328,6 @@ void main() {
         const pollen = particles(phone ? 40 : 70, true);
         const dirt = particles(40, false);
         const bubbles = particles(phone ? 12 : 18, false);
-        bubbles.points.renderOrder = 1;
         pollen.items.forEach((p) => Object.assign(p, { ox: rr(-4.6, 4.6), oz: rr(-4.6, 4.6), oy: rr(0.3, 3.2), ph: rr(0, 6.28), sp: rr(0.15, 0.35) }));
         dirt.items.forEach((p) => { p.life = 1; });
         bubbles.items.forEach((p) => resetBubble(p, true));
@@ -1546,8 +1392,7 @@ void main() {
             rings.push({ m, t: 1, max: 0.5, dur: 1 });
         }
         // --- Pluie : des traits fins poussés par le vent, des éclaboussures au sol, des ronds sur l'étang ---
-        const RAIN = Math.round((phone ? 450 : 900) * (EXT ? (phone ? 3 : 4.5) : 1));
-        const RAIN_AREA = EXT ? (phone ? 14 : 19) : HALF - 0.02;
+        const RAIN = phone ? 450 : 900;
         const RAIN_TOP = 8.5;
         const RAIN_SPEED = 7.5;
         const DRIFT_X = 0.12;
@@ -1563,8 +1408,8 @@ void main() {
         const drops = Array.from({ length: RAIN }, () => ({}));
         // Chaque goutte vise un point du bloc ; le vent la fait arriver en biais
         function resetDrop(d, anywhere) {
-            d.x = rr(-RAIN_AREA, RAIN_AREA);
-            d.z = rr(-RAIN_AREA, RAIN_AREA);
+            d.x = rr(-HALF + 0.02, HALF - 0.02);
+            d.z = rr(-HALF + 0.02, HALF - 0.02);
             d.ground = height(d.x, d.z);
             d.floor = Math.max(d.ground, WATER);
             d.y = anywhere ? rr(d.floor, RAIN_TOP) : rr(RAIN_TOP - 0.5, RAIN_TOP + 1.5);
@@ -1589,7 +1434,7 @@ void main() {
         function ripple(x, z, max = 0.45, dur = 1.4, delay = 0) {
             const r = rings.find(k => k.t >= 1) || rings[0];
             Object.assign(r, { t: -delay / dur, max, dur });
-            r.m.position.set(x, WATER + 0.05, z);
+            r.m.position.set(x, WATER + 0.035, z);
         }
 
         // --- Caméra ---
@@ -1718,14 +1563,6 @@ void main() {
         const ro = new ResizeObserver(resize);
         ro.observe(stage);
         resize();
-        // Même angle de vue qu'avant (quand on vient d'appuyer sur Étendre)
-        if (opts.view) {
-            ({ az, el } = opts.view);
-            if (opts.view.touched) {
-                zoom = opts.view.zoom;
-                touched = true;
-            }
-        }
 
         // --- Boucle ---
         const m4 = new THREE.Matrix4();
@@ -1764,8 +1601,8 @@ void main() {
             const dist = fit * zoom;
             camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
             camera.lookAt(target);
-            scene.fog.near = EXT ? dist - 1 : dist - 2;
-            scene.fog.far = dist + (EXT ? 18 : 22);
+            scene.fog.near = dist - 2;
+            scene.fog.far = dist + 22;
 
             for (const i of waves) {
                 const x = wp.getX(i);
@@ -2156,7 +1993,6 @@ void main() {
         raf = requestAnimationFrame(frame);
 
         return {
-            view: () => ({ az, el, zoom, touched }),
             dispose() {
                 alive = false;
                 stage.style.removeProperty('--flash');
@@ -2367,13 +2203,11 @@ void main() {
                 blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
             });
             const pts = new THREE.Points(g, m);
-            const self = pts;
             pts.frustumCulled = false;
             pts.renderOrder = 9;
             scene.add(pts);
             const items = Array.from({ length: count }, () => ({}));
             return {
-                points: self,
                 items,
                 set(i, x, y, z, s, c, a) {
                     pos[i * 3] = x;
@@ -2486,15 +2320,10 @@ void main() {
     // ce puits sans fin qu'à l'intérieur du bloc : de l'extérieur, ça reste un
     // simple rectangle.
     // ---------------------------------------------------------------------
-    function buildBoat(THREE, stage, opts = {}) {
+    function buildBoat(THREE, stage) {
         const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
-        // Mode étendu : plus de bloc, l'océan va jusqu'à l'horizon
-        const EXT = !!opts.extended;
         const S = 10;
         const HALF = S / 2;
-        // Jusqu'où les vagues soulèvent vraiment la surface (au-delà, seuls les reflets bougent)
-        const WAVE_R = EXT ? 20 : HALF;
-        const WAVE_EDGE = EXT ? 3 : 0.6;
         const BASE = -3.3;
         const ABYSS = -70;
         const rand = mulberry32(5);
@@ -2514,9 +2343,7 @@ void main() {
         renderer.domElement.className = 'diorama-canvas';
         stage.appendChild(renderer.domElement);
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 900);
-        // Au loin, l'océan étendu se fond dans la nuit
-        if (EXT) scene.fog = new THREE.Fog(0x0f171d, 20, 60);
+        const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 400);
         const uTime = { value: 0 };
         const uFlash = { value: 0 };
 
@@ -2544,13 +2371,13 @@ void main() {
             [0.83, -0.56, 4.83, 2.4, 0.03],
             [-0.3, -0.95, 7.85, 3.0, 0.015],
         ];
+        const EDGE = 0.6;
         const wave = (x, z, t) => {
             let h = 0;
             for (const [dx, dz, k, w, a] of WAVES) h += a * (Math.exp(Math.sin((dx * x + dz * z) * k - w * t) - 1) - 0.43);
-            return h * smooth(clamp((WAVE_R - Math.max(Math.abs(x), Math.abs(z))) / WAVE_EDGE, 0, 1));
+            return h * smooth(clamp((HALF - Math.max(Math.abs(x), Math.abs(z))) / EDGE, 0, 1));
         };
-        const edgeGLSL = `smoothstep(0.0, 1.0, clamp((${WAVE_R.toFixed(2)} - max(abs(p.x), abs(p.y))) / ${WAVE_EDGE.toFixed(2)}, 0.0, 1.0))`;
-        const edgeNGLSL = EXT ? '1.0' : edgeGLSL;
+        const edgeGLSL = `smoothstep(0.0, 1.0, clamp((${HALF.toFixed(2)} - max(abs(p.x), abs(p.y))) / ${EDGE.toFixed(2)}, 0.0, 1.0))`;
         const WAVE_GLSL = `uniform float uTime;
 varying vec2 vXZ;
 float waveH(vec2 p) {
@@ -2563,7 +2390,7 @@ vec3 waveN(vec2 p) {
     float th;
 ${WAVES.map(([dx, dz, k, w, a]) => `    th = dot(p, vec2(${dx.toFixed(3)}, ${dz.toFixed(3)})) * ${k.toFixed(3)} - ${w.toFixed(3)} * uTime;
     g += ${(a * k).toFixed(4)} * exp(sin(th) - 1.0) * cos(th) * vec2(${dx.toFixed(3)}, ${dz.toFixed(3)});`).join('\n')}
-    g *= ${edgeNGLSL};
+    g *= ${edgeGLSL};
     return normalize(vec3(-g.x, 1.0, -g.y));
 }
 `;
@@ -2591,30 +2418,19 @@ vWater = (modelMatrix * wW).xyz;`);
             mat.customProgramCacheKey = () => 'underwater';
             return mat;
         };
-        // Ce qu'on voit selon l'endroit par où l'on regarde : le masque marque 1 là où l'on regarde
-        // dans le bloc par une vitre, 2 là où l'on regarde par la surface, et 0 dehors.
-        //  'in'   : dans l'eau, par où que l'on regarde (poissons, méduses du fond…)
-        //  'side' : seulement par les vitres (les parois du puits)
-        //  'top'  : seulement par la surface (le fond infini, sans parois)
-        //  'out'  : seulement dehors (l'ombre sous le bloc)
-        const gate = (mat, mode = 'in') => {
+        // Ce qui n'existe que « vu à travers le bloc » : le puits sans fond
+        const gate = (mat, func) => {
             mat.stencilWrite = true;
+            mat.stencilRef = 1;
+            mat.stencilFunc = func === undefined ? THREE.EqualStencilFunc : func;
             mat.stencilFail = THREE.KeepStencilOp;
             mat.stencilZFail = THREE.KeepStencilOp;
             mat.stencilZPass = THREE.KeepStencilOp;
-            if (mode === 'mark1' || mode === 'mark2') {
-                mat.stencilRef = mode === 'mark1' ? 1 : 2;
-                mat.stencilFunc = THREE.AlwaysStencilFunc;
-                mat.stencilZPass = THREE.ReplaceStencilOp;
-            } else {
-                mat.stencilRef = mode === 'side' ? 1 : mode === 'top' ? 2 : 0;
-                mat.stencilFunc = mode === 'in' ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc;
-            }
             return mat;
         };
 
         // --- Les parois du puits : un dégradé avec des reflets de lumière qui s'éteignent en descendant ---
-        const wellMat = (side, mode) => {
+        const wellMat = (side, func) => {
             const m = new THREE.ShaderMaterial({
                 uniforms: { uTime, uFlash },
                 vertexShader: `varying vec3 vW;
@@ -2650,7 +2466,7 @@ void main() {
 }`,
                 side,
             });
-            if (mode) gate(m, mode);
+            if (func !== undefined) gate(m, func);
             return m;
         };
         const wall = (h, yc, mat, order) => {
@@ -2661,47 +2477,24 @@ void main() {
                 scene.add(m);
             });
         };
-        // Le masque : marque les pixels où l'on regarde dans l'eau, par les vitres (1) ou par la surface (2).
-        // Il passe avant tout le reste. De l'extérieur, le bloc reste un simple rectangle.
-        const maskMat = (mode) => gate(new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }), mode);
-        const maskTop = new THREE.Mesh(new THREE.PlaneGeometry(EXT ? 1600 : S, EXT ? 1600 : S).rotateX(-Math.PI / 2), maskMat('mark2'));
-        maskTop.renderOrder = -2;
-        scene.add(maskTop);
-        const masks = [maskTop];
-        if (!EXT) {
-            const maskSide = new THREE.Group();
-            [[0, HALF, 0], [HALF, 0, Math.PI / 2], [0, -HALF, Math.PI], [-HALF, 0, -Math.PI / 2]].forEach(([x, z, ry]) => {
-                const m = new THREE.Mesh(new THREE.PlaneGeometry(S, -BASE).rotateY(ry), maskMat('mark1'));
-                m.position.set(x, BASE / 2, z);
-                m.renderOrder = -2;
-                maskSide.add(m);
-                masks.push(m);
-            });
-            const bottomMask = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(Math.PI / 2), maskMat('mark1'));
-            bottomMask.position.y = BASE;
-            bottomMask.renderOrder = -2;
-            maskSide.add(bottomMask);
-            scene.add(maskSide);
-
-            // Les parois du puits, seulement quand on regarde par les vitres : vu du dessus, l'eau n'a pas de bords
-            wall(-BASE, BASE / 2, wellMat(THREE.BackSide, 'side'), 0);
-            wall(BASE - ABYSS, (BASE + ABYSS) / 2, wellMat(THREE.BackSide, 'side'), 2);
-            const abyssCap = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(-Math.PI / 2), wellMat(THREE.FrontSide, 'side'));
-            abyssCap.position.y = ABYSS;
-            abyssCap.renderOrder = 2;
-            scene.add(abyssCap);
-        }
-        // Vu par la surface : un fond très lointain, noyé dans le bleu nuit, qui s'étend partout
-        const deepFloor = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600).rotateX(-Math.PI / 2), wellMat(THREE.FrontSide, 'top'));
-        deepFloor.position.y = -46;
-        deepFloor.renderOrder = 2;
-        scene.add(deepFloor);
+        // Haut du puits (dans le bloc) : visible de partout
+        wall(-BASE, BASE / 2, wellMat(THREE.BackSide), 0);
+        // Le reste du puits, sous le bloc : seulement à travers le bloc (vitres ou surface)
+        wall(BASE - ABYSS, (BASE + ABYSS) / 2, wellMat(THREE.BackSide, THREE.EqualStencilFunc), 2);
+        const floorGeo = () => new THREE.PlaneGeometry(S, S).rotateX(-Math.PI / 2);
+        const abyssCap = new THREE.Mesh(floorGeo(), wellMat(THREE.FrontSide, THREE.EqualStencilFunc));
+        abyssCap.position.y = ABYSS;
+        abyssCap.renderOrder = 2;
+        scene.add(abyssCap);
+        // Le masque : marque les pixels où l'on regarde à l'intérieur du bloc (par le dessus ou par les côtés).
+        // Le puits sans fond n'est dessiné que là : de l'extérieur, le bloc reste un simple rectangle.
+        const mask = new THREE.Mesh(new THREE.BoxGeometry(S, -BASE, S).translate(0, BASE / 2, 0), gate(new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }), THREE.AlwaysStencilFunc));
+        mask.material.stencilZPass = THREE.ReplaceStencilOp;
+        mask.renderOrder = 1;
+        scene.add(mask);
 
         // --- Les vitres : on voit à travers, légèrement teintées ---
         const glassMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false });
-        const block = new THREE.Group();
-        block.visible = !EXT;
-        scene.add(block);
         [[0, HALF, 0], [HALF, 0, Math.PI / 2], [0, -HALF, Math.PI], [-HALF, 0, -Math.PI / 2]].forEach(([x, z, ry]) => {
             const g = new THREE.PlaneGeometry(S, -BASE, 1, 1).rotateY(ry);
             const col = [];
@@ -2710,7 +2503,7 @@ void main() {
             const m = new THREE.Mesh(g, glassMat);
             m.position.set(x, BASE / 2, z);
             m.renderOrder = 6;
-            block.add(m);
+            scene.add(m);
         });
         const corners = [[-HALF, HALF], [HALF, HALF], [HALF, -HALF], [-HALF, -HALF]];
         const topLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(corners.map(([x, z]) => V(x, 0.003, z))), new THREE.LineBasicMaterial({ color: 0xbfe2ea, transparent: true, opacity: 0.5 }));
@@ -2720,7 +2513,7 @@ void main() {
         const line = (p1, p2) => {
             const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), edgeMat);
             l.renderOrder = 8;
-            block.add(l);
+            scene.add(l);
             return l;
         };
         const vEdges = corners.map(([x, z]) => line(V(x, 0, z), V(x, BASE, z)));
@@ -2746,23 +2539,20 @@ void main() {
         const wellGeo = new THREE.BufferGeometry();
         wellGeo.setAttribute('position', new THREE.Float32BufferAttribute(wellPts, 3));
         wellGeo.setAttribute('color', new THREE.Float32BufferAttribute(wellCol, 4));
-        const wellLines = new THREE.LineSegments(wellGeo, gate(new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }), 'side'));
+        const wellLines = new THREE.LineSegments(wellGeo, gate(new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false })));
         wellLines.renderOrder = 3;
-        block.add(wellLines);
-        block.add(topLine);
-        // L'ombre sous le bloc : seulement vue de dehors (jamais à travers l'eau)
-        const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), gate(new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,0,0,0.45)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }), 'out'));
+        scene.add(wellLines);
+        scene.add(topLine);
+        const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,0,0,0.45)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }));
         contact.rotation.x = -Math.PI / 2;
         contact.position.set(1, BASE - 0.02, -0.8);
-        block.add(contact);
+        scene.add(contact);
 
         // --- La surface : transparente quand on regarde dedans, brillante en rasant ---
-        const M = EXT ? (phone ? 150 : 230) : (phone ? 100 : 140);
-        const WS = EXT ? WAVE_R * 2 : S;
-        const waterGeo = new THREE.PlaneGeometry(WS, WS, M, M);
+        const M = phone ? 100 : 140;
+        const waterGeo = new THREE.PlaneGeometry(S, S, M, M);
         waterGeo.rotateX(-Math.PI / 2);
-        // La surface écrit sa profondeur : ce qui est derrière elle (hors de l'eau) ne transparaît plus
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x2a7f8c, roughness: 0.12, metalness: 0.15, transparent: true, depthWrite: true });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x2a7f8c, roughness: 0.12, metalness: 0.15, transparent: true, depthWrite: false });
         waterMat.onBeforeCompile = (sh) => {
             sh.uniforms.uTime = uTime;
             sh.uniforms.uFlash = uFlash;
@@ -2783,16 +2573,6 @@ totalEmissiveRadiance += vec3(0.14, 0.22, 0.28) * fres * 0.6 + vec3(0.5, 0.6, 0.
         water.receiveShadow = true;
         water.renderOrder = 7;
         scene.add(water);
-        if (EXT) {
-            // Au-delà de la zone animée : quatre grands pans plats (les reflets bougent toujours)
-            const FARW = 800;
-            [[-(FARW + WAVE_R) / 2, 0, FARW - WAVE_R, FARW * 2], [(FARW + WAVE_R) / 2, 0, FARW - WAVE_R, FARW * 2], [0, -(FARW + WAVE_R) / 2, WAVE_R * 2, FARW - WAVE_R], [0, (FARW + WAVE_R) / 2, WAVE_R * 2, FARW - WAVE_R]].forEach(([cx, cz, w, h]) => {
-                const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h, 1, 1).rotateX(-Math.PI / 2).translate(cx, 0, cz), waterMat);
-                m.renderOrder = 7;
-                m.receiveShadow = true;
-                scene.add(m);
-            });
-        }
 
         // --- Le bateau ---
         const boat = new THREE.Group();
@@ -3085,7 +2865,7 @@ totalEmissiveRadiance += vec3(0.14, 0.22, 0.28) * fres * 0.6 + vec3(0.5, 0.6, 0.
         // --- Le ciel d'orage : des éclairs, toujours derrière le diorama ---
         const sky = new THREE.Group();
         scene.add(sky);
-        const boltMat = new THREE.MeshBasicMaterial({ color: 0xe8efff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+        const boltMat = new THREE.MeshBasicMaterial({ color: 0xe8efff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
         const bolt = new THREE.Mesh(new THREE.BufferGeometry(), boltMat);
         bolt.renderOrder = 9;
         sky.add(bolt);
@@ -3113,9 +2893,7 @@ totalEmissiveRadiance += vec3(0.14, 0.22, 0.28) * fres * 0.6 + vec3(0.5, 0.6, 0.
         }
 
         // --- La pluie, poussée par le vent ---
-        const RAIN = (phone ? 260 : 520) * (EXT ? 2 : 1);
-        const RAIN_X = EXT ? [-16, 12] : [-7, 5.5];
-        const RAIN_Z = EXT ? [-15, 12] : [-6, 5.5];
+        const RAIN = phone ? 260 : 520;
         const rainPos = new Float32Array(RAIN * 6);
         const rainGeo = new THREE.BufferGeometry();
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
@@ -3124,7 +2902,7 @@ totalEmissiveRadiance += vec3(0.14, 0.22, 0.28) * fres * 0.6 + vec3(0.5, 0.6, 0.
         rain.renderOrder = 9;
         scene.add(rain);
         const WIND = V(2.2, -9.5, 0.9);
-        const drops = Array.from({ length: RAIN }, () => ({ x: rr(RAIN_X[0], RAIN_X[1]), y: rr(-0.2, 7.5), z: rr(RAIN_Z[0], RAIN_Z[1]), s: rr(0.85, 1.15) }));
+        const drops = Array.from({ length: RAIN }, () => ({ x: rr(-6.5, 5.5), y: rr(-0.2, 7.5), z: rr(-6, 5.5), s: rr(0.85, 1.15) }));
 
         // --- Le projecteur du bateau balaie la mer ---
         const spot = new THREE.SpotLight(0xffeccc, 10, 8, 0.26, 0.6, 1.2);
@@ -3283,7 +3061,7 @@ void main() {
                 ripple(B0.x, B0.z, 1.2, 1.6);
                 return;
             }
-            const w = raycaster.intersectObjects(masks, false)[0];
+            const w = raycaster.intersectObject(mask)[0];
             if (w && w.point.y < -0.05) return;
             if (!w) {
                 if (!still && clock - storm.t0 > 1.2) {
@@ -3310,13 +3088,6 @@ void main() {
         const ro = new ResizeObserver(resize);
         ro.observe(stage);
         resize();
-        if (opts.view) {
-            ({ az, el } = opts.view);
-            if (opts.view.touched) {
-                zoom = opts.view.zoom;
-                touched = true;
-            }
-        }
 
         // --- Boucle ---
         const outDir = V(Math.sin(YAW), 0, Math.cos(YAW));
@@ -3354,10 +3125,6 @@ void main() {
             const facing = [cp.z > HALF, cp.x > HALF, cp.z < -HALF, cp.x < -HALF];
             vEdges.forEach((l, i) => { l.visible = facing[(i + 3) % 4] || facing[i]; });
             bEdges.forEach((l, i) => { l.visible = facing[i]; });
-            if (EXT) {
-                scene.fog.near = dist * 0.9;
-                scene.fog.far = dist + 38;
-            }
 
             // Le bateau suit la houle
             const fx = Math.cos(YAW);
@@ -3460,11 +3227,11 @@ void main() {
                 d.x += WIND.x * d.s * dt;
                 d.y += WIND.y * d.s * dt;
                 d.z += WIND.z * d.s * dt;
-                const inside = EXT || (Math.abs(d.x) < HALF && Math.abs(d.z) < HALF);
-                if (d.y < (inside ? 0.05 : BASE) || d.x > RAIN_X[1] + 1) {
-                    d.x = rr(RAIN_X[0], RAIN_X[1]);
+                const inside = Math.abs(d.x) < HALF && Math.abs(d.z) < HALF;
+                if (d.y < (inside ? 0.05 : BASE) || d.x > 6.5) {
+                    d.x = rr(-7, 5.5);
                     d.y = rr(6.5, 8);
-                    d.z = rr(RAIN_Z[0], RAIN_Z[1]);
+                    d.z = rr(-6, 5.5);
                 }
                 rainPos.set([d.x, d.y, d.z, d.x - WIND.x * 0.03, d.y - WIND.y * 0.03, d.z - WIND.z * 0.03], i * 6);
             }
@@ -3550,7 +3317,6 @@ void main() {
         raf = requestAnimationFrame(frame);
 
         return {
-            view: () => ({ az, el, zoom, touched }),
             dispose() {
                 alive = false;
                 cancelAnimationFrame(raf);

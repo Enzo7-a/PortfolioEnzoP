@@ -2404,7 +2404,7 @@ html.diorama-open { overflow: hidden; }
     width: min(300px, calc(100% - 80px));
 }
 
-/* En bas à droite : Aléatoire, Étendre, puis la mention IA */
+/* En bas à droite : le bouton Aléatoire, puis la mention IA */
 .diorama-dock {
     --a-bg: rgba(22, 32, 52, 0.62);
     --a-fg: #e2e9f6;
