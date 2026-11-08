@@ -2313,42 +2313,47 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="lighthouse"] .diorama-sky--storm { opacity: 1; }
 
-/* Le désert à l'heure dorée : un ciel lavande qui passe au pêche, le soleil bas à gauche */
+/* Le désert dans la tempête de sable : un ciel orange épais, plus clair là où le soleil perce */
 .diorama-sky--desert {
     opacity: 0;
     background:
-        radial-gradient(22% 18% at 18% 56%, rgba(255, 222, 170, 0.9), transparent),
-        radial-gradient(70% 34% at 30% 62%, rgba(255, 196, 140, 0.45), transparent),
-        linear-gradient(180deg, #7d84b6 0%, #a99cc0 30%, #d9aeb2 48%, #f3c29a 62%, #f6d2a4 74%, #d8a47c 100%);
+        radial-gradient(30% 24% at 24% 28%, rgba(255, 214, 160, 0.55), transparent),
+        radial-gradient(120% 70% at 50% 100%, rgba(120, 66, 32, 0.45), transparent),
+        linear-gradient(180deg, #a9653a 0%, #c47e4a 30%, #d6955c 55%, #c9864f 78%, #9c5d34 100%);
+}
+
+/* Dans la tempête, un voile de sable orange par-dessus tout le décor */
+.diorama-overlay[data-scene="desert"] .diorama-stage::after {
+    background:
+        radial-gradient(120% 95% at 50% 45%, rgba(214, 140, 80, 0.08) 40%, rgba(110, 56, 24, 0.34) 100%),
+        linear-gradient(180deg, rgba(200, 120, 60, 0.18), rgba(170, 96, 46, 0.1));
 }
 
 .diorama-overlay[data-scene="desert"] .diorama-sky--desert { opacity: 1; }
 
-/* La neige : l'heure bleue en montagne, quelques étoiles, la lune derrière les nuages, l'horizon lavande */
+/* La tempête de neige : un ciel bouché, gris en haut, presque blanc vers l'horizon */
 .diorama-sky--snow {
     opacity: 0;
     background:
-        radial-gradient(circle 30px at 78% 15%, rgba(250, 248, 238, 0.95), rgba(250, 248, 238, 0.35) 45%, transparent 70%),
-        radial-gradient(circle 170px at 78% 15%, rgba(200, 212, 240, 0.28), transparent),
-        radial-gradient(1px 1px at 12% 9%, rgba(255, 255, 255, 0.85), transparent),
-        radial-gradient(1px 1px at 31% 18%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1.5px 1.5px at 47% 7%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 63% 24%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1px 1px at 89% 30%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1.5px 1.5px at 22% 28%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(100% 45% at 50% 78%, rgba(196, 178, 214, 0.5), transparent),
-        linear-gradient(180deg, #121c3a 0%, #24345e 32%, #4c5d8c 56%, #8c8fb6 74%, #b7abc6 86%, #6f7ba0 100%);
+        radial-gradient(90% 50% at 50% 70%, rgba(226, 232, 240, 0.55), transparent),
+        linear-gradient(180deg, #5d6676 0%, #7f8899 30%, #a7b0bf 55%, #c3cad5 75%, #8f98a8 100%);
+}
+
+/* Dans le blizzard, un voile blanc par-dessus tout le décor, plus épais sur les bords */
+.diorama-overlay[data-scene="snow"] .diorama-stage::after {
+    background:
+        radial-gradient(115% 90% at 50% 48%, rgba(220, 228, 238, 0.06) 35%, rgba(196, 206, 220, 0.5) 100%),
+        linear-gradient(180deg, rgba(60, 70, 88, 0.18), rgba(220, 228, 238, 0.08));
 }
 
 .diorama-overlay[data-scene="snow"] .diorama-sky--snow { opacity: 1; }
 
-/* La salle de classe : un fond crème et doré, comme un après-midi au soleil */
+/* La salle de classe, un soir de pluie : un ciel gris-bleu qui s'assombrit, une lueur chaude au centre */
 .diorama-sky--classroom {
     opacity: 0;
     background:
-        radial-gradient(60% 50% at 25% 20%, rgba(255, 238, 200, 0.9), transparent),
-        radial-gradient(90% 60% at 70% 100%, rgba(214, 170, 130, 0.45), transparent),
-        linear-gradient(180deg, #f7ead6 0%, #f1dcc0 55%, #e3c4a0 100%);
+        radial-gradient(55% 45% at 50% 55%, rgba(255, 196, 130, 0.16), transparent),
+        linear-gradient(180deg, #232c3d 0%, #313c52 45%, #3f4a62 75%, #2b3446 100%);
 }
 
 .diorama-overlay[data-scene="classroom"] .diorama-sky--classroom { opacity: 1; }

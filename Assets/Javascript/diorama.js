@@ -48,13 +48,13 @@
         boatTitle: 'Lost at sea.',
         boatHelp: touch() ? 'Drag to turn · pinch to zoom · tap the boat, the water or the sky' : 'Drag to turn · scroll to zoom · click the boat, the water or the sky',
         lighthouseTitle: 'The lighthouse in the storm.',
-        desertTitle: 'The pharaoh\'s oasis.',
-        desertHelp: touch() ? 'Drag to turn · pinch to zoom · tap the pyramid, the camels or the water' : 'Drag to turn · scroll to zoom · click the pyramid, the camels or the water',
+        desertTitle: 'The oasis in the sandstorm.',
+        desertHelp: touch() ? 'Drag to turn · pinch to zoom · tap the crocodiles or the water' : 'Drag to turn · scroll to zoom · click the crocodiles or the water',
         lighthouseHelp: touch() ? 'Drag to turn · pinch to zoom · tap the lighthouse, the monsters or the water' : 'Drag to turn · scroll to zoom · click the lighthouse, the monsters or the water',
-        snowTitle: 'The chalet in the snow.',
+        snowTitle: 'The chalet in the blizzard.',
         classroomTitle: 'Revision time.',
         classroomHelp: touch() ? 'Drag to turn · pinch to zoom · tap a student, the teacher or the board' : 'Drag to turn · scroll to zoom · click a student, the teacher or the board',
-        snowHelp: touch() ? 'Drag to turn · pinch to zoom · tap the chalet, the fir trees or the snowman' : 'Drag to turn · scroll to zoom · click the chalet, the fir trees or the snowman',
+        snowHelp: touch() ? 'Drag to turn · pinch to zoom · tap the chalet or the fir trees' : 'Drag to turn · scroll to zoom · click the chalet or the fir trees',
     } : {
         open: 'Afficher les dioramas',
         dialog: 'Dioramas',
@@ -83,13 +83,13 @@
         boatTitle: 'Perdu au large.',
         boatHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le bateau, l\'eau ou le ciel' : 'Glisse pour tourner · molette pour zoomer · clique sur le bateau, l\'eau ou le ciel',
         lighthouseTitle: 'Le phare dans la tempête.',
-        desertTitle: 'L\'oasis du pharaon.',
-        desertHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche la pyramide, les chameaux ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur la pyramide, les chameaux ou l\'eau',
+        desertTitle: 'L\'oasis dans la tempête.',
+        desertHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche les crocodiles ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur les crocodiles ou l\'eau',
         lighthouseHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le phare, les monstres ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur le phare, les monstres ou l\'eau',
-        snowTitle: 'Le chalet sous la neige.',
+        snowTitle: 'Le chalet dans la tempête.',
         classroomTitle: 'L\'heure des révisions.',
         classroomHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche un élève, la prof ou le tableau' : 'Glisse pour tourner · molette pour zoomer · clique sur un élève, la prof ou le tableau',
-        snowHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le chalet, les sapins ou le bonhomme de neige' : 'Glisse pour tourner · molette pour zoomer · clique sur le chalet, les sapins ou le bonhomme de neige',
+        snowHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le chalet ou les sapins' : 'Glisse pour tourner · molette pour zoomer · clique sur le chalet ou les sapins',
     });
 
     // Vitesse de la rotation automatique au repos : lente, la même pour tous les dioramas
@@ -214,7 +214,7 @@
             const mine = ++token;
             o.dataset.scene = SCENES[current].id;
             // Interface claire sur les scènes sombres, sombre sur les scènes en plein jour
-            o.classList.toggle('is-night', !['desert', 'classroom'].includes(SCENES[current].id));
+            o.classList.toggle('is-night', SCENES[current].id !== 'desert');
             caption();
             if (scene3d) {
                 o.classList.remove('is-ready');
@@ -4848,10 +4848,10 @@ void main() {
     }
 
     // ---------------------------------------------------------------------
-    // Quatrième diorama : le désert au temps des pharaons. Des dunes sculptées par
-    // le vent, une petite oasis avec ses palmiers, et une pyramide intacte, couverte
-    // de calcaire blanc poli, dont la pointe en or renvoie l'éclat du soleil.
-    // Une caravane de chameaux fait le tour, des faucons planent au-dessus.
+    // Quatrième diorama : l'oasis dans la tempête de sable. Au milieu des dunes,
+    // une petite oasis (palmiers, papyrus) où vivent des crocodiles : deux se
+    // chauffent sur la berge, un autre nage tout doucement. Autour, le vent
+    // soulève le sable : tout devient orange, on devine à peine le décor.
     // ---------------------------------------------------------------------
     function buildDesert(THREE, stage) {
         const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
@@ -4869,10 +4869,8 @@ void main() {
         const smooth = (u) => u * u * (3 - 2 * u);
         const still = calm();
 
-        // --- Plan de la scène ---
-        const P = { x: -1.7, z: -1.9, half: 2.1, h: 2.75 };
-        const O = { x: 2.1, z: 1.75 };
-        const PONDS = [[2.1, 1.7, 1.0], [2.85, 2.3, 0.68], [1.4, 2.2, 0.58]];
+        // --- Plan de la scène : l'oasis au centre, les dunes tout autour ---
+        const PONDS = [[0.05, 0.15, 1.2], [0.95, 0.8, 0.72], [-0.9, 0.75, 0.62], [0.3, -0.75, 0.6]];
         const pondD = (x, z) => {
             let d = Infinity;
             for (const [cx, cz, r] of PONDS) d = Math.min(d, Math.hypot(x - cx, z - cz) - r);
@@ -4880,12 +4878,13 @@ void main() {
         };
         // Les dunes : un dos en pente douce face au vent, une face raide derrière, et deux cornes en croissant
         const DUNES = [
-            [3.6, -3.1, 0.95, 0.35, 2.2, 0.85, 1.6, 0.22],
-            [-3.8, 3.3, 0.8, 0.25, 2.0, 0.8, 1.5, 0.22],
-            [4.4, -0.3, 0.5, 0.4, 1.5, 0.6, 1.1, 0.3],
-            [-0.6, 4.5, 0.55, 0.3, 1.7, 0.7, 1.4, 0.25],
-            [-4.5, -0.1, 0.6, 0.35, 1.6, 0.7, 1.3, 0.2],
-            [1.2, -4.6, 0.45, 0.35, 1.4, 0.6, 1.2, 0.2],
+            [3.6, -3.2, 0.95, 0.35, 2.2, 0.85, 1.6, 0.22],
+            [-3.7, 3.4, 0.85, 0.25, 2.0, 0.8, 1.5, 0.22],
+            [4.2, 1.2, 0.6, 0.4, 1.5, 0.6, 1.3, 0.3],
+            [-0.8, 4.4, 0.55, 0.3, 1.7, 0.7, 1.4, 0.25],
+            [-4.3, -0.6, 0.7, 0.35, 1.6, 0.7, 1.4, 0.2],
+            [-1.6, -4.2, 0.8, 0.35, 1.8, 0.7, 1.5, 0.2],
+            [1.9, 4.3, 0.45, 0.3, 1.4, 0.6, 1.2, 0.2],
         ];
         const dune = (x, z, [cx, cz, A, th, w1, w2, wv, c]) => {
             const dx = x - cx;
@@ -4896,19 +4895,17 @@ void main() {
             const p = uu < 0 ? Math.exp(-Math.pow(uu / w1, 2)) : Math.exp(-Math.pow(uu / w2, 2));
             return A * p * Math.exp(-Math.pow(v / wv, 2));
         };
-        const footprint = (x, z) => Math.max(Math.abs(x - P.x), Math.abs(z - P.z)) - P.half;
         const height = (x, z) => {
             let h = 0.06 * Math.sin(x * 0.7 + z * 0.3) + 0.05 * Math.sin(z * 0.9 - x * 0.4) + 0.03 * Math.sin((x + z) * 1.7);
             for (const d of DUNES) h += dune(x, z, d);
             // L'oasis creuse une cuvette, l'eau au fond
             const d = pondD(x, z);
-            h = lerp(h, 0.0, 1 - smooth(clamp(d / 1.6, 0, 1)));
+            h = lerp(h, 0.0, 1 - smooth(clamp(d / 1.7, 0, 1)));
             if (d < 0) {
                 const k = Math.min(1, -d / 0.7);
                 h = -0.02 - 0.5 * smooth(k);
             }
-            // Le parvis de la pyramide, bien plat
-            return lerp(h, 0.04, 1 - smooth(clamp((footprint(x, z) - 0.15) / 0.9, 0, 1)));
+            return h;
         };
 
         // --- Rendu ---
@@ -4920,56 +4917,44 @@ void main() {
         renderer.domElement.className = 'diorama-canvas';
         stage.appendChild(renderer.domElement);
         const scene = new THREE.Scene();
-        // Une brume de chaleur, couleur de sable, qui adoucit le lointain
-        scene.fog = new THREE.Fog(0xe7c3a0, 20, 50);
+        // La tempête : une brume de sable épaisse et orange, qui avale le lointain
+        const DUST = 0xc98a52;
+        scene.fog = new THREE.Fog(DUST, 10, 30);
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
         const uTime = { value: 0 };
 
-        // --- Plein soleil ---
-        const SUN = V(-9, 4.6, 6.5);
-        const sunDir = SUN.clone().normalize();
-        const hemi = new THREE.HemisphereLight(0xc6b8d8, 0xd2a07a, 0.85);
+        // --- Un soleil voilé : la lumière passe à travers le sable, chaude et diffuse ---
+        const SUN = V(-8, 7, 4);
+        const hemi = new THREE.HemisphereLight(0xf0b47a, 0x8a5634, 1.35);
         scene.add(hemi);
-        const sun = new THREE.DirectionalLight(0xffc285, 2.5);
+        const sun = new THREE.DirectionalLight(0xffb878, 1.25);
         sun.position.copy(SUN);
         sun.castShadow = true;
         sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
-        Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 });
+        Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 });
         sun.shadow.bias = -0.0005;
         sun.shadow.normalBias = 0.03;
+        sun.shadow.radius = 4;
         scene.add(sun);
-        const bounce = new THREE.DirectionalLight(0xf0b88a, 0.3);
-        bounce.position.set(6, 3, -6);
-        scene.add(bounce);
 
-        // Un ciel en miniature, pour que l'or et l'eau aient quelque chose à refléter
-        // (l'or a le sien, plus chaud : un or qui reflète du bleu tournerait au vert)
+        // Un ciel de sable en miniature, pour les reflets de l'eau
         const pmrem = new THREE.PMREMGenerator(renderer);
-        function skyEnv(top, horizon, ground) {
-            const envScene = new THREE.Scene();
-            const skyGeo = new THREE.SphereGeometry(10, 32, 16);
-            const skyCol = [];
-            const sp = skyGeo.attributes.position;
-            for (let i = 0; i < sp.count; i++) {
-                const y = sp.getY(i) / 10;
-                if (y > 0.05) tmp.copy(color(horizon)).lerp(color(top), smooth(clamp(y * 1.6, 0, 1)));
-                else tmp.copy(color(horizon)).lerp(color(ground), smooth(clamp(-y * 3, 0, 1)));
-                skyCol.push(tmp.r, tmp.g, tmp.b);
-            }
-            skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(skyCol, 3));
-            envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
-            const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(14, 12, 8) }));
-            sunDisc.position.copy(sunDir).multiplyScalar(8.5);
-            envScene.add(sunDisc);
-            const tex = pmrem.fromScene(envScene, 0.02).texture;
-            envScene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
-            return tex;
+        const envScene = new THREE.Scene();
+        const skyGeo = new THREE.SphereGeometry(10, 32, 16);
+        const skyCol = [];
+        const sp = skyGeo.attributes.position;
+        for (let i = 0; i < sp.count; i++) {
+            const y = sp.getY(i) / 10;
+            tmp.copy(color(0xd9a06a)).lerp(color(y > 0 ? 0xb87a48 : 0x8a5a36), smooth(clamp(Math.abs(y) * 1.5, 0, 1)));
+            skyCol.push(tmp.r, tmp.g, tmp.b);
         }
-        const envMap = skyEnv(0x8c90c4, 0xf6c99c, 0xb98a60);
-        const goldEnv = skyEnv(0xf3d6b8, 0xffcf96, 0xa87a4c);
+        skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(skyCol, 3));
+        envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+        const envMap = pmrem.fromScene(envScene, 0.04).texture;
+        envScene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
         pmrem.dispose();
 
-        // --- Le sol : sable, sable mouillé, herbe de l'oasis, fond de l'eau, dalles du parvis ---
+        // --- Le sol : sable, sable mouillé, herbe de l'oasis, fond de l'eau ---
         const grid = new THREE.PlaneGeometry(S, S, N, N);
         grid.rotateX(-Math.PI / 2);
         const gp = grid.attributes.position;
@@ -4978,36 +4963,34 @@ void main() {
         grid.dispose();
         const tp = terrainGeo.attributes.position;
         const tc = new Float32Array(tp.count * 3);
-        const SAND = [0xe8cf9e, 0xe2c693, 0xedd6a8, 0xdcbd88].map(color);
-        const WET = color(0xb89c6e);
-        const GRASS = [0x7a9a3e, 0x8aa848, 0x6b8c38].map(color);
-        const BED = color(0x8c7a52);
-        const DEEP = color(0x3f6a62);
-        const SLAB = [0xeae0ca, 0xe2d6bd, 0xefe6d3].map(color);
+        const SAND = [0xe0b07a, 0xd9a670, 0xe6b886, 0xd09c66].map(color);
+        const WET = color(0xa47c52);
+        const GRASS = [0x7a8e3e, 0x86984a, 0x6e8238].map(color);
+        const BED = color(0x7a6444);
+        const DEEP = color(0x3d5a4c);
         for (let f = 0; f < tp.count; f += 3) {
             const x = (tp.getX(f) + tp.getX(f + 1) + tp.getX(f + 2)) / 3;
             const y = (tp.getY(f) + tp.getY(f + 1) + tp.getY(f + 2)) / 3;
             const z = (tp.getZ(f) + tp.getZ(f + 1) + tp.getZ(f + 2)) / 3;
             const h = hash(x, z);
             const d = pondD(x, z);
-            if (footprint(x, z) < 0.4) tmp.copy(SLAB[Math.floor(hash(Math.floor((x - P.x) * 2.2), Math.floor((z - P.z) * 2.2)) * SLAB.length)]);
-            else if (y < WATER - 0.02) tmp.copy(BED).lerp(DEEP, clamp((WATER - y) / 0.4, 0, 1));
+            if (y < WATER - 0.02) tmp.copy(BED).lerp(DEEP, clamp((WATER - y) / 0.4, 0, 1));
             else if (y < WATER + 0.06) tmp.copy(WET);
-            else if (d < 0.75 || (d < 1.15 && h < 0.45)) tmp.copy(GRASS[Math.floor(h * GRASS.length)]);
+            else if (d < 0.7 || (d < 1.1 && h < 0.45)) tmp.copy(GRASS[Math.floor(h * GRASS.length)]);
             else tmp.copy(SAND[Math.floor(h * SAND.length)]);
             for (let k = 0; k < 3; k++) tmp.toArray(tc, (f + k) * 3);
         }
         terrainGeo.setAttribute('color', new THREE.BufferAttribute(tc, 3));
         terrainGeo.computeVertexNormals();
         const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
-        // Les rides que le vent dessine sur le sable (pas sur le parvis ni dans l'oasis)
+        // Les rides que le vent dessine sur le sable, et qui avancent tout doucement
         terrainMat.onBeforeCompile = (sh) => {
+            sh.uniforms.uTime = uTime;
             sh.vertexShader = 'varying vec3 vRip;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvRip = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-            sh.fragmentShader = 'varying vec3 vRip;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
-float pav = step(max(abs(vRip.x - (${P.x.toFixed(2)})), abs(vRip.z - (${P.z.toFixed(2)}))), ${(P.half + 0.45).toFixed(2)});
-float oas = 1.0 - smoothstep(1.4, 2.2, length(vRip.xz - vec2(${O.x.toFixed(2)}, ${O.z.toFixed(2)})));
-float rp = sin(dot(vRip.xz, vec2(0.94, 0.34)) * 26.0 + sin(vRip.x * 1.7 + vRip.z * 1.1) * 2.5);
-diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
+            sh.fragmentShader = 'uniform float uTime;\nvarying vec3 vRip;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+float oas = 1.0 - smoothstep(1.6, 2.4, length(vRip.xz - vec2(0.05, 0.15)));
+float rp = sin(dot(vRip.xz, vec2(0.94, 0.34)) * 26.0 - uTime * 0.6 + sin(vRip.x * 1.7 + vRip.z * 1.1) * 2.5);
+diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - oas);`);
         };
         const terrain = new THREE.Mesh(terrainGeo, terrainMat);
         terrain.receiveShadow = true;
@@ -5022,8 +5005,8 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             { x0: HALF, z0: -HALF, dx: -1, dz: 0 },
             { x0: -HALF, z0: -HALF, dx: 0, dz: 1 },
         ];
-        const LIP_TOP = color(0xe2c693);
-        const LIP_LOW = color(0xc89a62);
+        const LIP_TOP = color(0xd9a670);
+        const LIP_LOW = color(0xc08a58);
         EDGES.forEach((e, ei) => {
             const body = [];
             const bodyUv = [];
@@ -5047,170 +5030,20 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         const bottom = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8a5c3c }));
         bottom.position.y = BASE;
         scene.add(bottom);
-        const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(60,40,20,0.4)', 'rgba(60,40,20,0)'), transparent: true, depthWrite: false, fog: false }));
-        contact.rotation.x = -Math.PI / 2;
-        contact.position.set(1.2, BASE - 0.02, 1.0);
-        scene.add(contact);
 
-        // --- L'eau de l'oasis : claire, verte au bord, qui reflète le ciel ---
-        const waterGeo = new THREE.PlaneGeometry(3.8, 3.2, 38, 32);
+        // --- L'eau de l'oasis : verte et un peu trouble, le sable s'y dépose ---
+        const waterGeo = new THREE.PlaneGeometry(3.8, 3.6, 38, 36);
         waterGeo.rotateX(-Math.PI / 2);
-        waterGeo.translate(2.2, 0, 2.05);
+        waterGeo.translate(0.05, 0, 0.1);
         const wp = waterGeo.attributes.position;
         const waveIdx = [];
         for (let i = 0; i < wp.count; i++) if (height(wp.getX(i), wp.getZ(i)) < WATER + 0.1) waveIdx.push(i);
-        const water = new THREE.Mesh(waterGeo, new THREE.MeshStandardMaterial({ color: 0x3e7d84, transparent: true, opacity: 0.78, roughness: 0.06, metalness: 0.1, flatShading: true, envMap, envMapIntensity: 0.9, depthWrite: false }));
+        const water = new THREE.Mesh(waterGeo, new THREE.MeshStandardMaterial({ color: 0x4f7a64, transparent: true, opacity: 0.82, roughness: 0.18, metalness: 0.05, flatShading: true, envMap, envMapIntensity: 0.8, depthWrite: false }));
         water.position.y = WATER;
         water.renderOrder = 2;
         scene.add(water);
 
-        // --- La pyramide : un revêtement de calcaire blanc poli, bloc par bloc, et le pyramidion en or ---
-        // Un tronc de pyramide (ou une pyramide entière quand top = 0) : quatre faces bien plates,
-        // avec des coordonnées de texture qui suivent chaque face (u le long de la base, v vers le haut)
-        function pyramidGeo(half, y0, y1, top, uv) {
-            const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
-            const pos = [];
-            const uvs = [];
-            for (let k = 0; k < 4; k++) {
-                const [ax, az] = c[k];
-                const [bx, bz] = c[(k + 1) % 4];
-                const tx = (bx - ax) / 2;
-                const tz = (bz - az) / 2;
-                const A = [ax * half, y0, az * half];
-                const B = [bx * half, y0, bz * half];
-                const Ct = [bx * top, y1, bz * top];
-                const D = [ax * top, y1, az * top];
-                (top > 0 ? [A, D, B, B, D, Ct] : [A, D, B]).forEach((q0) => {
-                    pos.push(...q0);
-                    if (uv) uvs.push(uv.u(q0[0] * tx + q0[2] * tz, k), uv.v(q0[1]));
-                });
-            }
-            const g = new THREE.BufferGeometry();
-            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-            if (uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-            g.computeVertexNormals();
-            return g;
-        }
-        const CAP_Y = P.h * 0.86;
-        const capHalf = P.half * (1 - CAP_Y / P.h);
-        const BAND = 0.09;
-        const pyramid = new THREE.Group();
-        pyramid.position.set(P.x, 0.04, P.z);
-        scene.add(pyramid);
-        // Le revêtement : des assises de blocs (plus hautes en bas), des joints fins en relief,
-        // chaque bloc un peu différent, des fossiles dans la pierre, et du sable poussé contre la base
-        const casingTex = casingTextures();
-        const casingMat = new THREE.MeshStandardMaterial({
-            map: casingTex.map,
-            bumpMap: casingTex.bump,
-            bumpScale: 0.006,
-            roughnessMap: casingTex.rough,
-            roughness: 1,
-            envMap,
-            envMapIntensity: 0.35,
-        });
-        const casing = new THREE.Mesh(pyramidGeo(P.half, 0, CAP_Y, capHalf, {
-            u: (s, k) => s / (2 * P.half) + 0.5 + k * 0.27,
-            v: (y) => y / CAP_Y,
-        }), casingMat);
-        casing.castShadow = true;
-        casing.receiveShadow = true;
-        pyramid.add(casing);
-
-        // Le socle : une large dalle de pierre sur laquelle repose la pyramide
-        const slabTex = slabTexture();
-        slabTex.repeat.set(6, 6);
-        const plinthSide = new THREE.MeshStandardMaterial({ color: 0xd7c9ab, roughness: 0.9 });
-        const plinthTop = new THREE.MeshStandardMaterial({ map: slabTex, roughness: 0.85 });
-        const plinth = new THREE.Mesh(new THREE.BoxGeometry(2 * (P.half + 0.16), 0.09, 2 * (P.half + 0.16)), [plinthSide, plinthSide, plinthTop, plinthSide, plinthSide, plinthSide]);
-        plinth.position.y = 0.005;
-        plinth.castShadow = true;
-        plinth.receiveShadow = true;
-        pyramid.add(plinth);
-
-        // L'entrée, sur la face au soleil : une ouverture sombre, un encadrement et des dalles en chevron
-        const SLOPE = Math.atan2(P.h, P.half);
-        const DOOR_Y = 0.46;
-        const door = new THREE.Group();
-        door.position.set(0, DOOR_Y, P.half * (1 - DOOR_Y / P.h));
-        door.rotation.x = -(Math.PI / 2 - SLOPE);
-        pyramid.add(door);
-        const hole = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.2), new THREE.MeshStandardMaterial({ color: 0x241b15, roughness: 1 }));
-        hole.position.z = 0.004;
-        door.add(hole);
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0xece3cf, roughness: 0.6, flatShading: true });
-        [[-0.1, 0, 0.04, 0.24], [0.1, 0, 0.04, 0.24], [0, 0.13, 0.26, 0.04]].forEach(([x, y, w, h]) => {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.035), frameMat);
-            m.position.set(x, y, 0.012);
-            m.castShadow = true;
-            door.add(m);
-        });
-        [-1, 1].forEach((sd) => {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.04, 0.035), frameMat);
-            m.position.set(sd * 0.072, 0.205, 0.014);
-            m.rotation.z = -sd * 0.55;
-            m.castShadow = true;
-            door.add(m);
-        });
-
-        // Le pyramidion en or : un disque solaire gravé, ses rayons, et l'œil d'Horus
-        const goldTex = goldTextures();
-        const goldBase = { color: 0xffc84a, metalness: 1, roughness: 0.2, envMap: goldEnv, envMapIntensity: 1.3, emissive: 0x4a2f00, emissiveIntensity: 0.45 };
-        const capMat = new THREE.MeshStandardMaterial(Object.assign({ map: goldTex.capMap, bumpMap: goldTex.capBump, bumpScale: 0.004 }, goldBase));
-        const capH = capHalf + 0.004;
-        const cap = new THREE.Mesh(pyramidGeo(capH, CAP_Y - 0.002, P.h, 0, {
-            u: (s) => s / (2 * capH) + 0.5,
-            v: (y) => (y - (CAP_Y - 0.002)) / (P.h - CAP_Y + 0.002),
-        }), capMat);
-        cap.castShadow = true;
-        pyramid.add(cap);
-        // Une bande d'or sous le pyramidion, gravée d'une frise de hiéroglyphes
-        const bandMat = new THREE.MeshStandardMaterial(Object.assign({ map: goldTex.bandMap, bumpMap: goldTex.bandBump, bumpScale: 0.003 }, goldBase));
-        const bandH = capHalf * (1 + BAND / (P.h - CAP_Y)) + 0.02;
-        const band = new THREE.Mesh(pyramidGeo(bandH, CAP_Y - BAND, CAP_Y, capHalf + 0.012, {
-            u: (s) => s / (2 * bandH) + 0.5,
-            v: (y) => (y - (CAP_Y - BAND)) / BAND,
-        }), bandMat);
-        pyramid.add(band);
-        const pyramidMeshes = [casing, cap, band, plinth];
-        door.traverse((m) => { if (m.isMesh) pyramidMeshes.push(m); });
-        // L'éclat du soleil sur l'or : une étoile qui brille quand le reflet arrive vers nous
-        const starTex = (() => {
-            const cv = document.createElement('canvas');
-            cv.width = cv.height = 256;
-            const g = cv.getContext('2d');
-            const rg = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-            rg.addColorStop(0, 'rgba(255,250,225,1)');
-            rg.addColorStop(0.12, 'rgba(255,225,150,0.75)');
-            rg.addColorStop(0.4, 'rgba(255,200,110,0.12)');
-            rg.addColorStop(1, 'rgba(255,190,90,0)');
-            g.fillStyle = rg;
-            g.fillRect(0, 0, 256, 256);
-            g.globalCompositeOperation = 'lighter';
-            [[0, 1, 128], [Math.PI / 2, 1, 128], [Math.PI / 4, 0.45, 80], [-Math.PI / 4, 0.45, 80]].forEach(([a, w, len]) => {
-                g.save();
-                g.translate(128, 128);
-                g.rotate(a);
-                const lg = g.createLinearGradient(-len, 0, len, 0);
-                lg.addColorStop(0, 'rgba(255,230,170,0)');
-                lg.addColorStop(0.5, 'rgba(255,250,230,0.9)');
-                lg.addColorStop(1, 'rgba(255,230,170,0)');
-                g.fillStyle = lg;
-                g.fillRect(-len, -2.2 * w, len * 2, 4.4 * w);
-                g.restore();
-            });
-            const tex = new THREE.CanvasTexture(cv);
-            tex.colorSpace = THREE.SRGBColorSpace;
-            return tex;
-        })();
-        const glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, fog: false }));
-        glint.position.set(P.x, 0.04 + P.h + 0.02, P.z);
-        glint.renderOrder = 12;
-        scene.add(glint);
-        // Les normales des quatre faces du pyramidion, pour savoir quand le reflet nous atteint
-        const capNormals = [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([nx, nz]) => V(nx * P.h, P.half, nz * P.h).normalize());
-
-        // --- L'oasis : palmiers dattiers, papyrus, herbes, buissons ---
+        // --- L'oasis : palmiers dattiers tout autour de l'eau, papyrus, herbes, buissons ---
         const frondGeo = (() => {
             // Une palme : une longue feuille qui part vers l'extérieur et retombe, pliée en V
             const pos = [];
@@ -5237,22 +5070,23 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             g.computeVertexNormals();
             return g;
         })();
-        const frondMats = [flat(0x4f7d34, { side: THREE.DoubleSide }), flat(0x5f8f3c, { side: THREE.DoubleSide }), flat(0x6a9a42, { side: THREE.DoubleSide })];
+        const frondMats = [flat(0x56763a, { side: THREE.DoubleSide }), flat(0x627f40, { side: THREE.DoubleSide }), flat(0x6c8846, { side: THREE.DoubleSide })];
         const barkMats = [flat(0x8a6a45), flat(0x75583a)];
         const dateMat = flat(0xb5652a, { roughness: 0.6 });
         const palms = [];
-        [[0.75, 1.0, 1.9], [1.3, 0.85, 1.6], [3.3, 1.35, 1.75], [3.75, 2.55, 1.45], [2.35, 3.25, 1.85], [0.7, 2.9, 1.5], [3.0, 0.7, 1.3]].slice(0, phone ? 5 : 7).forEach(([x, z, h], i) => {
+        const PALMS = [[-1.55, -0.4, 1.9], [-1.3, 1.55, 1.6], [1.65, -0.35, 1.8], [1.9, 1.6, 1.5], [0.4, 2.0, 1.75], [-0.4, -1.65, 1.55], [1.15, -1.55, 1.35], [-2.0, 0.6, 1.3]];
+        PALMS.slice(0, phone ? 6 : 8).forEach(([x, z, h], i) => {
             const g = new THREE.Group();
-            const lean = rr(0, 6.28);
-            const bend = rr(0.15, 0.35);
+            // Les palmiers penchent dans le sens du vent
+            const lean = Math.PI * 0.1 + rr(-0.4, 0.4);
+            const bend = rr(0.2, 0.4);
             const SEG = 7;
             let prev = V(0, 0, 0);
             for (let k = 1; k <= SEG; k++) {
                 const u = k / SEG;
                 const p = V(Math.cos(lean) * bend * u * u, h * u, Math.sin(lean) * bend * u * u);
                 const r = lerp(0.075, 0.05, u);
-                const seg = limb(prev, p, r, r * 0.92, barkMats[k % 2]);
-                g.add(seg);
+                g.add(limb(prev, p, r, r * 0.92, barkMats[k % 2]));
                 prev = p;
             }
             const crown = new THREE.Group();
@@ -5279,161 +5113,219 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             palms.push({ crown, ph: rr(0, 6.28) });
         });
         const papyrus = [];
-        for (let tries = 0; tries < 2000 && papyrus.length < (phone ? 28 : 46); tries++) {
-            const x = rr(0.4, 4.2);
-            const z = rr(0.4, 3.8);
+        for (let tries = 0; tries < 2500 && papyrus.length < (phone ? 34 : 56); tries++) {
+            const x = rr(-2.2, 2.3);
+            const z = rr(-1.6, 1.8);
             const d = pondD(x, z);
             if (d > -0.05 && d < 0.18) papyrus.push({ x, z, y: height(x, z) - 0.02, h: rr(0.35, 0.65), phase: rr(0, 6.28), yaw: rr(0, 6.28) });
         }
-        const stalkMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.012, 1, 4).translate(0, 0.5, 0), flat(0x6f9a3e), Math.max(1, papyrus.length));
-        const umbelMesh = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 0.1, 7).rotateX(Math.PI).translate(0, 0.02, 0), flat(0x9fbf4f, { side: THREE.DoubleSide }), Math.max(1, papyrus.length));
+        const stalkMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.012, 1, 4).translate(0, 0.5, 0), flat(0x6f8a3e), Math.max(1, papyrus.length));
+        const umbelMesh = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 0.1, 7).rotateX(Math.PI).translate(0, 0.02, 0), flat(0x9aaa4f, { side: THREE.DoubleSide }), Math.max(1, papyrus.length));
         stalkMesh.castShadow = true;
         scene.add(stalkMesh, umbelMesh);
         const tufts = [];
-        for (let tries = 0; tries < 3000 && tufts.length < (phone ? 80 : 150); tries++) {
-            const x = rr(-0.2, 4.8);
-            const z = rr(-0.2, 4.8);
+        for (let tries = 0; tries < 3500 && tufts.length < (phone ? 90 : 170); tries++) {
+            const x = rr(-2.8, 2.9);
+            const z = rr(-2.4, 2.8);
             const d = pondD(x, z);
             if (d < 0.05 || d > 1.0) continue;
             tufts.push({ x, z, y: height(x, z) - 0.01, s: rr(0.7, 1.3), yaw: rr(0, 6.28), phase: rr(0, 6.28) });
         }
         const tuftMesh = new THREE.InstancedMesh(tuftGeometry(), flat(0xffffff, { side: THREE.DoubleSide }), Math.max(1, tufts.length));
-        tufts.forEach((p, i) => tuftMesh.setColorAt(i, color([0x7a9a3e, 0x8fae4c, 0x6b8c38][Math.floor(hash(p.x * 2.3, p.z) * 3)])));
+        tufts.forEach((p, i) => tuftMesh.setColorAt(i, color([0x7a8e3e, 0x8a9a4c, 0x6e8238][Math.floor(hash(p.x * 2.3, p.z) * 3)])));
         scene.add(tuftMesh);
         const bushes = [];
-        for (let tries = 0; tries < 800 && bushes.length < (phone ? 7 : 12); tries++) {
-            const x = rr(0, 4.6);
-            const z = rr(0, 4.6);
+        for (let tries = 0; tries < 900 && bushes.length < (phone ? 8 : 14); tries++) {
+            const x = rr(-2.8, 2.8);
+            const z = rr(-2.6, 2.8);
             const d = pondD(x, z);
-            if (d < 0.3 || d > 1.0) continue;
+            if (d < 0.35 || d > 1.0) continue;
             bushes.push({ x, z, y: height(x, z), s: rr(0.6, 1.1), yaw: rr(0, 6.28) });
         }
-        instanced(new THREE.IcosahedronGeometry(0.17, 0).scale(1.2, 0.75, 1).translate(0, 0.08, 0), flat(0xffffff), bushes, (p) => color(hash(p.x, p.z) < 0.5 ? 0x5f8a3a : 0x6f9a44), true);
-        // Quelques rochers de grès dans le sable
+        instanced(new THREE.IcosahedronGeometry(0.17, 0).scale(1.2, 0.75, 1).translate(0, 0.08, 0), flat(0xffffff), bushes, (p) => color(hash(p.x, p.z) < 0.5 ? 0x5f7a3a : 0x6f8a44), true);
+        // Quelques rochers de grès à moitié ensevelis
         const rocks = [];
-        for (let tries = 0; tries < 800 && rocks.length < 11; tries++) {
+        for (let tries = 0; tries < 900 && rocks.length < 14; tries++) {
             const x = rr(-4.6, 4.6);
             const z = rr(-4.6, 4.6);
-            if (footprint(x, z) < 0.8 || pondD(x, z) < 1.2) continue;
-            rocks.push({ x, z, y: height(x, z) - 0.03, s: rr(0.6, 1.5), yaw: rr(0, 6.28), tilt: rr(-0.3, 0.3) });
+            if (pondD(x, z) < 1.3) continue;
+            rocks.push({ x, z, y: height(x, z) - 0.04, s: rr(0.6, 1.6), yaw: rr(0, 6.28), tilt: rr(-0.3, 0.3) });
         }
-        instanced(new THREE.DodecahedronGeometry(0.14, 0).scale(1.3, 0.7, 1), flat(0xffffff, { roughness: 0.95 }), rocks, (p) => color([0xc79b68, 0xb7895a, 0xd4ab78][Math.floor(hash(p.x, p.z) * 3)]), true);
+        instanced(new THREE.DodecahedronGeometry(0.14, 0).scale(1.3, 0.7, 1), flat(0xffffff, { roughness: 0.95 }), rocks, (p) => color([0xb98a5c, 0xa87c50, 0xc4966a][Math.floor(hash(p.x, p.z) * 3)]), true);
 
-        // --- La caravane : trois chameaux (un chamelier sur le premier) qui font le tour ---
-        const trail = new THREE.CatmullRomCurve3([
-            [0.9, -0.35], [-0.25, 1.0], [0.25, 3.45], [2.35, 4.2], [4.15, 3.3], [4.1, 0.75], [2.6, -0.45],
-        ].map(([x, z]) => V(x, 0, z)), true, 'centripetal');
-        const trailLen = trail.getLength();
-        const furMats = [flat(0xc8995f), flat(0xb98a54), flat(0xd2a86e)];
-        const darkMat = flat(0x3a2a1f);
-        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x140e0a });
-        function makeCamel(i) {
-            const fur = furMats[i % 3];
+        // --- Les crocodiles : deux se chauffent sur la berge, gueule entrouverte ; un nage lentement ---
+        const crocSkin = [flat(0x3c4824, { roughness: 0.8 }), flat(0x47522a, { roughness: 0.8 })];
+        const bellyMat = flat(0xa69a6a);
+        const eyeMat = flat(0xd9b84a, { roughness: 0.4 });
+        const pupilMat = flat(0x14140f);
+        const toothMat = flat(0xf2ead2);
+        const mouthMat = flat(0xc47a6a);
+        function makeCroc(skin) {
             const g = new THREE.Group();
-            const body = new THREE.Group();
+            // Le corps, aplati, qui va du cou (x > 0) à la base de la queue (x < 0)
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.42, 4, 10).rotateZ(Math.PI / 2), skin);
+            body.scale.set(1, 0.55, 1.1);
+            body.position.y = 0.07;
             g.add(body);
-            body.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1).scale(0.75, 0.7, 1.35), fur));
-            const hump = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 1).scale(1, 0.95, 1.25), fur);
-            hump.position.set(0, 0.15, -0.02);
-            body.add(hump);
-            // Le cou pivote à l'épaule, la tête au bout
-            const neck = new THREE.Group();
-            neck.position.set(0, 0.04, 0.22);
-            body.add(neck);
-            neck.add(limb(V(0, 0, 0), V(0, 0.26, 0.2), 0.06, 0.04, fur));
-            const head = new THREE.Group();
-            head.position.set(0, 0.26, 0.2);
-            neck.add(head);
-            head.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0).scale(0.75, 0.72, 1.6).translate(0, 0, 0.07), fur));
-            [-1, 1].forEach((sd) => {
-                const ear = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.05, 4), fur);
-                ear.position.set(sd * 0.035, 0.05, -0.01);
-                head.add(ear);
-                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.011, 5, 4), eyeMat);
-                eye.position.set(sd * 0.042, 0.022, 0.05);
-                head.add(eye);
-            });
-            const legs = [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sz]) => {
-                const hip = new THREE.Group();
-                hip.position.set(sx * 0.085, -0.06, sz * 0.19);
-                hip.add(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.03, 0.44, 5).translate(0, -0.22, 0), fur));
-                hip.add(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 6).translate(0, -0.44, 0.01), darkMat));
-                body.add(hip);
-                // L'amble : les deux pattes d'un même côté avancent ensemble
-                return { hip, phase: sx > 0 ? 0 : Math.PI };
-            });
-            const tail = limb(V(0, 0.02, -0.26), V(0, -0.12, -0.3), 0.012, 0.008, fur);
-            body.add(tail);
-            // Le chargement : une couverture rayée, des sacs sur les flancs
-            const blanket = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.3), flat(i === 0 ? 0xa3322b : 0x2f5d8c));
-            blanket.position.set(0, 0.24, -0.02);
-            body.add(blanket);
-            if (i > 0) {
-                [-1, 1].forEach((sd) => {
-                    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.16), flat(i % 2 ? 0xd9c9a2 : 0x8c6d4a));
-                    bag.position.set(sd * 0.19, 0.08, -0.02);
-                    body.add(bag);
+            const belly = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.36, 3, 8).rotateZ(Math.PI / 2), bellyMat);
+            belly.scale.set(1, 0.35, 1);
+            belly.position.y = 0.035;
+            g.add(belly);
+            // Les écailles du dos : deux rangées de petites bosses
+            for (let k = 0; k < 7; k++) {
+                [-1, 1].forEach((e) => {
+                    const sc = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.035, 4), skin);
+                    sc.position.set(0.22 - k * 0.075, 0.135, e * 0.04);
+                    g.add(sc);
                 });
-            } else {
-                // Le chamelier : une tunique blanche, un foulard bleu
-                const rider = new THREE.Group();
-                rider.position.set(0, 0.26, 0.0);
-                rider.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.2, 7).translate(0, 0.1, 0), flat(0xeee6d6)));
-                const face = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), flat(0x9c6b48));
-                face.position.y = 0.25;
-                rider.add(face);
-                const scarf = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.62), flat(0x3d5f8a));
-                scarf.position.y = 0.26;
-                rider.add(scarf);
-                [-1, 1].forEach((sd) => rider.add(limb(V(sd * 0.055, 0.17, 0), V(sd * 0.05, 0.08, 0.1), 0.016, 0.014, flat(0xeee6d6))));
-                [-1, 1].forEach((sd) => rider.add(limb(V(sd * 0.06, 0.02, 0.02), V(sd * 0.12, -0.12, 0.06), 0.018, 0.015, flat(0xeee6d6))));
-                body.add(rider);
             }
-            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-            g.scale.setScalar(0.8);
-            scene.add(g);
-            return { g, body, neck, head, legs, tail, pos: V(0, 0, 0), heading: 0, gait: 0, move: 0, ph: rr(0, 6.28), lag: i * 0.75 };
-        }
-        const camels = [0, 1, 2].map(makeCamel);
-        const caravan = { s: rr(0, trailLen), state: 'walk', until: rr(8, 12), look: 0 };
-        const v0 = new THREE.Vector3();
-        camels.forEach((c) => {
-            const u = (((caravan.s - c.lag) / trailLen) % 1 + 1) % 1;
-            trail.getPointAt(u, c.pos);
-            trail.getTangentAt(u, v0);
-            c.heading = Math.atan2(v0.x, v0.z);
-        });
-
-        // --- Des faucons qui planent en grands cercles ---
-        const birds = [];
-        for (let i = 0; i < (phone ? 2 : 3); i++) {
-            const g = new THREE.Group();
-            const mat = flat(0x6b4b2e);
-            g.add(new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 5).rotateX(Math.PI / 2), mat));
-            const wings = [-1, 1].map((sd) => {
-                const piv = new THREE.Group();
-                piv.add(new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.06).rotateX(-Math.PI / 2).translate(sd * 0.1, 0, -0.005), flat(0x7d5a38, { side: THREE.DoubleSide })));
-                g.add(piv);
-                return { piv, sd };
+            // La tête : une mâchoire du haut fixe, celle du bas qui s'ouvre
+            const head = new THREE.Group();
+            head.position.set(0.3, 0.07, 0);
+            g.add(head);
+            const skull = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.15).translate(0.06, 0.01, 0), skin);
+            head.add(skull);
+            const upper = new THREE.Group();
+            head.add(upper);
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.045, 0.1).translate(0.26, 0.0, 0), skin);
+            upper.add(snout);
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), skin);
+            nose.position.set(0.38, 0.02, 0);
+            nose.scale.set(1, 0.6, 1.4);
+            upper.add(nose);
+            const jaw = new THREE.Group();
+            jaw.position.set(0.04, -0.025, 0);
+            head.add(jaw);
+            const lowerJaw = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.095).translate(0.18, -0.01, 0), skin);
+            jaw.add(lowerJaw);
+            const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.006, 0.07).translate(0.16, 0.007, 0), mouthMat);
+            jaw.add(tongue);
+            for (let k = 0; k < 6; k++) {
+                [-1, 1].forEach((e) => {
+                    const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.025, 4).rotateX(Math.PI), toothMat);
+                    tooth.position.set(0.16 + k * 0.04, -0.03, e * 0.042);
+                    upper.add(tooth);
+                });
+            }
+            // Les yeux, sur le dessus : ce qu'on voit dépasser de l'eau
+            [-1, 1].forEach((e) => {
+                const bump = new THREE.Mesh(new THREE.SphereGeometry(0.03, 7, 5), skin);
+                bump.position.set(0.08, 0.06, e * 0.045);
+                head.add(bump);
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 7, 5), eyeMat);
+                eye.position.set(0.1, 0.075, e * 0.05);
+                head.add(eye);
+                const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.022, 0.006), pupilMat);
+                pupil.position.set(0.117, 0.077, e * 0.055);
+                head.add(pupil);
             });
-            g.rotation.order = 'YXZ';
+            // La queue : quatre segments qui ondulent
+            const tail = [];
+            let parent = g;
+            let x0 = -0.3;
+            for (let k = 0; k < 5; k++) {
+                const piv = new THREE.Group();
+                piv.position.set(k ? -0.15 : x0, k ? 0 : 0.065, 0);
+                parent.add(piv);
+                const r = 0.085 * (1 - k * 0.17);
+                const seg = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r, 0.17, 7).rotateZ(Math.PI / 2).translate(-0.075, 0, 0), skin);
+                seg.scale.set(1, 0.65, 1);
+                piv.add(seg);
+                const crest = new THREE.Mesh(new THREE.ConeGeometry(0.015, 0.035, 4), skin);
+                crest.position.set(-0.07, r * 0.6, 0);
+                piv.add(crest);
+                tail.push(piv);
+                parent = piv;
+            }
+            // Les pattes, écartées sur les côtés
+            const legs = [];
+            [[0.18, 1], [0.18, -1], [-0.2, 1], [-0.2, -1]].forEach(([lx, e]) => {
+                const piv = new THREE.Group();
+                piv.position.set(lx, 0.05, e * 0.1);
+                g.add(piv);
+                piv.add(limb(V(0, 0, 0), V(0.03, -0.035, e * 0.09), 0.028, 0.022, skin));
+                const foot = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.015, 0.05), skin);
+                foot.position.set(0.05, -0.045, e * 0.1);
+                piv.add(foot);
+                legs.push({ piv, e, front: lx > 0 });
+            });
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            g.scale.setScalar(1.6);
             scene.add(g);
-            birds.push({ g, wings, cx: rr(-2, 1), cz: rr(-2, 1), r: rr(2.2, 3.4), h: rr(3.8, 4.8), w: rr(0.22, 0.32) * (i % 2 ? 1 : -1), a: rr(0, 6.28), ph: rr(0, 6.28) });
+            return { g, jaw, head, tail, legs };
         }
+        const crocs = [];
+        // Sur la berge, la tête vers l'eau
+        [[1.75, 0.35], [-1.05, -0.95]].forEach(([x, z], i) => {
+            const c = makeCroc(crocSkin[i % 2]);
+            const a = Math.atan2(0.15 - z, 0.05 - x);
+            c.g.position.set(x, height(x, z) + 0.01, z);
+            c.g.rotation.y = -a;
+            crocs.push(Object.assign(c, { kind: 'bask', gape: 0, gapeT: rr(2, 6), snap: 0, ph: rr(0, 6.28) }));
+        });
+        // Dans l'eau, à peine visible : le dos, les yeux, le bout du museau
+        const swimmer = makeCroc(crocSkin[1]);
+        crocs.push(Object.assign(swimmer, { kind: 'swim', a: rr(0, 6.28), snap: 0, dive: 0, ph: rr(0, 6.28) }));
+        const crocMeshes = [];
+        crocs.forEach((c, i) => c.g.traverse((m) => { if (m.isMesh) { m.userData.croc = i; crocMeshes.push(m); } }));
 
-        // --- Le vent soulève un peu de sable sur les crêtes ---
+        // --- La tempête de sable ---
         const pointScale = { value: 1 };
-        const WIND = V(Math.cos(0.35), 0, Math.sin(0.35));
-        const sand = particles(phone ? 90 : 160);
-        sand.items.forEach((p) => resetGrain(p, true));
+        // Le vent tourne autour d'une direction moyenne et souffle par rafales lentes
+        const WIND_A = 0.35;
+        const wind = { x: Math.cos(WIND_A), z: Math.sin(WIND_A), k: 1 };
+        // Des traînées de sable qui filent, comme une pluie couchée
+        const STREAKS = phone ? 420 : 900;
+        const streakPos = new Float32Array(STREAKS * 6);
+        const streakCol = new Float32Array(STREAKS * 6);
+        const streakGeo = new THREE.BufferGeometry();
+        streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+        streakGeo.setAttribute('color', new THREE.BufferAttribute(streakCol, 3));
+        const streaks = new THREE.LineSegments(streakGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false }));
+        streaks.frustumCulled = false;
+        streaks.renderOrder = 8;
+        scene.add(streaks);
+        const flying = Array.from({ length: STREAKS }, () => {
+            const f = {};
+            resetStreak(f, true);
+            return f;
+        });
+        function resetStreak(f, anywhere) {
+            // On repart du côté d'où vient le vent
+            const along = anywhere ? rr(-8, 8) : -8 - rr(0, 2);
+            const across = rr(-8, 8);
+            f.x = along * wind.x - across * wind.z;
+            f.z = along * wind.z + across * wind.x;
+            f.y = Math.pow(rand(), 1.7) * 4.5 - 0.2;
+            f.sp = rr(3.2, 6.5);
+            f.len = rr(0.18, 0.55);
+            f.ph = rr(0, 6.28);
+            const b = rr(0.85, 1.05);
+            f.c = [0.93 * b, 0.74 * b, 0.52 * b];
+        }
+        // De gros nuages de poussière qui roulent lentement : c'est eux qui cachent le décor
+        const clouds = particles(phone ? 70 : 120);
+        clouds.items.forEach((p) => resetCloud(p, true));
+        function resetCloud(p, anywhere) {
+            const along = anywhere ? rr(-9, 9) : -9 - rr(0, 2);
+            const across = rr(-9, 9);
+            p.x = along * wind.x - across * wind.z;
+            p.z = along * wind.z + across * wind.x;
+            p.y = rr(0.0, 3.4);
+            p.s = rr(1.6, 3.6);
+            p.sp = rr(0.9, 1.7);
+            p.a = rr(0.08, 0.17);
+            p.ph = rr(0, 6.28);
+        }
+        // Le sable qui court au ras du sol
+        const grains = particles(phone ? 160 : 300);
+        grains.items.forEach((p) => resetGrain(p, true));
         function resetGrain(p, anywhere) {
-            // On repart d'une crête de dune, du côté d'où vient le vent
-            const d = DUNES[Math.floor(rand() * DUNES.length)];
-            p.x = d[0] + rr(-1.2, 0.6);
-            p.z = d[1] + rr(-1.2, 1.2);
+            p.x = rr(-HALF, HALF);
+            p.z = rr(-HALF, HALF);
             p.age = anywhere ? rr(0, 1) : 0;
-            p.life = rr(2.5, 4.5);
-            p.sp = rr(0.6, 1.2);
+            p.life = rr(1.2, 2.6);
+            p.sp = rr(1.4, 2.6);
             p.ph = rr(0, 6.28);
         }
 
@@ -5441,7 +5333,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         const ringGeo = new THREE.RingGeometry(0.9, 1, 40);
         ringGeo.rotateX(-Math.PI / 2);
         for (let i = 0; i < 10; i++) {
-            const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+            const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffe6c4, transparent: true, opacity: 0, depthWrite: false, fog: false }));
             m.visible = false;
             m.renderOrder = 5;
             scene.add(m);
@@ -5453,12 +5345,12 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             r.m.position.set(x, WATER + 0.03, z);
         }
 
-        // --- Caméra : au départ, près de l'oasis, la pyramide derrière les palmiers ---
-        const target = V(0.4, 0.75, 0.2);
-        const HOME_EL = 0.36;
+        // --- Caméra : l'oasis au centre, un peu en hauteur ---
+        const target = V(0.05, 0.35, 0.15);
+        const HOME_EL = 0.46;
         let az = 0.6;
         let el = HOME_EL;
-        let zoom = 0.56;
+        let zoom = 0.5;
         let fit = 26;
         let lastInput = -10;
         let touched = false;
@@ -5490,7 +5382,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
                 el = clamp(el + dy * 0.0045, 0.05, 1.2);
             } else if (pointers.size === 2) {
                 const s = spread();
-                if (pinch) zoom = clamp(zoom * pinch / s, 0.25, 1.5);
+                if (pinch) zoom = clamp(zoom * pinch / s, 0.22, 1.5);
                 pinch = s;
             }
             lastInput = clock;
@@ -5506,7 +5398,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         };
         const onWheel = (e) => {
             e.preventDefault();
-            zoom = clamp(zoom * Math.exp(e.deltaY * 0.0012), 0.25, 1.5);
+            zoom = clamp(zoom * Math.exp(e.deltaY * 0.0012), 0.22, 1.5);
             lastInput = clock;
         };
         canvas.addEventListener('pointerdown', onDown);
@@ -5515,22 +5407,21 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         canvas.addEventListener('pointercancel', onUp);
         canvas.addEventListener('wheel', onWheel, { passive: false });
 
-        // Toucher la pyramide : la pointe s'embrase. Les chameaux : ils s'arrêtent et regardent. L'eau : des ronds.
+        // Toucher un crocodile : il claque des mâchoires (celui qui nage plonge un instant). L'eau : des ronds.
         const raycaster = new THREE.Raycaster();
         const ndc = new THREE.Vector2();
-        const camelTargets = [];
-        camels.forEach((c) => c.g.traverse((m) => { if (m.isMesh) camelTargets.push(m); }));
-        let flare = 0;
         function tap(e) {
             const r = canvas.getBoundingClientRect();
             ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
             raycaster.setFromCamera(ndc, camera);
-            if (raycaster.intersectObjects(pyramidMeshes, false).length) {
-                flare = 1;
-                return;
-            }
-            if (raycaster.intersectObjects(camelTargets, false).length) {
-                caravan.look = 3;
+            const hit = raycaster.intersectObjects(crocMeshes, false)[0];
+            if (hit) {
+                const c = crocs[hit.object.userData.croc];
+                c.snap = 1;
+                if (c.kind === 'swim') {
+                    c.dive = 1;
+                    ripple(c.g.position.x, c.g.position.z, 0.55, 1.4);
+                }
                 return;
             }
             const w = raycaster.intersectObject(water)[0];
@@ -5546,7 +5437,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(14 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
-            if (!touched) zoom = camera.aspect < 0.8 ? 0.74 : 0.56;
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.66 : 0.5;
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
@@ -5562,7 +5453,9 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         const v4 = new THREE.Vector3();
         const sc = new THREE.Vector3();
         const up = new THREE.Vector3(0, 1, 0);
-        const windAxis = new THREE.Vector3(-Math.sin(0.35), 0, Math.cos(0.35));
+        const windAxis = new THREE.Vector3(-Math.sin(WIND_A), 0, Math.cos(WIND_A));
+        const SAND_C = [0.9, 0.7, 0.48];
+        const CLOUD_C = [0.86, 0.6, 0.38];
         let clock = 0;
         let last = performance.now();
         let raf = 0;
@@ -5577,7 +5470,6 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             const t = clock;
             uTime.value = t;
 
-            // Au repos : tour lent, en revenant doucement à la hauteur de départ
             if (!still && !pointers.size) {
                 const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
                 az += IDLE_SPIN * dt * idle;
@@ -5586,42 +5478,28 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             const dist = fit * zoom;
             camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
             camera.lookAt(target);
-            scene.fog.near = dist - 2;
-            scene.fog.far = dist + 28;
+            // La tempête respire : des rafales lentes qui épaississent et éclaircissent le voile
+            wind.k = 1 + 0.35 * Math.sin(t * 0.21) + 0.15 * Math.sin(t * 0.53 + 1.3);
+            // (la brume suit la distance : de près, on voit l'oasis ; de loin, tout se fond dans le sable)
+            scene.fog.near = dist * (0.62 - 0.1 * wind.k);
+            scene.fog.far = dist * (1.95 - 0.3 * wind.k) + 2;
 
-            // L'eau de l'oasis frissonne
+            // L'eau frissonne sous le vent
             for (const i of waveIdx) {
                 const x = wp.getX(i);
                 const z = wp.getZ(i);
-                wp.setY(i, 0.012 * Math.sin(x * 3.1 + t * 1.4) * Math.cos(z * 2.6 - t * 1.1) + 0.006 * Math.sin((x + z) * 6 + t * 2.3));
+                wp.setY(i, (0.014 * Math.sin(x * 3.1 + z * 1.2 + t * 2.0) * Math.cos(z * 2.6 - t * 1.3) + 0.007 * Math.sin((x + z) * 6 + t * 2.8)) * wind.k);
             }
             wp.needsUpdate = true;
             waterGeo.computeVertexNormals();
 
-            // L'éclat de l'or : fort quand le reflet du soleil sur une face du pyramidion arrive vers nous
-            flare = Math.max(0, flare - dt * 0.7);
-            v3.copy(camera.position).sub(glint.position).normalize();
-            let best = 0;
-            for (const n of capNormals) {
-                // Seules les faces au soleil renvoient un éclat : le rayon réfléchi part dans cette direction
-                if (sunDir.dot(n) <= 0) continue;
-                v4.copy(sunDir).negate().reflect(n);
-                best = Math.max(best, v4.dot(v3));
-            }
-            const shine = Math.pow(Math.max(0, best), 10);
-            const twinkle = 0.85 + 0.15 * Math.sin(t * 5.3) * Math.sin(t * 3.1);
-            const gs = (0.3 + shine * 0.7 + flare * 1.6) * twinkle;
-            glint.scale.setScalar(gs);
-            glint.material.opacity = clamp(0.22 + shine * 0.4 + flare * 0.8, 0, 1);
-            capMat.emissiveIntensity = bandMat.emissiveIntensity = 0.2 + shine * 0.3 + flare * 1.0;
-
-            // Palmiers et papyrus dans le vent chaud
+            // Palmiers et papyrus ploient dans le vent
             palms.forEach((p) => {
-                p.crown.rotation.x = Math.sin(t * 1.3 + p.ph) * 0.05;
-                p.crown.rotation.z = Math.sin(t * 1.7 + p.ph * 2) * 0.06;
+                p.crown.rotation.x = Math.sin(t * 1.9 + p.ph) * 0.07 * wind.k;
+                p.crown.rotation.z = -0.08 * wind.k + Math.sin(t * 2.3 + p.ph * 2) * 0.08 * wind.k;
             });
             papyrus.forEach((p, i) => {
-                q.setFromAxisAngle(windAxis, Math.sin(t * 1.6 + p.phase) * 0.08);
+                q.setFromAxisAngle(windAxis, 0.12 * wind.k + Math.sin(t * 2.2 + p.phase) * 0.1);
                 m4.compose(v3.set(p.x, p.y, p.z), q, sc.set(1, p.h, 1));
                 stalkMesh.setMatrixAt(i, m4);
                 v4.set(0, p.h, 0).applyQuaternion(q).add(v3);
@@ -5632,7 +5510,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             stalkMesh.instanceMatrix.needsUpdate = true;
             umbelMesh.instanceMatrix.needsUpdate = true;
             tufts.forEach((p, i) => {
-                q.setFromAxisAngle(windAxis, Math.sin(t * 1.8 + p.phase) * 0.12);
+                q.setFromAxisAngle(windAxis, 0.15 * wind.k + Math.sin(t * 2.4 + p.phase) * 0.14);
                 qYaw.setFromAxisAngle(up, p.yaw);
                 q.multiply(qYaw);
                 m4.compose(v3.set(p.x, p.y, p.z), q, sc.setScalar(p.s));
@@ -5640,58 +5518,84 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             });
             tuftMesh.instanceMatrix.needsUpdate = true;
 
-            // La caravane avance, fait une pause de temps en temps ; touchée, elle s'arrête et regarde
-            caravan.look = Math.max(0, caravan.look - dt);
-            if (t > caravan.until) {
-                caravan.state = caravan.state === 'walk' ? 'rest' : 'walk';
-                caravan.until = t + (caravan.state === 'walk' ? rr(9, 14) : rr(3, 5));
-            }
-            const walking = caravan.state === 'walk' && caravan.look <= 0;
-            if (walking) caravan.s += dt * 0.2;
-            camels.forEach((c, i) => {
-                const u = (((caravan.s - c.lag) / trailLen) % 1 + 1) % 1;
-                trail.getPointAt(u, v4);
-                trail.getTangentAt(u, v3);
-                c.pos.lerp(v4, Math.min(1, dt * 5));
-                const want = Math.atan2(v3.x, v3.z);
-                c.heading += Math.atan2(Math.sin(want - c.heading), Math.cos(want - c.heading)) * Math.min(1, dt * 3);
-                c.move += ((walking ? 1 : 0) - c.move) * Math.min(1, dt * 3);
-                c.gait += dt * 5.5 * c.move;
-                const swing = c.move * 0.4;
-                c.legs.forEach((l) => { l.hip.rotation.x = Math.sin(c.gait + l.phase) * swing; });
-                // Le cou se balance en marchant ; au repos ou surpris, la tête se lève et tourne
-                const alert = caravan.look > 0 ? 1 : 0;
-                c.neck.rotation.x = Math.sin(c.gait * 2) * 0.06 * c.move - alert * 0.35 + (1 - c.move) * (1 - alert) * (0.25 + Math.sin(t * 0.7 + c.ph) * 0.1);
-                c.head.rotation.y = (1 - c.move) * Math.sin(t * 0.5 + c.ph) * 0.5;
-                c.tail.rotation.z = Math.sin(t * 3 + i) * 0.3;
-                const ground = height(c.pos.x, c.pos.z);
-                c.g.position.set(c.pos.x, ground + 0.5 * 0.8 + Math.abs(Math.sin(c.gait)) * 0.015 * c.move, c.pos.z);
-                c.g.rotation.y = c.heading;
-                c.body.rotation.z = Math.sin(c.gait) * 0.05 * c.move;
+            // Les crocodiles
+            crocs.forEach((c) => {
+                c.snap = Math.max(0, c.snap - dt * 1.6);
+                // Un claquement : la gueule s'ouvre grand, puis se referme d'un coup
+                const snapOpen = c.snap > 0 ? (c.snap > 0.55 ? (1 - c.snap) / 0.45 : c.snap > 0.4 ? 1 : 0) : 0;
+                if (c.kind === 'bask') {
+                    // Au soleil (même voilé), la gueule s'entrouvre tout doucement, puis se referme
+                    if (t > c.gapeT) {
+                        c.gapeOn = !c.gapeOn;
+                        c.gapeT = t + (c.gapeOn ? rr(6, 10) : rr(4, 8));
+                    }
+                    c.gape += ((c.gapeOn ? 1 : 0) - c.gape) * Math.min(1, dt * 0.6);
+                    c.jaw.rotation.z = -(c.gape * 0.35 + snapOpen * 0.75);
+                    c.head.rotation.z = c.gape * 0.08 + snapOpen * 0.1;
+                    c.tail.forEach((s, k) => { s.rotation.y = Math.sin(t * 0.4 + c.ph + k * 0.6) * 0.06; });
+                } else {
+                    // Il fait le tour de l'eau en ondulant, les yeux juste au ras de l'eau
+                    c.dive = Math.max(0, c.dive - dt * 0.5);
+                    c.a += dt * 0.12;
+                    const R = 0.62 + 0.08 * Math.sin(c.a * 2.3);
+                    const x = 0.05 + Math.cos(c.a) * R;
+                    const z = 0.15 + Math.sin(c.a) * R;
+                    const sink = Math.sin(Math.min(1, c.dive) * Math.PI) * 0.18;
+                    c.g.position.set(x, WATER - 0.13 - sink + Math.sin(t * 1.2 + c.ph) * 0.006, z);
+                    c.g.rotation.y = -(c.a + Math.PI / 2);
+                    c.jaw.rotation.z = -snapOpen * 0.7;
+                    c.tail.forEach((s, k) => { s.rotation.y = Math.sin(t * 2.4 - k * 0.9) * (0.18 + k * 0.05); });
+                    c.legs.forEach((l) => { l.piv.rotation.y = l.e * 0.9; });
+                    // Un sillage discret derrière lui
+                    if (Math.random() < dt * 0.9) ripple(x, z, 0.32, 2.2);
+                }
             });
 
-            // Faucons
-            birds.forEach((b) => {
-                b.a += b.w * dt;
-                b.g.position.set(b.cx + Math.cos(b.a) * b.r, b.h + Math.sin(t * 0.5 + b.ph) * 0.2, b.cz + Math.sin(b.a) * b.r);
-                b.g.rotation.y = Math.atan2(-Math.sin(b.a) * Math.sign(b.w), Math.cos(b.a) * Math.sign(b.w));
-                b.g.rotation.z = -Math.sign(b.w) * 0.3;
-                const flap = Math.sin(t * 0.6 + b.ph) > 0.6 ? Math.sin(t * 12 + b.ph) * 0.6 : 0.08;
-                b.wings.forEach(({ piv, sd }) => { piv.rotation.z = sd * flap; });
+            // Les traînées de sable filent dans le vent
+            const sw = 1 + (wind.k - 1) * 0.8;
+            flying.forEach((f, i) => {
+                f.x += wind.x * f.sp * sw * dt;
+                f.z += wind.z * f.sp * sw * dt;
+                f.y += Math.sin(t * 2 + f.ph) * 0.15 * dt;
+                const along = f.x * wind.x + f.z * wind.z;
+                if (along > 8) resetStreak(f, false);
+                const o = i * 6;
+                streakPos[o] = f.x;
+                streakPos[o + 1] = f.y;
+                streakPos[o + 2] = f.z;
+                streakPos[o + 3] = f.x - wind.x * f.len * sw;
+                streakPos[o + 4] = f.y - 0.02;
+                streakPos[o + 5] = f.z - wind.z * f.len * sw;
+                streakCol.set(f.c, o);
+                streakCol.set(f.c, o + 3);
             });
+            streakGeo.attributes.position.needsUpdate = true;
+            streakGeo.attributes.color.needsUpdate = true;
 
-            // Sable soufflé par le vent
-            sand.items.forEach((p, i) => {
+            // Les nuages de poussière roulent et gonflent
+            clouds.items.forEach((p, i) => {
+                p.x += wind.x * p.sp * sw * dt;
+                p.z += wind.z * p.sp * sw * dt;
+                p.y += Math.sin(t * 0.4 + p.ph) * 0.06 * dt;
+                const along = p.x * wind.x + p.z * wind.z;
+                if (along > 9) resetCloud(p, false);
+                const edge = clamp((9 - Math.abs(along)) / 2, 0, 1);
+                clouds.set(i, p.x, p.y, p.z, p.s * (1 + 0.1 * Math.sin(t * 0.5 + p.ph)), CLOUD_C, p.a * edge * (0.75 + 0.35 * wind.k));
+            });
+            clouds.update();
+
+            // Le sable court au ras du sol, par petits bonds
+            grains.items.forEach((p, i) => {
                 p.age += real / p.life;
                 if (p.age >= 1) resetGrain(p, false);
-                p.x += WIND.x * p.sp * dt;
-                p.z += WIND.z * p.sp * dt;
+                p.x += wind.x * p.sp * sw * dt;
+                p.z += wind.z * p.sp * sw * dt;
                 if (Math.abs(p.x) > HALF - 0.05 || Math.abs(p.z) > HALF - 0.05) resetGrain(p, false);
                 const k = p.age;
-                const y = height(p.x, p.z) + 0.04 + Math.sin(k * Math.PI) * 0.12 + Math.sin(t * 6 + p.ph) * 0.01;
-                sand.set(i, p.x, y, p.z, 0.035, [0.95, 0.85, 0.66], Math.sin(k * Math.PI) * 0.55);
+                const y = Math.max(height(p.x, p.z), WATER) + 0.03 + Math.abs(Math.sin(k * Math.PI * 3)) * 0.08;
+                grains.set(i, p.x, y, p.z, 0.035, SAND_C, Math.sin(k * Math.PI) * 0.6);
             });
-            sand.update();
+            grains.update();
 
             rings.forEach((r) => {
                 if (r.t >= 1) {
@@ -5703,7 +5607,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
                 const k = Math.min(1, r.t);
                 r.m.visible = true;
                 r.m.scale.setScalar(0.04 + r.max * easeOut(k));
-                r.m.material.opacity = (1 - k) * 0.55;
+                r.m.material.opacity = (1 - k) * 0.45;
             });
 
             renderer.render(scene, camera);
@@ -5727,7 +5631,6 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
                     }
                 });
                 envMap.dispose();
-                goldEnv.dispose();
                 renderer.dispose();
                 canvas.remove();
             },
@@ -5796,379 +5699,6 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             const m = new THREE.Mesh(g, mat);
             m.receiveShadow = shadow;
             return m;
-        }
-
-        // Les textures du revêtement : couleur, relief (joints, arêtes) et brillance (blocs polis, joints mats)
-        function casingTextures() {
-            const W = 1024;
-            const H = 1024;
-            const make = (fill) => {
-                const cv = document.createElement('canvas');
-                cv.width = W;
-                cv.height = H;
-                const g = cv.getContext('2d');
-                g.fillStyle = fill;
-                g.fillRect(0, 0, W, H);
-                return [cv, g];
-            };
-            const [cc, cg] = make('rgb(208,196,172)');
-            const [bc, bg] = make('rgb(30,30,30)');
-            const [rc, rg] = make('rgb(245,245,245)');
-            const rnd = mulberry32(31);
-            const rgb = (r, g, b2, a = 1) => `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b2)},${a})`;
-            // Les assises : 26 rangées, plus hautes en bas qu'en haut ; chaque rangée fait le tour sans couture
-            const ROWS = 26;
-            const weights = Array.from({ length: ROWS }, (_, i) => 1.3 - 0.55 * i / (ROWS - 1));
-            const total = weights.reduce((x, y) => x + y, 0);
-            const blocks = [];
-            let yb = H;
-            for (let r = 0; r < ROWS; r++) {
-                const h = (weights[r] / total) * H;
-                const yt = yb - h;
-                const x0 = -rnd() * 80;
-                let x = x0;
-                while (x < x0 + W - 1) {
-                    let w = 50 + rnd() * 52;
-                    if (x0 + W - (x + w) < 36) w = x0 + W - x;
-                    blocks.push({ x, y: yt, w, h, l: 0.93 + rnd() * 0.1, warm: rnd() * 10 - 4, rough: 95 + rnd() * 60, high: 205 + rnd() * 30, row: r });
-                    x += w;
-                }
-                yb = yt;
-            }
-            const J = 1.5;
-            blocks.forEach((bk) => {
-                const base = [236 * bk.l + bk.warm, 229 * bk.l + bk.warm * 0.6, 211 * bk.l - bk.warm * 0.3];
-                [bk.x, bk.x + W].forEach((x) => {
-                    if (x > W || x + bk.w < 0) return;
-                    const x1 = x + J;
-                    const y1 = bk.y + J;
-                    const w = bk.w - 2 * J;
-                    const h = bk.h - 2 * J;
-                    cg.fillStyle = rgb(...base);
-                    cg.fillRect(x1, y1, w, h);
-                    // L'arête du haut prend la lumière, celle du bas est dans l'ombre
-                    const gr = cg.createLinearGradient(0, y1, 0, y1 + h);
-                    gr.addColorStop(0, 'rgba(255,252,240,0.3)');
-                    gr.addColorStop(0.14, 'rgba(255,252,240,0)');
-                    gr.addColorStop(0.8, 'rgba(110,85,50,0)');
-                    gr.addColorStop(1, 'rgba(110,85,50,0.14)');
-                    cg.fillStyle = gr;
-                    cg.fillRect(x1, y1, w, h);
-                    // Relief : le bloc est plein, ses bords s'arrondissent vers le joint
-                    bg.fillStyle = rgb(bk.high - 70, bk.high - 70, bk.high - 70);
-                    bg.fillRect(x1, y1, w, h);
-                    bg.fillStyle = rgb(bk.high - 30, bk.high - 30, bk.high - 30);
-                    bg.fillRect(x1 + 1.5, y1 + 1.5, w - 3, h - 3);
-                    bg.fillStyle = rgb(bk.high, bk.high, bk.high);
-                    bg.fillRect(x1 + 3, y1 + 3, w - 6, h - 6);
-                    rg.fillStyle = rgb(bk.rough, bk.rough, bk.rough);
-                    rg.fillRect(x1, y1, w, h);
-                });
-            });
-            const both = (x, cb) => { cb(x); if (x < 12) cb(x + W); if (x > W - 12) cb(x - W); };
-            // Le grain de la pierre
-            for (let i = 0; i < 14000; i++) {
-                const x = rnd() * W;
-                const y = rnd() * H;
-                const lightDot = rnd() < 0.5;
-                cg.fillStyle = lightDot ? `rgba(255,253,245,${0.05 + rnd() * 0.1})` : `rgba(120,100,70,${0.04 + rnd() * 0.07})`;
-                cg.fillRect(x, y, 1 + rnd() * 1.4, 1 + rnd() * 1.4);
-                if (i % 3 === 0) {
-                    const v = lightDot ? 255 : 150;
-                    bg.fillStyle = `rgba(${v},${v},${v},0.25)`;
-                    bg.fillRect(x, y, 1.2, 1.2);
-                }
-            }
-            // Des nummulites : les petits fossiles ronds du calcaire égyptien
-            for (let i = 0; i < 520; i++) {
-                const x = rnd() * W;
-                const y = rnd() * H;
-                const r = 1.2 + rnd() * 2.4;
-                const a = rnd() * Math.PI;
-                both(x, (xx) => {
-                    cg.fillStyle = `rgba(176,158,124,${0.25 + rnd() * 0.2})`;
-                    cg.beginPath();
-                    cg.ellipse(xx, y, r * 1.3, r, a, 0, Math.PI * 2);
-                    cg.fill();
-                    cg.fillStyle = 'rgba(250,244,228,0.5)';
-                    cg.beginPath();
-                    cg.ellipse(xx, y, r * 0.5, r * 0.4, a, 0, Math.PI * 2);
-                    cg.fill();
-                    bg.fillStyle = 'rgba(140,140,140,0.35)';
-                    bg.beginPath();
-                    bg.ellipse(xx, y, r * 1.2, r * 0.9, a, 0, Math.PI * 2);
-                    bg.fill();
-                });
-            }
-            // Quelques fines fissures et des coins ébréchés
-            for (let i = 0; i < 34; i++) {
-                const bk = blocks[Math.floor(rnd() * blocks.length)];
-                let x = bk.x + bk.w * (0.2 + rnd() * 0.6);
-                let y = bk.y + bk.h * (0.15 + rnd() * 0.3);
-                cg.strokeStyle = 'rgba(120,102,74,0.5)';
-                bg.strokeStyle = 'rgba(70,70,70,0.8)';
-                cg.lineWidth = bg.lineWidth = 0.9;
-                cg.beginPath();
-                bg.beginPath();
-                cg.moveTo(x, y);
-                bg.moveTo(x, y);
-                for (let s2 = 0; s2 < 6; s2++) {
-                    x += (rnd() - 0.5) * 9;
-                    y += 2 + rnd() * 5;
-                    cg.lineTo(x, y);
-                    bg.lineTo(x, y);
-                }
-                cg.stroke();
-                bg.stroke();
-            }
-            for (let i = 0; i < 40; i++) {
-                const bk = blocks[Math.floor(rnd() * blocks.length)];
-                const right = rnd() < 0.5;
-                const cx = right ? bk.x + bk.w - J : bk.x + J;
-                const cy = bk.y + J;
-                const sz = 4 + rnd() * 6;
-                const tri = (g, fill) => {
-                    g.fillStyle = fill;
-                    g.beginPath();
-                    g.moveTo(cx, cy);
-                    g.lineTo(cx + (right ? -sz : sz), cy);
-                    g.lineTo(cx, cy + sz * 0.8);
-                    g.fill();
-                };
-                tri(cg, 'rgba(178,160,128,0.75)');
-                tri(bg, 'rgb(110,110,110)');
-            }
-            // Des traînées laissées par les rares pluies, très légères
-            for (let i = 0; i < 46; i++) {
-                const x = rnd() * W;
-                const y = rnd() * H * 0.8;
-                const len = 50 + rnd() * 180;
-                const w = 2 + rnd() * 5;
-                const gr = cg.createLinearGradient(0, y, 0, y + len);
-                gr.addColorStop(0, 'rgba(150,128,96,0.07)');
-                gr.addColorStop(1, 'rgba(150,128,96,0)');
-                cg.fillStyle = gr;
-                both(x, (xx) => cg.fillRect(xx, y, w, len));
-            }
-            // Le haut du revêtement, mieux poli, un peu plus clair
-            const top = cg.createLinearGradient(0, 0, 0, H * 0.35);
-            top.addColorStop(0, 'rgba(255,253,246,0.18)');
-            top.addColorStop(1, 'rgba(255,253,246,0)');
-            cg.fillStyle = top;
-            cg.fillRect(0, 0, W, H * 0.35);
-            // Le sable poussé par le vent contre la base : une dune basse qui ondule le long de la face
-            const dunePath = (g, lift) => {
-                g.beginPath();
-                g.moveTo(0, H);
-                for (let x = 0; x <= W; x += 8) {
-                    const u = (x / W) * Math.PI * 2;
-                    const h = (0.035 + 0.025 * Math.sin(u * 3 + 0.7) + 0.012 * Math.sin(u * 7 + 2.1) + lift) * H;
-                    g.lineTo(x, H - Math.max(4, h));
-                }
-                g.lineTo(W, H);
-                g.closePath();
-            };
-            const sandGrad = cg.createLinearGradient(0, H * 0.78, 0, H);
-            sandGrad.addColorStop(0, 'rgba(228,204,158,0)');
-            sandGrad.addColorStop(1, 'rgba(228,204,158,0.45)');
-            cg.fillStyle = sandGrad;
-            cg.fillRect(0, H * 0.78, W, H * 0.22);
-            [[0.025, 'rgba(234,210,162,0.4)'], [0.012, 'rgba(234,210,162,0.6)'], [0, 'rgba(232,207,158,0.92)']].forEach(([lift, col]) => {
-                cg.fillStyle = col;
-                dunePath(cg, lift);
-                cg.fill();
-            });
-            bg.fillStyle = 'rgb(170,170,170)';
-            dunePath(bg, 0);
-            bg.fill();
-            rg.fillStyle = 'rgb(250,250,250)';
-            dunePath(rg, 0);
-            rg.fill();
-            const tex = (cv, srgb) => {
-                const t = new THREE.CanvasTexture(cv);
-                t.wrapS = THREE.RepeatWrapping;
-                t.anisotropy = 8;
-                if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-                return t;
-            };
-            return { map: tex(cc, true), bump: tex(bc, false), rough: tex(rc, false) };
-        }
-
-        // Les grandes dalles du socle
-        function slabTexture() {
-            const cv = document.createElement('canvas');
-            cv.width = cv.height = 256;
-            const g = cv.getContext('2d');
-            g.fillStyle = 'rgb(186,172,146)';
-            g.fillRect(0, 0, 256, 256);
-            const rnd = mulberry32(17);
-            for (let r = 0; r < 3; r++) {
-                const off = r % 2 ? 43 : 0;
-                for (let k = -1; k < 3; k++) {
-                    const l = 0.93 + rnd() * 0.09;
-                    g.fillStyle = `rgb(${Math.round(232 * l)},${Math.round(222 * l)},${Math.round(200 * l)})`;
-                    g.fillRect(k * 86 + off + 1.5, r * 85.33 + 1.5, 83, 82.3);
-                }
-            }
-            for (let i = 0; i < 2500; i++) {
-                g.fillStyle = rnd() < 0.5 ? 'rgba(255,250,236,0.12)' : 'rgba(110,92,64,0.08)';
-                g.fillRect(rnd() * 256, rnd() * 256, 1.3, 1.3);
-            }
-            const t = new THREE.CanvasTexture(cv);
-            t.wrapS = t.wrapT = THREE.RepeatWrapping;
-            t.colorSpace = THREE.SRGBColorSpace;
-            t.anisotropy = 8;
-            return t;
-        }
-
-        // L'or gravé : sur chaque face du pyramidion, un disque solaire dont les rayons descendent,
-        // surmonté de l'œil d'Horus ; sur la bande, une frise (ankh, œil, eau, roseau…)
-        function goldTextures() {
-            const make = (w, h) => {
-                const mk = (fill) => {
-                    const cv = document.createElement('canvas');
-                    cv.width = w;
-                    cv.height = h;
-                    const g = cv.getContext('2d');
-                    g.fillStyle = fill;
-                    g.fillRect(0, 0, w, h);
-                    return [cv, g];
-                };
-                return [mk('rgb(255,248,232)'), mk('rgb(210,210,210)')];
-            };
-            const rnd = mulberry32(23);
-            const LINE = 'rgb(168,120,42)';
-            const DEEP = 'rgb(70,70,70)';
-            // Un dessin fait deux fois : en couleur (or plus sombre dans les creux) et en relief
-            const engrave = (pairs, draw) => {
-                pairs.forEach(([cv, g], i) => {
-                    g.strokeStyle = g.fillStyle = i ? DEEP : LINE;
-                    g.lineCap = 'round';
-                    g.lineJoin = 'round';
-                    draw(g);
-                });
-            };
-            // Le pyramidion (un triangle : base en bas, pointe en haut)
-            const [[capC, capG], [capB, capBG]] = make(512, 512);
-            for (let i = 0; i < 4000; i++) {
-                capG.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(150,110,40,0.06)';
-                capG.beginPath();
-                capG.arc(rnd() * 512, rnd() * 512, 1 + rnd() * 2.5, 0, Math.PI * 2);
-                capG.fill();
-            }
-            engrave([[capC, capG], [capB, capBG]], (g) => {
-                g.lineWidth = 7;
-                g.beginPath();
-                g.moveTo(52, 486);
-                g.lineTo(460, 486);
-                g.lineTo(256, 70);
-                g.closePath();
-                g.stroke();
-                // Disque solaire
-                g.lineWidth = 7;
-                g.beginPath();
-                g.arc(256, 340, 46, 0, Math.PI * 2);
-                g.stroke();
-                g.beginPath();
-                g.arc(256, 340, 20, 0, Math.PI * 2);
-                g.fill();
-                // Rayons qui descendent, terminés par de petites mains
-                g.lineWidth = 4;
-                for (let k = 0; k < 9; k++) {
-                    const a = Math.PI * (0.15 + 0.7 * k / 8);
-                    const x0 = 256 + Math.cos(a) * 56;
-                    const y0 = 340 + Math.sin(a) * 56;
-                    const x1 = 256 + Math.cos(a) * 128;
-                    const y1 = Math.min(470, 340 + Math.sin(a) * 128);
-                    g.beginPath();
-                    g.moveTo(x0, y0);
-                    g.lineTo(x1, y1);
-                    g.stroke();
-                    g.beginPath();
-                    g.arc(x1, y1, 6, 0, Math.PI * 2);
-                    g.fill();
-                }
-                // L'œil d'Horus
-                g.lineWidth = 5;
-                g.beginPath();
-                g.moveTo(206, 220);
-                g.quadraticCurveTo(256, 178, 306, 220);
-                g.quadraticCurveTo(256, 250, 206, 220);
-                g.stroke();
-                g.beginPath();
-                g.arc(256, 216, 11, 0, Math.PI * 2);
-                g.fill();
-                g.beginPath();
-                g.moveTo(212, 196);
-                g.quadraticCurveTo(256, 168, 304, 192);
-                g.stroke();
-                g.beginPath();
-                g.moveTo(246, 240);
-                g.lineTo(238, 272);
-                g.moveTo(286, 234);
-                g.quadraticCurveTo(300, 262, 318, 252);
-                g.stroke();
-            });
-            // La frise de la bande : 10 cases
-            const [[bandC, bandG], [bandB, bandBG]] = make(1024, 96);
-            engrave([[bandC, bandG], [bandB, bandBG]], (g) => {
-                g.lineWidth = 4;
-                g.beginPath();
-                g.moveTo(0, 8);
-                g.lineTo(1024, 8);
-                g.moveTo(0, 88);
-                g.lineTo(1024, 88);
-                g.stroke();
-                for (let k = 0; k < 10; k++) {
-                    const cx = 51.2 + k * 102.4;
-                    g.lineWidth = 4;
-                    g.beginPath();
-                    switch (k % 5) {
-                        case 0: // ankh
-                            g.ellipse(cx, 30, 10, 14, 0, 0, Math.PI * 2);
-                            g.moveTo(cx, 44);
-                            g.lineTo(cx, 80);
-                            g.moveTo(cx - 18, 52);
-                            g.lineTo(cx + 18, 52);
-                            break;
-                        case 1: // œil
-                            g.moveTo(cx - 24, 48);
-                            g.quadraticCurveTo(cx, 26, cx + 24, 48);
-                            g.quadraticCurveTo(cx, 62, cx - 24, 48);
-                            g.moveTo(cx - 6, 60);
-                            g.lineTo(cx - 10, 78);
-                            break;
-                        case 2: // l'eau
-                            for (let r = 0; r < 3; r++) {
-                                g.moveTo(cx - 26, 32 + r * 16);
-                                for (let s2 = 0; s2 < 6; s2++) g.lineTo(cx - 26 + (s2 + 1) * 8.7, 32 + r * 16 + (s2 % 2 ? 0 : -6));
-                            }
-                            break;
-                        case 3: // roseau
-                            g.moveTo(cx, 80);
-                            g.lineTo(cx, 26);
-                            g.moveTo(cx, 26);
-                            g.quadraticCurveTo(cx + 16, 30, cx + 10, 46);
-                            g.moveTo(cx - 12, 80);
-                            g.lineTo(cx + 12, 80);
-                            break;
-                        default: // disque et cobra
-                            g.arc(cx, 38, 12, 0, Math.PI * 2);
-                            g.moveTo(cx - 20, 78);
-                            g.quadraticCurveTo(cx - 22, 56, cx - 8, 56);
-                            g.moveTo(cx + 20, 78);
-                            g.quadraticCurveTo(cx + 22, 56, cx + 8, 56);
-                    }
-                    g.stroke();
-                }
-            });
-            const tex = (cv, srgb) => {
-                const t = new THREE.CanvasTexture(cv);
-                t.anisotropy = 8;
-                if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-                return t;
-            };
-            return { capMap: tex(capC, true), capBump: tex(capB, false), bandMap: tex(bandC, true), bandBump: tex(bandB, false) };
         }
 
         // Les couches de grès sur les côtés : ocre, rose, rouille, avec des veines claires
@@ -6295,10 +5825,10 @@ void main() {
     }
 
     // ---------------------------------------------------------------------
-    // Cinquième diorama : le chalet sous la neige. L'heure bleue en montagne,
-    // un chalet en rondins sous un épais manteau de neige, les fenêtres qui
-    // brillent, la fumée qui sort de la cheminée, une forêt de sapins tout
-    // autour et la neige qui tombe sans arrêt. Un étang gelé, un bonhomme de neige.
+    // Cinquième diorama : le chalet dans la tempête de neige. Un chalet en rondins
+    // perdu au fond d'une vallée de montagne, noyé dans les sapins. Dehors, le
+    // blizzard efface tout ; dedans, la lumière est chaude et on devine des
+    // silhouettes qui passent derrière les fenêtres.
     // ---------------------------------------------------------------------
     function buildSnow(THREE, stage) {
         const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
@@ -6306,7 +5836,6 @@ void main() {
         const HALF = S / 2;
         const N = phone ? 50 : 76;
         const BASE = -2.6;
-        const ICE = 0.012;
         const rand = mulberry32(23);
         const rr = (a, b) => a + (b - a) * rand();
         const color = (hex) => new THREE.Color(hex);
@@ -6320,7 +5849,6 @@ void main() {
         const CH = { x: -0.7, z: -0.9, rot: 0.32, W: 2.2, D: 1.7 };
         const cr = Math.cos(CH.rot);
         const sr = Math.sin(CH.rot);
-        const toWorld = (lx, lz) => [CH.x + lx * cr + lz * sr, CH.z - lx * sr + lz * cr];
         const footprint = (x, z) => {
             const dx = x - CH.x;
             const dz = z - CH.z;
@@ -6328,40 +5856,16 @@ void main() {
             const lz = dx * sr + dz * cr;
             return Math.max(Math.abs(lx) - CH.W / 2, Math.abs(lz) - CH.D / 2);
         };
-        const POND = { x: 2.65, z: 2.45, r: 0.95 };
-        const pondD = (x, z) => {
-            const a = Math.atan2(z - POND.z, x - POND.x);
-            return Math.hypot(x - POND.x, (z - POND.z) * 1.15) - POND.r * (1 + 0.08 * Math.sin(a * 3 + 1));
-        };
-        // Le sentier, de la porte jusqu'au bord du bloc
-        const door = toWorld(0, CH.D / 2 + 0.2);
-        const PATH = [door, [door[0] + 0.15, door[1] + 1.0], [0.2, 2.4], [0.15, 3.6], [0.45, 5.2]];
-        const pathD = (x, z) => {
-            let d = Infinity;
-            for (let i = 0; i < PATH.length - 1; i++) {
-                const [ax, az] = PATH[i];
-                const [bx, bz] = PATH[i + 1];
-                const vx = bx - ax;
-                const vz = bz - az;
-                const k = clamp(((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz), 0, 1);
-                d = Math.min(d, Math.hypot(x - ax - vx * k, z - az - vz * k));
-            }
-            return d;
-        };
-        const SNOWMAN = { x: 1.35, z: 1.25 };
         const DRIFTS = [[-3.2, 1.8, 0.28, 0.9], [3.6, -0.6, 0.32, 1.0], [-1.6, 3.4, 0.2, 0.8], [1.9, -2.6, 0.25, 0.9], [-4.0, -1.5, 0.3, 1.1]];
         const height = (x, z) => {
             let h = 0.05 * Math.sin(x * 0.9 + z * 0.4) + 0.04 * Math.sin(z * 1.3 - x * 0.6) + 0.025 * Math.sin((x - z) * 2.1);
-            // Le terrain monte vers le fond et sur les côtés, comme au pied d'une montagne
-            h += 0.95 * smooth(clamp((-z - 1.6) / 3.2, 0, 1)) * (0.75 + 0.25 * Math.sin(x * 0.8 + 0.5));
-            h += 0.3 * smooth(clamp((Math.abs(x) - 2.8) / 2.2, 0, 1));
+            // Une petite combe : les montagnes montent tout autour, plus haut vers le fond
+            const rad = Math.hypot(x - CH.x * 0.6, (z - CH.z * 0.4) * 1.1);
+            h += 1.15 * smooth(clamp((rad - 2.0) / 3.4, 0, 1)) * (0.8 + 0.2 * Math.sin(x * 1.1 + 0.4) + 0.12 * Math.sin(z * 1.7));
+            h += 0.9 * smooth(clamp((-z - 1.2) / 3.6, 0, 1)) * (0.75 + 0.25 * Math.sin(x * 0.8 + 0.5));
+            // Des crêtes rocheuses sur les pentes
+            h += 0.12 * Math.max(0, Math.sin(x * 2.3 + z * 1.4)) * smooth(clamp((rad - 2.6) / 2, 0, 1));
             for (const [cx, cz, a, w] of DRIFTS) h += a * Math.exp(-(Math.pow(x - cx, 2) + Math.pow(z - cz, 2)) / (w * w));
-            // L'étang : une cuvette sous la glace
-            const d = pondD(x, z);
-            h = lerp(h, 0.0, 1 - smooth(clamp(d / 1.1, 0, 1)));
-            if (d < 0) h = -0.06 - 0.14 * smooth(Math.min(1, -d / 0.5));
-            // Le sentier tassé par les pas
-            h -= 0.035 * (1 - smooth(clamp(pathD(x, z) / 0.32, 0, 1)));
             // Le replat sous le chalet
             return lerp(h, 0.03, 1 - smooth(clamp((footprint(x, z) - 0.25) / 1.1, 0, 1)));
         };
@@ -6375,16 +5879,17 @@ void main() {
         renderer.domElement.className = 'diorama-canvas';
         stage.appendChild(renderer.domElement);
         const scene = new THREE.Scene();
-        // Une brume bleutée : la neige qui tombe efface le lointain
-        scene.fog = new THREE.Fog(0x8193b3, 20, 46);
+        // Le blizzard : une brume blanche et grise, épaisse, qui avale tout au-delà de la vallée
+        const WHITEOUT = 0x98a2b2;
+        scene.fog = new THREE.Fog(WHITEOUT, 10, 30);
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
         const uTime = { value: 0 };
 
-        // --- L'heure bleue : un ciel froid, la lune, et la chaleur des fenêtres ---
+        // --- Un ciel bouché par la tempête : une lumière grise et diffuse, et la chaleur des fenêtres ---
         const MOON = V(6, 9, -5);
-        const hemi = new THREE.HemisphereLight(0xa9bde0, 0x4a5874, 1.15);
+        const hemi = new THREE.HemisphereLight(0xaab6ca, 0x3a4354, 0.72);
         scene.add(hemi);
-        const moon = new THREE.DirectionalLight(0xc6d6ff, 1.25);
+        const moon = new THREE.DirectionalLight(0xc6d2e8, 0.3);
         moon.position.copy(MOON);
         moon.castShadow = true;
         moon.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
@@ -6404,8 +5909,8 @@ void main() {
         const sp = skyGeo.attributes.position;
         for (let i = 0; i < sp.count; i++) {
             const y = sp.getY(i) / 10;
-            if (y > 0.02) tmp.copy(color(0xb8a9cc)).lerp(color(0x22325a), smooth(clamp(y * 1.5, 0, 1)));
-            else tmp.copy(color(0xb8a9cc)).lerp(color(0xdfe7f2), smooth(clamp(-y * 3, 0, 1)));
+            if (y > 0.02) tmp.copy(color(0xb5bfcc)).lerp(color(0x6a7486), smooth(clamp(y * 1.5, 0, 1)));
+            else tmp.copy(color(0xb5bfcc)).lerp(color(0xdfe5ee), smooth(clamp(-y * 3, 0, 1)));
             skyCol.push(tmp.r, tmp.g, tmp.b);
         }
         skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(skyCol, 3));
@@ -6425,8 +5930,9 @@ void main() {
         const tc = new Float32Array(tp.count * 3);
         const SNOW = [0xf3f6fb, 0xeaf0f8, 0xf7f9fc, 0xe4ebf5].map(color);
         const HOLLOW = color(0xc7d4ea);
-        const TRAIL = color(0xc9d3e3);
-        const RIM = color(0xd8e3f0);
+        const ROCK = [0x5d6470, 0x6b7380].map(color);
+        const v3a = new THREE.Vector3();
+        const v3b = new THREE.Vector3();
         for (let f = 0; f < tp.count; f += 3) {
             const x = (tp.getX(f) + tp.getX(f + 1) + tp.getX(f + 2)) / 3;
             const y = (tp.getY(f) + tp.getY(f + 1) + tp.getY(f + 2)) / 3;
@@ -6435,8 +5941,11 @@ void main() {
             tmp.copy(SNOW[Math.floor(h * SNOW.length)]);
             // Les creux restent dans l'ombre bleue
             tmp.lerp(HOLLOW, clamp(0.35 - y * 0.6, 0, 0.45));
-            if (pathD(x, z) < 0.22) tmp.lerp(TRAIL, 0.75);
-            else if (pondD(x, z) < 0.15) tmp.copy(RIM);
+            // Sur les pentes les plus raides, la roche sombre perce la neige
+            v3a.set(tp.getX(f + 1) - tp.getX(f), tp.getY(f + 1) - tp.getY(f), tp.getZ(f + 1) - tp.getZ(f));
+            v3b.set(tp.getX(f + 2) - tp.getX(f), tp.getY(f + 2) - tp.getY(f), tp.getZ(f + 2) - tp.getZ(f));
+            const ny = Math.abs(v3a.cross(v3b).normalize().y);
+            if (ny < 0.8 && h < 0.7) tmp.copy(ROCK[Math.floor(h * 2.9) % 2]);
             for (let k = 0; k < 3; k++) tmp.toArray(tc, (f + k) * 3);
         }
         terrainGeo.setAttribute('color', new THREE.BufferAttribute(tc, 3));
@@ -6496,34 +6005,6 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
         contact.rotation.x = -Math.PI / 2;
         contact.position.set(0.6, BASE - 0.02, 0.6);
         scene.add(contact);
-
-        // --- L'étang gelé : de la glace lisse, des fêlures, et la neige poussée sur les bords ---
-        // Un disque qui suit le contour de l'étang (le bord net de la glace posée sur la neige)
-        const iceShape = new THREE.Shape();
-        const contour = [];
-        for (let i = 0; i < 64; i++) {
-            const a = (i / 64) * Math.PI * 2;
-            // On cherche, dans cette direction, où le bord de l'étang se trouve
-            let lo = 0;
-            let hi = 2;
-            for (let k = 0; k < 20; k++) {
-                const m = (lo + hi) / 2;
-                if (pondD(POND.x + Math.cos(a) * m, POND.z + Math.sin(a) * m) < 0.06) lo = m; else hi = m;
-            }
-            contour.push([Math.cos(a) * lo, Math.sin(a) * lo]);
-        }
-        contour.forEach(([x, z], i) => { if (i) iceShape.lineTo(x, -z); else iceShape.moveTo(x, -z); });
-        const iceGeo = new THREE.ShapeGeometry(iceShape, 4);
-        iceGeo.rotateX(-Math.PI / 2);
-        const iuv = iceGeo.attributes.uv;
-        for (let i = 0; i < iuv.count; i++) iuv.setXY(i, iuv.getX(i) / 2.8 + 0.5, iuv.getY(i) / 2.6 + 0.5);
-        const ice = new THREE.Mesh(iceGeo, new THREE.MeshStandardMaterial({ map: iceTexture(), color: 0xc6dcee, roughness: 0.12, metalness: 0.05, envMap, envMapIntensity: 1.1, transparent: true, opacity: 0.92 }));
-        ice.position.set(POND.x, ICE, POND.z);
-        ice.receiveShadow = true;
-        scene.add(ice);
-        // Le bourrelet de neige poussée tout autour de la glace
-        const bank = contour.map(([x, z], i) => ({ x: POND.x + x * 1.03, y: ICE - 0.01, z: POND.z + z * 1.03, s: 0.8 + 0.45 * hash(i, 3), yaw: Math.atan2(x, z) }));
-        instanced(new THREE.SphereGeometry(0.11, 8, 5).scale(1.4, 0.32, 1), flat(0xeef3fa, { roughness: 0.85 }), bank, null, false);
 
         // --- Le chalet ---
         const chalet = new THREE.Group();
@@ -6679,14 +6160,36 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
         const smokeFrom = V(chimX, chimTop + 0.12, chimZ).applyMatrix4(chalet.matrixWorld);
 
         // Les fenêtres : lumière chaude, croisillons, volets rouges et rebord enneigé
-        const glassMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0c, emissive: 0xffa84f, emissiveIntensity: 1.6, roughness: 0.4 });
+        // La lumière des fenêtres perce la tempête (le brouillard ne l'éteint pas)
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0c, emissive: 0xffa84f, emissiveIntensity: 1.6, roughness: 0.4, fog: false });
         const shutterMat = flat(0x8c3424, { roughness: 0.9 });
+        // Une silhouette : la tête et les épaules (une plus petite pour un enfant)
+        const bust = (k) => {
+            const sh = new THREE.Shape();
+            sh.moveTo(-0.13 * k, 0);
+            sh.quadraticCurveTo(-0.13 * k, 0.12 * k, -0.05 * k, 0.13 * k);
+            sh.lineTo(0.05 * k, 0.13 * k);
+            sh.quadraticCurveTo(0.13 * k, 0.12 * k, 0.13 * k, 0);
+            sh.closePath();
+            const head = new THREE.CircleGeometry(0.055 * k, 14).translate(0, 0.2 * k, 0);
+            const neck = new THREE.PlaneGeometry(0.04 * k, 0.05 * k).translate(0, 0.14 * k, 0);
+            const body = new THREE.ShapeGeometry(sh, 6);
+            const parts = [body, head, neck].map((g) => g.toNonIndexed());
+            const pos = [];
+            parts.forEach((g) => { pos.push(...g.attributes.position.array); g.dispose(); });
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            return g;
+        };
+        const silGeo = bust(1);
+        const silSmall = bust(0.78);
+        const people = [];
         const WINDOWS = [
-            { x: -0.66, y: STONE_H + 0.52, z: D / 2, ry: 0 },
-            { x: 0.66, y: STONE_H + 0.52, z: D / 2, ry: 0 },
-            { x: W / 2, y: STONE_H + 0.52, z: -0.35, ry: Math.PI / 2 },
+            { x: -0.66, y: STONE_H + 0.52, z: D / 2, ry: 0, who: 'read' },
+            { x: 0.66, y: STONE_H + 0.52, z: D / 2, ry: 0, who: 'walk' },
+            { x: W / 2, y: STONE_H + 0.52, z: -0.35, ry: Math.PI / 2, who: 'small' },
             { x: W / 2, y: STONE_H + 0.52, z: 0.42, ry: Math.PI / 2 },
-            { x: -W / 2, y: STONE_H + 0.52, z: 0.25, ry: -Math.PI / 2 },
+            { x: -W / 2, y: STONE_H + 0.52, z: 0.25, ry: -Math.PI / 2, who: 'walk' },
             { x: 0, y: STONE_H + 0.52, z: -D / 2, ry: Math.PI },
         ];
         WINDOWS.forEach((w) => {
@@ -6697,6 +6200,13 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
             const out = R + 0.012;
             add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.42, 0.05), darkWood), g).position.z = out;
             add(new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.34), glassMat), g).position.z = out + 0.027;
+            if (w.who) {
+                // Quelqu'un à l'intérieur, à contre-jour : on ne voit que sa silhouette
+                const sil = new THREE.Mesh(w.who === 'small' ? silSmall : silGeo, new THREE.MeshBasicMaterial({ color: 0x2e1a0c, transparent: true, opacity: 0, depthWrite: false }));
+                sil.position.set(0, -0.17, out + 0.029);
+                g.add(sil);
+                people.push({ sil, base: rr(-0.04, 0.04), on: rand() < 0.7, until: rr(3, 9), a: 0, ph: rr(0, 6.28), read: w.who === 'read' });
+            }
             const bar1 = add(new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.34, 0.02), darkWood), g);
             bar1.position.z = out + 0.035;
             const bar2 = add(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.025, 0.02), darkWood), g);
@@ -6751,7 +6261,7 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
         const lanternPos = V(0.62, 0, D / 2 + 0.55);
         const post = add(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.95, 6), darkWood));
         post.position.set(lanternPos.x, 0.47, lanternPos.z);
-        const lanternMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0c, emissive: 0xffb562, emissiveIntensity: 2.2 });
+        const lanternMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0c, emissive: 0xffb562, emissiveIntensity: 2.2, fog: false });
         const lantern = add(new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.14, 0.11), lanternMat));
         lantern.position.set(lanternPos.x, 1.0, lanternPos.z);
         const lanternHat = add(new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.07, 4).rotateY(Math.PI / 4), darkWood));
@@ -6779,119 +6289,66 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
         const firGeo = firGeometry();
         const firMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 });
         const firs = [];
-        const tries = phone ? 900 : 1600;
-        const want = phone ? 60 : 95;
+        const tries = phone ? 1600 : 3000;
+        const want = phone ? 95 : 160;
         for (let i = 0; i < tries && firs.length < want; i++) {
             const x = rr(-HALF + 0.3, HALF - 0.3);
             const z = rr(-HALF + 0.3, HALF - 0.3);
             const back = smooth(clamp((-z + 1) / 5, 0, 1));
             const sideEdge = smooth(clamp((Math.abs(x) - 2) / 2.5, 0, 1));
-            // Plus serré au fond et sur les côtés, une clairière autour du chalet
-            if (rand() > 0.25 + 0.75 * Math.max(back, sideEdge)) continue;
-            if (footprint(x, z) < 1.25) continue;
-            if (pondD(x, z) < 0.45) continue;
-            if (pathD(x, z) < (z > 1.5 ? 0.85 : 0.55)) continue;
-            if (z > 2.2 && Math.abs(x - 0.5) < 2.2 && rand() < 0.6) continue;
-            if (Math.hypot(x - SNOWMAN.x, z - SNOWMAN.z) < 0.6) continue;
+            // Les sapins couvrent toute la vallée ; il ne reste qu'une petite clairière autour du chalet
+            if (rand() > 0.55 + 0.45 * Math.max(back, sideEdge)) continue;
+            if (footprint(x, z) < 1.0) continue;
+            const fd = footprint(x, z);
+            if (fd < 1.6 && rand() < 0.5) continue;
+            // On garde une trouée devant la façade, pour voir les fenêtres éclairées
+            const lx = (x - CH.x) * cr - (z - CH.z) * sr;
+            const lz = (x - CH.x) * sr + (z - CH.z) * cr;
+            if (lz > 0 && lz < 3.4 && Math.abs(lx) < 0.55 + lz * 0.35) continue;
             const s = rr(0.65, 1.15) * (0.8 + 0.4 * back);
             const r = 0.45 * s;
-            if (firs.some((f) => Math.hypot(f.x - x, f.z - z) < (r + f.r) * 0.62)) continue;
+            if (firs.some((f) => Math.hypot(f.x - x, f.z - z) < (r + f.r) * 0.55)) continue;
             firs.push({ x, y: height(x, z) - 0.02, z, s, r, yaw: rr(0, 6.28), tilt: rr(-0.05, 0.05), shake: 0, ph: rr(0, 6.28) });
         }
         const firMesh = instanced(firGeo, firMat, firs, (p) => tmp.setScalar(rr(0.82, 1.05)).clone(), true);
 
-        // --- Le bonhomme de neige, au bord du sentier ---
-        const snowman = new THREE.Group();
-        snowman.position.set(SNOWMAN.x, height(SNOWMAN.x, SNOWMAN.z) - 0.03, SNOWMAN.z);
-        snowman.rotation.y = -0.5;
-        scene.add(snowman);
-        const snowmanMeshes = [];
-        const sm = (geo, mat, x, y, z, parent = snowman) => {
-            const m = new THREE.Mesh(geo, mat);
-            m.position.set(x, y, z);
-            m.castShadow = true;
-            m.receiveShadow = true;
-            parent.add(m);
-            snowmanMeshes.push(m);
-            return m;
-        };
-        const ballMat = flat(0xf6f8fc, { roughness: 0.8 });
-        sm(new THREE.IcosahedronGeometry(0.24, 2), ballMat, 0, 0.21, 0);
-        sm(new THREE.IcosahedronGeometry(0.17, 2), ballMat, 0, 0.55, 0);
-        const headG = new THREE.Group();
-        headG.position.set(0, 0.8, 0);
-        snowman.add(headG);
-        sm(new THREE.IcosahedronGeometry(0.12, 2), ballMat, 0, 0, 0, headG);
-        const coal = flat(0x1d1d22);
-        [-1, 1].forEach((e) => sm(new THREE.SphereGeometry(0.016, 6, 4), coal, e * 0.045, 0.03, 0.108, headG));
-        for (let i = 0; i < 5; i++) {
-            const a = (i - 2) * 0.32;
-            sm(new THREE.SphereGeometry(0.012, 5, 4), coal, Math.sin(a) * 0.06, -0.045 - Math.cos(a) * 0.012 + 0.012, 0.105, headG);
-        }
-        for (let i = 0; i < 3; i++) sm(new THREE.SphereGeometry(0.018, 6, 4), coal, 0, 0.62 - i * 0.08, 0.16 - i * 0.004);
-        const carrot = sm(new THREE.ConeGeometry(0.022, 0.14, 6).rotateX(Math.PI / 2), flat(0xe8792b), 0, 0, 0.18, headG);
-        carrot.position.z = 0.17;
-        // L'écharpe rouge et le chapeau
-        const scarfMat = flat(0xc0392b);
-        sm(new THREE.TorusGeometry(0.11, 0.032, 6, 14).rotateX(Math.PI / 2), scarfMat, 0, 0.69, 0);
-        const tail = sm(new THREE.BoxGeometry(0.06, 0.18, 0.025), scarfMat, 0.07, 0.6, 0.1);
-        tail.rotation.set(0.2, 0.3, 0.25);
-        const hat = new THREE.Group();
-        hat.position.set(0, 0.1, 0);
-        headG.add(hat);
-        sm(new THREE.CylinderGeometry(0.13, 0.13, 0.015, 14), coal, 0, 0, 0, hat);
-        sm(new THREE.CylinderGeometry(0.08, 0.085, 0.14, 14), coal, 0, 0.075, 0, hat);
-        sm(new THREE.CylinderGeometry(0.087, 0.087, 0.025, 14), scarfMat, 0, 0.02, 0, hat);
-        // Les bras en branches
-        const twig = flat(0x4a3220);
-        [-1, 1].forEach((e) => {
-            const a = V(e * 0.13, 0.58, 0);
-            const b = V(e * 0.38, 0.74 + (e > 0 ? 0.06 : -0.02), 0.02);
-            const arm = limb(a, b, 0.012, 0.007, twig);
-            arm.castShadow = true;
-            snowman.add(arm);
-            snowmanMeshes.push(arm);
-            const f = limb(b.clone().lerp(a, 0.25), b.clone().add(V(e * 0.04, 0.07, 0)), 0.006, 0.004, twig);
-            snowman.add(f);
-            snowmanMeshes.push(f);
-        });
-        const hatState = { t: 1 };
-
-        // --- Les traces de pas sur le sentier ---
-        const steps = [];
-        for (let i = 0; i < PATH.length - 1; i++) {
-            const [ax, az] = PATH[i];
-            const [bx, bz] = PATH[i + 1];
-            const len = Math.hypot(bx - ax, bz - az);
-            const n = Math.floor(len / 0.16);
-            const yaw = Math.atan2(bx - ax, bz - az);
-            for (let k = 0; k < n; k++) {
-                const u = k / n;
-                const side = (steps.length % 2 ? 1 : -1) * 0.07;
-                const x = ax + (bx - ax) * u + Math.cos(yaw) * side;
-                const z = az + (bz - az) * u - Math.sin(yaw) * side;
-                if (Math.abs(x) > HALF - 0.1 || Math.abs(z) > HALF - 0.1) continue;
-                steps.push({ x, y: height(x, z) + 0.012, z, s: 1, yaw });
-            }
-        }
-        const printGeo = new THREE.CircleGeometry(0.045, 8).rotateX(-Math.PI / 2).scale(0.75, 1, 1.45);
-        const prints = instanced(printGeo, new THREE.MeshStandardMaterial({ color: 0xaab9d2, roughness: 1, transparent: true, opacity: 0.55, depthWrite: false }), steps, null, false);
-        prints.receiveShadow = false;
-
         // --- La neige qui tombe ---
         const pointScale = { value: 1 };
-        const flakes = particles(phone ? 420 : 760);
+        const flakes = particles(phone ? 900 : 1700);
         const SKY_TOP = 7;
         let gust = 0;
+        let storm = 1;
         flakes.items.forEach((p) => resetFlake(p, true));
         function resetFlake(p, anywhere) {
             p.x = rr(-HALF - 1, HALF + 1);
             p.z = rr(-HALF - 1, HALF + 1);
             p.y = anywhere ? rr(-0.5, SKY_TOP) : SKY_TOP + rr(0, 1);
-            p.sp = rr(0.32, 0.62);
-            p.s = rr(0.028, 0.06);
+            p.sp = rr(0.5, 0.95);
+            p.s = rr(0.025, 0.065);
             p.ph = rr(0, 6.28);
             p.sw = rr(0.15, 0.35);
+        }
+        // Des traînées blanches : la neige que le vent fait filer à l'horizontale
+        const STREAKS = phone ? 300 : 650;
+        const streakPos = new Float32Array(STREAKS * 6);
+        const streakGeo = new THREE.BufferGeometry();
+        streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+        const streakLines = new THREE.LineSegments(streakGeo, new THREE.LineBasicMaterial({ color: 0xf2f6fb, transparent: true, opacity: 0.38, depthWrite: false }));
+        streakLines.frustumCulled = false;
+        streakLines.renderOrder = 8;
+        scene.add(streakLines);
+        const streaks = Array.from({ length: STREAKS }, () => {
+            const f = {};
+            resetStreak(f, true);
+            return f;
+        });
+        function resetStreak(f, anywhere) {
+            f.x = anywhere ? rr(-8, 8) : -8 - rr(0, 2);
+            f.z = rr(-8, 8);
+            f.y = Math.pow(rand(), 1.4) * 5 - 0.2;
+            f.sp = rr(3.5, 6.5);
+            f.len = rr(0.15, 0.4);
+            f.ph = rr(0, 6.28);
         }
         // La fumée de la cheminée
         const smoke = particles(phone ? 26 : 40);
@@ -6978,7 +6435,7 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
         canvas.addEventListener('wheel', onWheel, { passive: false });
 
         // Toucher le chalet : on éteint ou rallume. Un sapin : il se secoue et perd sa neige.
-        // Le bonhomme : son chapeau saute. Ailleurs : une rafale de vent fait tourbillonner la neige.
+        // Ailleurs : une rafale encore plus forte.
         const raycaster = new THREE.Raycaster();
         const ndc = new THREE.Vector2();
         let lightsOn = true;
@@ -6987,15 +6444,11 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
             const r = canvas.getBoundingClientRect();
             ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
             raycaster.setFromCamera(ndc, camera);
-            const hits = raycaster.intersectObjects([...chaletMeshes, ...snowmanMeshes, firMesh], false);
+            const hits = raycaster.intersectObjects([...chaletMeshes, firMesh], false);
             const hit = hits[0];
             if (hit && chaletMeshes.includes(hit.object)) {
                 lightsOn = !lightsOn;
                 if (!lightsOn) roofSnow.forEach((m) => snowPuff(...m.getWorldPosition(v3).toArray(), 10, 0.5));
-                return;
-            }
-            if (hit && snowmanMeshes.includes(hit.object)) {
-                hatState.t = 0;
                 return;
             }
             if (hit && hit.object === firMesh && hit.instanceId != null) {
@@ -7054,16 +6507,31 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
             const dist = fit * zoom;
             camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
             camera.lookAt(target);
-            scene.fog.near = dist - 2;
-            scene.fog.far = dist + 24;
+            // Les rafales épaississent et éclaircissent le voile blanc, lentement
+            storm = 1 + 0.3 * Math.sin(t * 0.19) + 0.15 * Math.sin(t * 0.47 + 2.1) + gust * 0.6;
+            scene.fog.near = dist * (0.46 - 0.1 * storm);
+            scene.fog.far = dist * (1.55 - 0.28 * storm) + 1.5;
 
             // Le feu de cheminée fait vaciller la lumière des fenêtres
             light += ((lightsOn ? 1 : 0) - light) * Math.min(1, dt * 3);
             const flick = 0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1 + 1.3);
-            glassMat.emissiveIntensity = 0.05 + 1.6 * light * flick;
+            glassMat.emissiveIntensity = 0.05 + 2.1 * light * flick;
             glows.forEach(([g, base]) => { g.intensity = base * light * flick; });
             lanternMat.emissiveIntensity = 0.1 + 2.1 * light;
             lanternLight.intensity = 1.6 * light;
+
+            // Les silhouettes : elles vont et viennent, l'une lit en hochant un peu la tête
+            people.forEach((p) => {
+                if (t > p.until) {
+                    p.on = !p.on;
+                    p.until = t + (p.on ? rr(8, 16) : rr(4, 9));
+                }
+                p.a += ((p.on && light > 0.3 ? 1 : 0) - p.a) * Math.min(1, dt * 1.2);
+                p.sil.material.opacity = 0.82 * p.a;
+                p.sil.position.x = p.base + (p.read ? Math.sin(t * 0.3 + p.ph) * 0.01 : (1 - p.a) * 0.12 + Math.sin(t * 0.5 + p.ph) * 0.025);
+                p.sil.rotation.z = p.read ? Math.sin(t * 0.7 + p.ph) * 0.04 : 0;
+                p.sil.position.y = -0.17 + Math.sin(t * 1.1 + p.ph) * 0.004;
+            });
 
             // Les sapins secoués
             let dirty = false;
@@ -7082,24 +6550,16 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
             });
             if (dirty) firMesh.instanceMatrix.needsUpdate = true;
 
-            // Le chapeau du bonhomme saute et retombe en tournant
-            if (hatState.t < 1) {
-                hatState.t = Math.min(1, hatState.t + dt * 1.1);
-                const k = hatState.t;
-                hat.position.y = 0.1 + Math.sin(k * Math.PI) * 0.45;
-                hat.rotation.y = k * Math.PI * 2;
-                hat.rotation.z = Math.sin(k * Math.PI * 3) * 0.25 * (1 - k);
-            }
-            headG.rotation.y = Math.sin(t * 0.4) * 0.12;
 
             // La neige tombe, en se balançant ; la rafale l'emporte
             gust = Math.max(0, gust - dt * 0.35);
-            const wind = 0.12 + gust * 2.2;
+            const wind = 1.6 * storm + gust * 1.6;
             flakes.items.forEach((p, i) => {
-                p.y -= p.sp * dt * (1 + gust * 0.4);
-                p.x += (wind + Math.sin(t * 0.9 + p.ph) * p.sw) * dt;
-                p.z += (Math.cos(t * 0.7 + p.ph) * p.sw * 0.7 + gust * Math.sin(p.ph) * 0.8) * dt;
+                p.y -= p.sp * dt * (1 + gust * 0.4) * (0.8 + 0.2 * storm);
+                p.x += (wind * (0.7 + p.sw) + Math.sin(t * 1.6 + p.ph) * p.sw) * dt;
+                p.z += (wind * 0.25 + Math.cos(t * 1.3 + p.ph) * p.sw * 0.9 + gust * Math.sin(p.ph) * 0.8) * dt;
                 if (p.x > HALF + 1) p.x -= S + 2;
+                if (p.z > HALF + 1) p.z -= S + 2;
                 const inside = Math.abs(p.x) < HALF && Math.abs(p.z) < HALF;
                 const floor = inside ? height(p.x, p.z) : BASE;
                 if (p.y < floor) resetFlake(p, false);
@@ -7107,14 +6567,29 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
                 flakes.set(i, p.x, p.y, p.z, p.s, FLAKE, 0.9 * fade);
             });
             flakes.update();
+            streaks.forEach((f, i) => {
+                f.x += f.sp * (0.55 + 0.45 * storm + gust * 0.8) * dt;
+                f.z += f.sp * 0.25 * dt;
+                f.y -= 0.35 * dt + Math.sin(t * 2 + f.ph) * 0.1 * dt;
+                if (f.x > 8 || f.y < -0.5) resetStreak(f, false);
+                if (f.z > 8) f.z -= 16;
+                const o = i * 6;
+                streakPos[o] = f.x;
+                streakPos[o + 1] = f.y;
+                streakPos[o + 2] = f.z;
+                streakPos[o + 3] = f.x - f.len * storm;
+                streakPos[o + 4] = f.y + 0.03;
+                streakPos[o + 5] = f.z - f.len * 0.25;
+            });
+            streakGeo.attributes.position.needsUpdate = true;
 
             // La fumée monte, gonfle et se disperse
             smoke.items.forEach((p, i) => {
                 p.age += real / p.life;
                 if (p.age >= 1) resetPuff(p, false);
                 const k = p.age;
-                const x = smokeFrom.x + p.dx + k * (0.6 + gust * 1.5) + Math.sin(t * 0.8 + p.ph) * 0.06 * k;
-                const y = smokeFrom.y + k * 1.7;
+                const x = smokeFrom.x + p.dx + k * (1.4 * storm + gust * 1.5) + Math.sin(t * 0.8 + p.ph) * 0.06 * k;
+                const y = smokeFrom.y + k * 0.9;
                 const z = smokeFrom.z + p.dz + Math.sin(t * 0.6 + p.ph) * 0.08 * k;
                 const g = 0.52 + 0.18 * k;
                 smoke.set(i, x, y, z, 0.12 + k * 0.5, [g, g + 0.02, g + 0.06], Math.sin(Math.min(1, k * 4) * Math.PI / 2) * (1 - k) * 0.42 * (0.4 + 0.6 * light));
@@ -7308,43 +6783,6 @@ diffuseColor.rgb += step(0.9965, n) * tw * 0.55;`);
             return tex;
         }
 
-        // La glace de l'étang : des voiles plus clairs et des fêlures fines
-        function iceTexture() {
-            const cv = document.createElement('canvas');
-            cv.width = cv.height = 512;
-            const g = cv.getContext('2d');
-            g.fillStyle = 'rgb(190,214,235)';
-            g.fillRect(0, 0, 512, 512);
-            const rnd = mulberry32(41);
-            for (let i = 0; i < 14; i++) {
-                const grad = g.createRadialGradient(rnd() * 512, rnd() * 512, 0, rnd() * 512, rnd() * 512, 60 + rnd() * 120);
-                grad.addColorStop(0, `rgba(240,248,255,${0.15 + rnd() * 0.2})`);
-                grad.addColorStop(1, 'rgba(240,248,255,0)');
-                g.fillStyle = grad;
-                g.fillRect(0, 0, 512, 512);
-            }
-            for (let k = 0; k < 9; k++) {
-                let x = 256 + (rnd() - 0.5) * 220;
-                let y = 256 + (rnd() - 0.5) * 220;
-                let a = rnd() * Math.PI * 2;
-                g.strokeStyle = `rgba(255,255,255,${0.35 + rnd() * 0.35})`;
-                g.lineWidth = 0.8 + rnd() * 1.2;
-                g.beginPath();
-                g.moveTo(x, y);
-                for (let s = 0; s < 8; s++) {
-                    a += (rnd() - 0.5) * 1.1;
-                    x += Math.cos(a) * 18;
-                    y += Math.sin(a) * 18;
-                    g.lineTo(x, y);
-                }
-                g.stroke();
-            }
-            const tex = new THREE.CanvasTexture(cv);
-            tex.colorSpace = THREE.SRGBColorSpace;
-            tex.anisotropy = 4;
-            return tex;
-        }
-
         // Les côtés du bloc : terre gelée, puis roche grise avec quelques cailloux
         function earthTexture() {
             const Wt = 1024;
@@ -7487,16 +6925,16 @@ void main() {
     }
 
     // ---------------------------------------------------------------------
-    // Sixième diorama : la salle de classe. Un après-midi calme, le soleil entre
-    // par les fenêtres, les élèves révisent tranquillement (ils écrivent, lisent,
-    // tournent les pages) et la prof, ravie, se promène devant le tableau.
+    // Sixième diorama : la petite salle de classe, un soir de pluie. Dehors il
+    // pleut doucement contre les vitres ; dedans, quatre élèves révisent sous
+    // leur lampe de bureau, et la prof, ravie, se promène devant le tableau.
     // Les murs côté caméra s'effacent, comme dans une maison de poupée.
     // ---------------------------------------------------------------------
     function buildClassroom(THREE, stage) {
         const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
-        const S = 10;
+        const S = 6;
         const HALF = S / 2;
-        const BASE = -0.55;
+        const BASE = -0.45;
         const WALL_H = 2.75;
         const WALL_T = 0.14;
         const rand = mulberry32(61);
@@ -7520,10 +6958,10 @@ void main() {
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
 
-        // --- Lumière d'après-midi : le soleil entre par les fenêtres de gauche ---
-        const hemi = new THREE.HemisphereLight(0xfbeedc, 0x8f7258, 1.3);
+        // --- Un soir de pluie : un jour gris et bleuté par les fenêtres, et les lampes qui réchauffent tout ---
+        const hemi = new THREE.HemisphereLight(0xe8d2bc, 0x54443a, 0.62);
         scene.add(hemi);
-        const sun = new THREE.DirectionalLight(0xffd9a6, 2.45);
+        const sun = new THREE.DirectionalLight(0x9fb4d6, 0.7);
         sun.position.set(-11, 7.5, 3.2);
         sun.target.position.set(0, 0, 0);
         sun.castShadow = true;
@@ -7532,13 +6970,13 @@ void main() {
         sun.shadow.bias = -0.0006;
         sun.shadow.normalBias = 0.02;
         scene.add(sun, sun.target);
-        const fill = new THREE.DirectionalLight(0xe8eeff, 0.55);
+        const fill = new THREE.DirectionalLight(0xffcf9a, 0.35);
         fill.position.set(6, 6, 7);
         scene.add(fill);
 
         // --- Le plancher ---
         const floorTex = plankTexture();
-        floorTex.repeat.set(2.5, 2.5);
+        floorTex.repeat.set(1.5, 1.5);
         const floor = new THREE.Mesh(new THREE.BoxGeometry(S, 0.1, S), [
             flat(0x8a5d3b), flat(0x8a5d3b),
             new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.7 }),
@@ -7559,9 +6997,9 @@ void main() {
         contact.position.y = BASE - 0.02;
         scene.add(contact);
         // Un grand tapis au fond, pour le coin lecture
-        const rug = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 1 }));
+        const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 1.0), new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 1 }));
         rug.rotation.x = -Math.PI / 2;
-        rug.position.set(1.4, 0.006, 4.05);
+        rug.position.set(-1.25, 0.006, 2.35);
         rug.receiveShadow = true;
         scene.add(rug);
 
@@ -7632,16 +7070,16 @@ void main() {
             return obj;
         };
 
-        const WIN = [-2.9, 0, 2.9].map((u) => ({ u0: u - 0.85, u1: u + 0.85, y0: 0.95, y1: 2.25 }));
+        const WIN = [-1.3, 1.3].map((u) => ({ u0: u - 0.75, u1: u + 0.75, y0: 0.95, y1: 2.25 }));
         const front = makeWall('z', -HALF + WALL_T / 2, 1, []);
         const left = makeWall('x', -HALF + WALL_T / 2, 1, WIN);
         const back = makeWall('z', HALF - WALL_T / 2, -1, []);
-        const DOOR = { u0: -3.6, u1: -2.5, y0: 0, y1: 2.05 };
+        const DOOR = { u0: 1.75, u1: 2.75, y0: 0, y1: 2.05 };
         const right = makeWall('x', HALF - WALL_T / 2, -1, [DOOR]);
 
         // --- Le tableau noir, et ce qui est écrit dessus ---
-        const BOARD_W = 4.6;
-        const BOARD_H = 1.45;
+        const BOARD_W = 3.0;
+        const BOARD_H = 3.0 * 435 / 1380;
         const boardCanvas = document.createElement('canvas');
         boardCanvas.width = 1380;
         boardCanvas.height = 435;
@@ -7761,18 +7199,18 @@ void main() {
         const ledge = new THREE.Mesh(new THREE.BoxGeometry(BOARD_W, 0.04, 0.12), flat(0x6b4529));
         ledge.position.set(0, -BOARD_H / 2 - 0.06, 0.06);
         boardGroup.add(ledge);
-        [[0xffffff, -1.2], [0xffe9a0, -1.05], [0xffb8c8, -0.9], [0xb8e0ff, 1.5]].forEach(([c, x]) => {
+        [[0xffffff, -1.0], [0xffe9a0, -0.86], [0xffb8c8, -0.72], [0xb8e0ff, 1.15]].forEach(([c, x]) => {
             const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.09, 6).rotateZ(Math.PI / 2), flat(c));
             ch.position.set(x, -BOARD_H / 2 - 0.028, 0.07);
             boardGroup.add(ch);
         });
         const eraser = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.08), flat(0x3d3d48));
-        eraser.position.set(0.8, -BOARD_H / 2 - 0.015, 0.07);
+        eraser.position.set(0.6, -BOARD_H / 2 - 0.015, 0.07);
         boardGroup.add(eraser);
         const eraserTop = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.08), flat(0xc89058));
-        eraserTop.position.set(0.8, -BOARD_H / 2 + 0.02, 0.07);
+        eraserTop.position.set(0.6, -BOARD_H / 2 + 0.02, 0.07);
         boardGroup.add(eraserTop);
-        onWall(front, boardGroup, -0.3, 1.58, 0.03);
+        onWall(front, boardGroup, -0.35, 1.6, 0.03);
         const boardMeshes = [boardFrame, boardFace];
 
         // L'horloge au-dessus de la porte du couloir... non : à droite du tableau, à l'heure du vrai monde
@@ -7792,10 +7230,10 @@ void main() {
         handS.add(new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.22, 0.006).translate(0, 0.08, 0), flat(0xc0392b)));
         handS.position.z = 0.038;
         wallClock.add(handH, handM, handS);
-        onWall(front, wallClock, 3.25, 2.2, 0.02);
+        onWall(front, wallClock, 2.05, 2.1, 0.02);
 
         // Les fenêtres : cadres, croisillons, vitres, rebords avec des plantes
-        const glassMat = new THREE.MeshStandardMaterial({ color: 0xcfe6f5, transparent: true, opacity: 0.18, roughness: 0.05, metalness: 0.1, depthWrite: false });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x8ea4c4, emissive: 0x3c4c66, emissiveIntensity: 0.6, transparent: true, opacity: 0.32, roughness: 0.05, metalness: 0.1, depthWrite: false });
         const frameMat = flat(0xf7f3ea, { roughness: 0.6 });
         WIN.forEach((h, wi) => {
             const wg = new THREE.Group();
@@ -7814,7 +7252,7 @@ void main() {
             sill.position.set(0, -wh / 2 - 0.02, 0.06);
             wg.add(sill);
             // Des pots de plantes sur le rebord
-            const potCol = [0xc4673f, 0xd4885a, 0x6f8fb0][wi];
+            const potCol = [0xc4673f, 0x6f8fb0][wi];
             [-0.45, 0.35].forEach((px, k) => {
                 if (wi === 1 && k === 1) return;
                 const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.13, 8), flat(potCol));
@@ -7826,7 +7264,7 @@ void main() {
                 wg.add(leaves);
                 if (!k) {
                     // Une petite fleur
-                    const fl = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), flat([0xff7aa2, 0xffd54f, 0xff8a65][wi]));
+                    const fl = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), flat([0xff7aa2, 0xffd54f][wi]));
                     fl.position.set(px + 0.03, -wh / 2 + 0.33, 0.1);
                     wg.add(fl);
                 }
@@ -7865,15 +7303,13 @@ void main() {
 
         // Les affiches et les dessins des élèves
         const POSTERS = english ? [
-            { wall: right, u: 0.3, y: 1.75, w: 1.3, h: 0.85, kind: 'sign', text: ['Quiet please,', 'we are revising'] },
-            { wall: right, u: 2.4, y: 1.7, w: 1.1, h: 1.1, kind: 'alphabet' },
-            { wall: back, u: -2.2, y: 1.8, w: 1.9, h: 1.05, kind: 'map' },
-            { wall: back, u: 0.35, y: 1.95, w: 1.5, h: 0.75, kind: 'drawings' },
+            { wall: right, u: 0.3, y: 2.15, w: 1.1, h: 0.55, kind: 'sign', text: ['Quiet please,', 'we are revising'] },
+            { wall: back, u: -1.5, y: 1.75, w: 1.5, h: 0.85, kind: 'map' },
+            { wall: back, u: 0.2, y: 1.9, w: 1.05, h: 0.58, kind: 'drawings' },
         ] : [
-            { wall: right, u: 0.3, y: 1.75, w: 1.3, h: 0.85, kind: 'sign', text: ['Chut,', 'on révise'] },
-            { wall: right, u: 2.4, y: 1.7, w: 1.1, h: 1.1, kind: 'alphabet' },
-            { wall: back, u: -2.2, y: 1.8, w: 1.9, h: 1.05, kind: 'map' },
-            { wall: back, u: 0.35, y: 1.95, w: 1.5, h: 0.75, kind: 'drawings' },
+            { wall: right, u: 0.3, y: 2.15, w: 1.1, h: 0.55, kind: 'sign', text: ['Chut,', 'on révise'] },
+            { wall: back, u: -1.5, y: 1.75, w: 1.5, h: 0.85, kind: 'map' },
+            { wall: back, u: 0.2, y: 1.9, w: 1.05, h: 0.58, kind: 'drawings' },
         ];
         POSTERS.forEach((p) => {
             const tex = posterTexture(p);
@@ -7899,12 +7335,12 @@ void main() {
             pocket.position.set(x, -0.28, 0.18);
             hooks.add(pocket);
         });
-        onWall(right, hooks, -1.5, 1.45, 0.02);
+        onWall(right, hooks, 0.3, 1.45, 0.02);
 
         // La bibliothèque du fond, pleine de livres de toutes les couleurs
         const shelf = new THREE.Group();
         const shelfWood = flat(0xa8734a);
-        const SH_W = 2.6;
+        const SH_W = 1.7;
         [[SH_W, 0.05, 0, 0], [SH_W, 0.05, 0, 0.45], [SH_W, 0.05, 0, 0.9], [SH_W, 0.05, 0, 1.3], [0.05, 1.3, -SH_W / 2, 0.65], [0.05, 1.3, SH_W / 2, 0.65], [0.05, 1.3, 0, 0.65]].forEach(([a, b, x, y]) => {
             const p = new THREE.Mesh(new THREE.BoxGeometry(a, b, 0.36), shelfWood);
             p.position.set(x, y, 0.18);
@@ -7932,24 +7368,24 @@ void main() {
         });
         // Un globe et une petite plante sur le dessus
         const plant = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), flat(0x4f8f4a));
-        plant.position.set(-0.9, 1.52, 0.18);
+        plant.position.set(-0.6, 1.52, 0.18);
         shelf.add(plant);
         const plantPot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.16, 8), flat(0xe8d6b8));
-        plantPot.position.set(-0.9, 1.4, 0.18);
+        plantPot.position.set(-0.6, 1.4, 0.18);
         shelf.add(plantPot);
-        onWall(back, shelf, 2.6, 0, 0);
+        onWall(back, shelf, 1.95, 0, 0);
 
         // Des coussins sur le tapis du coin lecture
-        [[0.4, 0xf6b26b], [1.2, 0x8fc1e3], [2.3, 0xe39fc1]].forEach(([x, c]) => {
+        [[-1.85, 0xf6b26b], [-1.25, 0x8fc1e3], [-0.65, 0xe39fc1]].forEach(([x, c]) => {
             const cu = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.1, 10), flat(c, { roughness: 1 }));
-            cu.position.set(x, 0.05, 4.1);
+            cu.position.set(x, 0.05, 2.38);
             cu.castShadow = true;
             cu.receiveShadow = true;
             scene.add(cu);
         });
         // La poubelle et la corbeille à papier près du bureau
         const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.34, 10, 1, true), flat(0x4a90a4, { side: THREE.DoubleSide }));
-        bin.position.set(4.45, 0.17, -3.0);
+        bin.position.set(2.7, 0.17, -1.6);
         bin.castShadow = true;
         scene.add(bin);
 
@@ -8045,6 +7481,34 @@ void main() {
             return head;
         }
 
+        const lamps = [];
+        const bulbMat = new THREE.MeshStandardMaterial({ color: 0x3a2a14, emissive: 0xffc070, emissiveIntensity: 2.2 });
+        function deskLamp(parent, x, y, z, yaw) {
+            const lg = new THREE.Group();
+            lg.position.set(x, y, z);
+            lg.rotation.y = yaw;
+            parent.add(lg);
+            const shadeCol = [0x2e7d6b, 0xc0392b, 0x2c5f8a, 0xd4a017, 0x6b4a8a][lamps.length % 5];
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.02, 10), flat(0x2b2b30));
+            lg.add(base);
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.26, 5), flat(0x3a3a40, { metalness: 0.4 }));
+            arm.position.set(0, 0.13, 0);
+            arm.rotation.z = 0.15;
+            lg.add(arm);
+            const shade = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.08, 10, 1, true), flat(shadeCol, { side: THREE.DoubleSide }));
+            shade.position.set(-0.04, 0.25, 0.03);
+            shade.rotation.set(0.35, 0, 0.25);
+            lg.add(shade);
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), bulbMat);
+            bulb.position.set(-0.04, 0.225, 0.04);
+            lg.add(bulb);
+            const pl = new THREE.PointLight(0xffb866, 1.7, 2.4, 1.4);
+            pl.position.set(-0.04, 0.18, 0.06);
+            lg.add(pl);
+            lamps.push({ pl, ph: rr(0, 6.28) });
+            return lg;
+        }
+
         // Un élève assis à son pupitre, tourné vers +z (on tourne le tout vers le tableau ensuite)
         function makeStudent(i, x, z) {
             const st = new THREE.Group();
@@ -8091,6 +7555,8 @@ void main() {
                 leg.position.set(lx, 0.3, lz);
                 st.add(leg);
             });
+            // La lampe de bureau : un pied, un bras, un abat-jour, et une lumière chaude
+            deskLamp(st, 0.27, 0.64, 0.6, -0.5);
             // Le livre ouvert, avec une page qui peut se tourner
             const bookCol = pick(BOOKS);
             const cover = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.012, 0.25), flat(bookCol));
@@ -8183,13 +7649,13 @@ void main() {
         }
 
         const students = [];
-        const COLS = [-2.55, -0.85, 0.85, 2.55];
-        const ROWS = [-1.15, 0.55, 2.25];
+        const COLS = [-0.85, 0.85];
+        const ROWS = [-0.45, 1.25];
         ROWS.forEach((z) => COLS.forEach((x) => students.push(makeStudent(students.length, x + rr(-0.06, 0.06), z + rr(-0.05, 0.05)))));
 
         // --- Le bureau de la prof : pile de copies, pomme, globe, mug ---
         const desk = new THREE.Group();
-        desk.position.set(3.3, 0, -3.25);
+        desk.position.set(1.95, 0, -2.05);
         desk.rotation.y = -0.15;
         scene.add(desk);
         const dWood = flat(0xb07a4a, { roughness: 0.7 });
@@ -8247,6 +7713,7 @@ void main() {
         const tLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.44, 6), flat(0x777c86));
         tLeg.position.set(0.1, 0.22, -0.6);
         desk.add(tLeg);
+        deskLamp(desk, -0.6, 0.785, -0.15, 0.6);
         desk.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
 
         // --- La prof : debout, ravie, avec son livre sous le bras ---
@@ -8313,7 +7780,7 @@ void main() {
         });
         const teacherMeshes = [];
         teacher.traverse((m) => { if (m.isMesh) teacherMeshes.push(m); });
-        const T = { x: -0.6, z: -2.9, heading: 0, state: 'pause', until: 3, goal: -0.6, gait: 0, move: 0, hop: 0, look: null, lookUntil: 0, heartAt: 2 };
+        const T = { x: -0.4, z: -1.85, heading: 0, state: 'pause', until: 3, goal: -0.6, gait: 0, move: 0, hop: 0, look: null, lookUntil: 0, heartAt: 2 };
 
         // --- Les petits cœurs de la prof heureuse ---
         const heartShape = new THREE.Shape();
@@ -8341,22 +7808,35 @@ void main() {
 
         // --- La poussière qui danse dans les rayons du soleil ---
         const pointScale = { value: 1 };
-        const dust = particles(phone ? 50 : 90);
-        dust.items.forEach((p) => {
-            p.x = rr(-HALF + 0.3, -2.6);
-            p.y = rr(0.3, 2.4);
-            p.z = rr(-4.4, 4.4);
-            p.ph = rr(0, 6.28);
-            p.sp = rr(0.03, 0.08);
-            p.s = rr(0.012, 0.022);
-        });
+        // La pluie dehors, derrière les fenêtres et le long du mur
+        const RAIN = phone ? 160 : 300;
+        const rainPos = new Float32Array(RAIN * 6);
+        const rainGeo = new THREE.BufferGeometry();
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+        const rainLines = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xc4d2e6, transparent: true, opacity: 0.4, depthWrite: false }));
+        rainLines.frustumCulled = false;
+        rainLines.renderOrder = 7;
+        scene.add(rainLines);
+        const drops = Array.from({ length: RAIN }, () => ({ x: rr(-HALF - 1.6, -HALF - 0.15), y: rr(0, 3.6), z: rr(-HALF, HALF), sp: rr(3.2, 4.4) }));
+        // Les gouttes qui glissent sur les vitres
+        const beads = particles(phone ? 30 : 60);
+        beads.items.forEach((p) => resetBead(p, true));
+        function resetBead(p, anywhere) {
+            const w = WIN[Math.floor(rand() * WIN.length)];
+            p.z = rr(w.u0 + 0.05, w.u1 - 0.05);
+            p.y = anywhere ? rr(w.y0, w.y1) : w.y1 - 0.02;
+            p.y0 = w.y0;
+            p.sp = 0;
+            p.wait = rr(0, 4);
+            p.s = rr(0.02, 0.035);
+        }
 
         // --- Caméra : de biais, depuis le fond de la classe, le tableau et les fenêtres en face ---
-        const target = V(0.1, 0.8, -0.2);
-        const HOME_EL = 0.52;
+        const target = V(0.05, 0.75, -0.1);
+        const HOME_EL = 0.56;
         let az = 0.95;
         let el = HOME_EL;
-        let zoom = 0.6;
+        let zoom = 0.42;
         let fit = 26;
         let lastInput = -10;
         let touched = false;
@@ -8452,7 +7932,7 @@ void main() {
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(14 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
-            if (!touched) zoom = camera.aspect < 0.8 ? 0.7 : 0.6;
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.58 : 0.42;
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
@@ -8574,8 +8054,8 @@ void main() {
             if (t > T.until && !T.look) {
                 if (T.state === 'pause') {
                     T.state = 'walk';
-                    T.goal = rr(-2.6, 1.9);
-                    if (Math.abs(T.goal - T.x) < 0.8) T.goal = T.x > 0 ? T.goal - 1.5 : T.goal + 1.5;
+                    T.goal = rr(-1.4, 0.9);
+                    if (Math.abs(T.goal - T.x) < 0.6) T.goal = T.x > -0.25 ? -1.2 : 0.7;
                     T.until = t + 20;
                 } else {
                     T.state = 'pause';
@@ -8637,15 +8117,35 @@ void main() {
                 h.m.material.opacity = Math.min(1, h.t * 6) * (1 - smooth(h.t));
             });
 
-            // La poussière flotte dans la lumière
-            dust.items.forEach((p, i) => {
-                p.y += Math.sin(t * 0.5 + p.ph) * 0.002;
-                p.x += Math.sin(t * 0.3 + p.ph * 2) * 0.0015 + p.sp * dt * 0.2;
-                p.z += Math.cos(t * 0.25 + p.ph) * 0.002;
-                if (p.x > -2.4) p.x = -HALF + 0.3;
-                dust.set(i, p.x, p.y, p.z, p.s, [1, 0.92, 0.72], 0.18 + 0.16 * Math.sin(t * 1.4 + p.ph * 3));
+            // La pluie tombe doucement dehors
+            drops.forEach((d2, i) => {
+                d2.y -= d2.sp * dt;
+                d2.z += 0.3 * dt;
+                if (d2.y < 0) {
+                    d2.y += 3.6;
+                    d2.z = rr(-HALF, HALF);
+                }
+                if (d2.z > HALF) d2.z -= S;
+                const o = i * 6;
+                rainPos[o] = d2.x;
+                rainPos[o + 1] = d2.y;
+                rainPos[o + 2] = d2.z;
+                rainPos[o + 3] = d2.x;
+                rainPos[o + 4] = d2.y + 0.22;
+                rainPos[o + 5] = d2.z - 0.02;
             });
-            dust.update();
+            rainGeo.attributes.position.needsUpdate = true;
+            // Les gouttes sur les vitres : elles attendent, puis glissent d'un coup
+            beads.items.forEach((p, i) => {
+                if (p.wait > 0) p.wait -= dt;
+                else p.sp = Math.min(0.6, p.sp + dt * 0.8);
+                p.y -= p.sp * dt;
+                if (p.y < p.y0 + 0.03) resetBead(p, false);
+                beads.set(i, -HALF + WALL_T / 2 + 0.005, p.y, p.z, p.s, [0.86, 0.9, 1.0], 0.55);
+            });
+            beads.update();
+            // Les lampes : une lumière chaude qui respire à peine
+            lamps.forEach((l) => { l.pl.intensity = 1.7 + Math.sin(t * 0.8 + l.ph) * 0.05; });
 
             renderer.render(scene, camera);
             raf = requestAnimationFrame(frame);
@@ -8944,7 +8444,6 @@ void main() {
 }`,
                 transparent: true,
                 depthWrite: false,
-                blending: THREE.AdditiveBlending,
             });
             const pts = new THREE.Points(g, m);
             pts.frustumCulled = false;
