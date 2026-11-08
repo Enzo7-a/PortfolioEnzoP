@@ -1402,11 +1402,12 @@ void main() {
 
         // --- Caméra ---
         const target = V(0.25, 1.0, 0.1);
-        // Vue de départ : un peu en hauteur sur la clairière
-        const HOME_EL = 0.62;
+        // Vue de départ : dans le décor, à hauteur de la clairière
+        const HOME_EL = 0.42;
+        const HOME_ZOOM = () => (camera.aspect < 0.8 ? 0.5 : 0.38);
         let az = -0.5;
         let el = HOME_EL;
-        let zoom = 0.88;
+        let zoom = 0.38;
         let fit = 26;
         let lastInput = -10;
         let touched = false;
@@ -1518,7 +1519,7 @@ void main() {
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(16.4 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
-            if (!touched) zoom = camera.aspect < 0.8 ? 1 : 0.88;
+            if (!touched) zoom = HOME_ZOOM();
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
@@ -2952,7 +2953,8 @@ void main() {
         const HOME_EL = 0.74;
         let az = -0.75;
         let el = HOME_EL;
-        let zoom = 1;
+        // Vue de départ : tout près du bateau
+        let zoom = 0.3;
         let fit = 24;
         let lastInput = -10;
         let touched = false;
@@ -3042,6 +3044,7 @@ void main() {
             camera.aspect = w / h;
             const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
             fit = Math.max(13 / tanV / 2, (camera.aspect < 0.8 ? 15.5 : 16) / (tanV * camera.aspect) / 2);
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.42 : 0.3;
             camera.updateProjectionMatrix();
             pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
         }
