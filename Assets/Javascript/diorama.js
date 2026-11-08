@@ -166,7 +166,7 @@
             current = (i + SCENES.length) % SCENES.length;
             const mine = ++token;
             o.dataset.scene = SCENES[current].id;
-            o.classList.toggle('is-night', SCENES[current].id !== 'forest');
+            o.classList.add('is-night');
             caption();
             if (scene3d) {
                 o.classList.remove('is-ready');
@@ -467,17 +467,18 @@
         stage.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0xd6e4d4, 20, 50);
+        scene.fog = new THREE.Fog(0x31463f, 20, 50);
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
         const uniforms = {
             uTime: { value: 0 },
             uWater: { value: WATER },
         };
 
-        // --- Lumière d'un matin de soleil ---
-        const hemi = new THREE.HemisphereLight(0xd8ecff, 0x5b6b3c, 1.05);
+        // --- Lumière d'un jour de pluie : ciel gris-vert, lumière douce ---
+        const HEMI = 1.0;
+        const hemi = new THREE.HemisphereLight(0xc2d6d6, 0x43503a, HEMI);
         scene.add(hemi);
-        const sun = new THREE.DirectionalLight(0xfff0d2, 2.3);
+        const sun = new THREE.DirectionalLight(0xdde9ee, 1.3);
         sun.position.set(-6, 13, 4);
         sun.castShadow = true;
         sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
@@ -485,7 +486,7 @@
         sun.shadow.bias = -0.0006;
         sun.shadow.normalBias = 0.03;
         scene.add(sun);
-        const bounce = new THREE.DirectionalLight(0xbfe0c8, 0.35);
+        const bounce = new THREE.DirectionalLight(0x9fc2b8, 0.3);
         bounce.position.set(7, 4, -5);
         scene.add(bounce);
 
@@ -1226,7 +1227,8 @@
         // --- Des papillons qui volent entre les fleurs ---
         const butterflies = [];
         const BUTTER = [0xfff2a6, 0xffffff, 0xf2953a, 0x8fb6ff, 0xf3a9cb];
-        for (let i = 0; i < (phone ? 5 : 8); i++) {
+        // Sous la pluie, les papillons restent à l'abri
+        for (let i = 0; i < 0; i++) {
             const g = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: BUTTER[i % BUTTER.length], side: THREE.DoubleSide, roughness: 0.6, emissive: BUTTER[i % BUTTER.length], emissiveIntensity: 0.15 });
             const wings = [-1, 1].map((sd) => {
@@ -1246,7 +1248,7 @@
         const sunDir = sun.position.clone().normalize();
         const rays = [];
         const rayGeo = new THREE.PlaneGeometry(1, 1);
-        [[CLEAR.x + 0.3, CLEAR.z - 0.3, 1.0], [CLEAR.x - 1.2, CLEAR.z + 0.5, 0.65], [2.4, -0.4, 0.75], [-1.6, -0.6, 0.6], [2.4, 2.8, 0.65]].slice(0, phone ? 3 : 5).forEach(([x, z, w], i) => {
+        [[CLEAR.x + 0.3, CLEAR.z - 0.3, 1.0], [CLEAR.x - 1.2, CLEAR.z + 0.5, 0.65], [2.4, -0.4, 0.75], [-1.6, -0.6, 0.6], [2.4, 2.8, 0.65]].slice(0, 0).forEach(([x, z, w], i) => {
             const len = 7.5;
             const foot = V(x, height(x, z), z);
             const mat = new THREE.ShaderMaterial({
@@ -1274,12 +1276,12 @@ void main() {
 
         const mistTex = radialTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
         const mists = [];
-        for (let i = 0; i < (phone ? 5 : 8); i++) {
-            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: 0xf2f6ea, transparent: true, opacity: 0.15, depthWrite: false, fog: false }));
+        for (let i = 0; i < (phone ? 7 : 12); i++) {
+            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: 0xa9bdb6, transparent: true, opacity: 0.2, depthWrite: false, fog: false }));
             const x = rr(-4, 4);
             const z = rr(-4, 4);
             sp.scale.set(rr(2.5, 4), rr(0.9, 1.4), 1);
-            sp.position.set(x, Math.max(WATER, height(x, z)) + 0.35, z);
+            sp.position.set(x, Math.max(WATER, height(x, z)) + rr(0.25, 0.9), z);
             scene.add(sp);
             mists.push({ sp, x, z, ph: rr(0, 6.28) });
         }
@@ -1345,13 +1347,53 @@ void main() {
         const rings = [];
         const ringGeo = new THREE.RingGeometry(0.9, 1, 40);
         ringGeo.rotateX(-Math.PI / 2);
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 32; i++) {
             const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xbfd8ff, transparent: true, opacity: 0, depthWrite: false, fog: false }));
             m.visible = false;
             m.renderOrder = 5;
             scene.add(m);
             rings.push({ m, t: 1, max: 0.5, dur: 1 });
         }
+        // --- Pluie : des traits fins poussés par le vent, des éclaboussures au sol, des ronds sur l'étang ---
+        const RAIN = phone ? 450 : 900;
+        const RAIN_TOP = 8.5;
+        const RAIN_SPEED = 7.5;
+        const DRIFT_X = 0.12;
+        const DRIFT_Z = 0.05;
+        const DROP = 0.3;
+        const rainPos = new Float32Array(RAIN * 6);
+        const rainGeo = new THREE.BufferGeometry();
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xd2e1e6, transparent: true, opacity: 0.4, depthWrite: false }));
+        rain.frustumCulled = false;
+        rain.renderOrder = 7;
+        scene.add(rain);
+        const drops = Array.from({ length: RAIN }, () => ({}));
+        // Chaque goutte vise un point du bloc ; le vent la fait arriver en biais
+        function resetDrop(d, anywhere) {
+            d.x = rr(-HALF + 0.02, HALF - 0.02);
+            d.z = rr(-HALF + 0.02, HALF - 0.02);
+            d.ground = height(d.x, d.z);
+            d.floor = Math.max(d.ground, WATER);
+            d.y = anywhere ? rr(d.floor, RAIN_TOP) : rr(RAIN_TOP - 0.5, RAIN_TOP + 1.5);
+            d.sp = rr(0.85, 1.15);
+        }
+        drops.forEach((d) => resetDrop(d, true));
+        const splash = particles(phone ? 50 : 90, false);
+        splash.items.forEach((p) => { p.life = 1; });
+        function splashAt(x, y, z) {
+            let n = 0;
+            for (const p of splash.items) {
+                if (p.life < 1) continue;
+                p.life = 0;
+                p.from = V(x, y + 0.01, z);
+                p.vel = V(rr(-0.25, 0.25), rr(0.25, 0.5), rr(-0.25, 0.25));
+                if (++n >= 2) break;
+            }
+        }
+        // Un éclair lointain de temps en temps
+        const storm = { next: rr(8, 14), flash: 0 };
+
         function ripple(x, z, max = 0.45, dur = 1.4, delay = 0) {
             const r = rings.find(k => k.t >= 1) || rings[0];
             Object.assign(r, { t: -delay / dur, max, dur });
@@ -1522,7 +1564,7 @@ void main() {
             camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
             camera.lookAt(target);
             scene.fog.near = dist - 2;
-            scene.fog.far = dist + 26;
+            scene.fog.far = dist + 22;
 
             for (const i of waves) {
                 const x = wp.getX(i);
@@ -1807,14 +1849,14 @@ void main() {
             });
             mists.forEach((m) => {
                 m.sp.position.x = m.x + Math.sin(t * 0.08 + m.ph) * 0.6;
-                m.sp.material.opacity = 0.12 + 0.05 * Math.sin(t * 0.3 + m.ph);
+                m.sp.material.opacity = 0.17 + 0.07 * Math.sin(t * 0.3 + m.ph);
             });
 
             // Pollen qui flotte dans la lumière
             pollen.items.forEach((p, i) => {
                 const x = p.ox + Math.sin(t * p.sp + p.ph) * 0.5;
                 const z = p.oz + Math.cos(t * p.sp * 0.8 + p.ph) * 0.5;
-                pollen.set(i, x, height(x, z) + p.oy + Math.sin(t * p.sp * 1.3 + p.ph * 2) * 0.25, z, 0.045, [1, 0.95, 0.7], 0.35 + 0.35 * Math.sin(t * 1.7 + p.ph));
+                pollen.set(i, x, height(x, z) + p.oy + Math.sin(t * p.sp * 1.3 + p.ph * 2) * 0.25, z, 0.035, [0.78, 0.88, 0.9], 0.15 + 0.12 * Math.sin(t * 1.7 + p.ph));
             });
             pollen.update();
             dirt.items.forEach((p, i) => {
@@ -1838,6 +1880,53 @@ void main() {
                 bubbles.set(i, p.x + Math.sin(t * 3 + p.ph) * 0.02, p.y, p.z + Math.cos(t * 2.6 + p.ph) * 0.02, p.size, [0.8, 0.9, 1], 0.6);
             });
             bubbles.update();
+
+            // La pluie tombe ; au sol elle éclabousse, sur l'étang elle fait des ronds
+            for (let i = 0; i < RAIN; i++) {
+                const d = drops[i];
+                d.y -= RAIN_SPEED * d.sp * dt;
+                if (d.y <= d.floor) {
+                    if (d.ground < WATER - 0.02) {
+                        if (rand() < 0.12) ripple(d.x, d.z, rr(0.08, 0.16), 0.7);
+                    } else if (rand() < 0.3) {
+                        splashAt(d.x, d.floor, d.z);
+                    }
+                    resetDrop(d, false);
+                }
+                const up = d.y - d.floor;
+                const x = d.x + up * DRIFT_X;
+                const z = d.z + up * DRIFT_Z;
+                rainPos[i * 6] = x + DROP * DRIFT_X;
+                rainPos[i * 6 + 1] = d.y + DROP;
+                rainPos[i * 6 + 2] = z + DROP * DRIFT_Z;
+                rainPos[i * 6 + 3] = x;
+                rainPos[i * 6 + 4] = d.y;
+                rainPos[i * 6 + 5] = z;
+            }
+            rainGeo.attributes.position.needsUpdate = true;
+            splash.items.forEach((p, i) => {
+                if (p.life >= 1) {
+                    splash.set(i, 0, -50, 0, 0, [0, 0, 0], 0);
+                    return;
+                }
+                p.life += real / 0.35;
+                const k = Math.min(1, p.life);
+                v3.copy(p.from).addScaledVector(p.vel, k * 0.35);
+                v3.y -= k * k * 0.12;
+                splash.set(i, v3.x, v3.y, v3.z, 0.03, [0.85, 0.92, 0.95], (1 - k) * 0.7);
+            });
+            splash.update();
+
+            // Éclair lointain : deux lueurs rapides qui éclairent la scène et le fond
+            if (!still && t > storm.next) {
+                storm.flash = 1;
+                storm.next = t + rr(14, 28);
+            }
+            storm.flash = Math.max(0, storm.flash - dt * 1.8);
+            const fl = storm.flash;
+            const glow = fl > 0.75 ? fl : fl > 0.55 ? 0.15 : fl > 0.35 ? fl * 1.3 : fl * 0.4;
+            hemi.intensity = HEMI + glow * 0.9;
+            stage.style.setProperty('--flash', glow.toFixed(3));
 
             leaves.forEach((l) => {
                 if (l.rest > 0) {
@@ -1868,6 +1957,7 @@ void main() {
         return {
             dispose() {
                 alive = false;
+                stage.style.removeProperty('--flash');
                 cancelAnimationFrame(raf);
                 ro.disconnect();
                 canvas.removeEventListener('wheel', onWheel);

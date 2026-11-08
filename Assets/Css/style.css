@@ -2280,11 +2280,14 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="boat"] .diorama-sky--boat { opacity: 1; }
 
+/* Forêt sous la pluie : ciel gris-vert, plus sombre vers le bas, avec une lueur d'éclair de temps en temps */
 .diorama-sky--day {
     opacity: 0;
     background:
-        radial-gradient(55% 40% at 30% 18%, rgba(255, 246, 214, 0.9), transparent),
-        radial-gradient(120% 95% at 50% 32%, #f1f4e4 0%, #cfe2cd 52%, #9fc0a6 100%);
+        radial-gradient(60% 42% at 50% 16%, rgba(168, 192, 186, 0.38), transparent),
+        radial-gradient(120% 80% at 50% 115%, rgba(14, 24, 21, 0.85), transparent 65%),
+        linear-gradient(180deg, #4a615a 0%, #374c45 45%, #24342f 100%);
+    filter: brightness(calc(1 + var(--flash, 0) * 0.55));
 }
 
 .diorama-overlay[data-scene="forest"] .diorama-sky--day { opacity: 1; }
@@ -2319,6 +2322,7 @@ html.diorama-open { overflow: hidden; }
 }
 
 .diorama-overlay.is-ready .diorama-loading { opacity: 0; }
+.diorama-overlay.is-night .diorama-loading { color: #b7c6c1; }
 
 .diorama-btn {
     position: absolute;
