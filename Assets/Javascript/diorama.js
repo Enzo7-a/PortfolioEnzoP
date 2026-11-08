@@ -5055,49 +5055,116 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
         water.renderOrder = 2;
         scene.add(water);
 
-        // --- La pyramide : calcaire blanc poli, et le pyramidion en or ---
-        // Un tronc de pyramide (ou une pyramide entière quand top = 0) : quatre faces bien plates
-        function pyramidGeo(half, y0, y1, top) {
+        // --- La pyramide : un revêtement de calcaire blanc poli, bloc par bloc, et le pyramidion en or ---
+        // Un tronc de pyramide (ou une pyramide entière quand top = 0) : quatre faces bien plates,
+        // avec des coordonnées de texture qui suivent chaque face (u le long de la base, v vers le haut)
+        function pyramidGeo(half, y0, y1, top, uv) {
             const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
             const pos = [];
+            const uvs = [];
             for (let k = 0; k < 4; k++) {
                 const [ax, az] = c[k];
                 const [bx, bz] = c[(k + 1) % 4];
+                const tx = (bx - ax) / 2;
+                const tz = (bz - az) / 2;
                 const A = [ax * half, y0, az * half];
                 const B = [bx * half, y0, bz * half];
                 const Ct = [bx * top, y1, bz * top];
                 const D = [ax * top, y1, az * top];
-                pos.push(...A, ...D, ...B);
-                if (top > 0) pos.push(...B, ...D, ...Ct);
+                (top > 0 ? [A, D, B, B, D, Ct] : [A, D, B]).forEach((q0) => {
+                    pos.push(...q0);
+                    if (uv) uvs.push(uv.u(q0[0] * tx + q0[2] * tz, k), uv.v(q0[1]));
+                });
             }
             const g = new THREE.BufferGeometry();
             g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            if (uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
             g.computeVertexNormals();
             return g;
         }
         const CAP_Y = P.h * 0.86;
         const capHalf = P.half * (1 - CAP_Y / P.h);
+        const BAND = 0.09;
         const pyramid = new THREE.Group();
         pyramid.position.set(P.x, 0.04, P.z);
         scene.add(pyramid);
-        const casingMat = new THREE.MeshStandardMaterial({ color: 0xe9e0cc, roughness: 0.45, metalness: 0, envMap, envMapIntensity: 0.3 });
-        // De très fines assises de blocs, à peine visibles : juste pour donner l'échelle
-        casingMat.onBeforeCompile = (sh) => {
-            sh.vertexShader = 'varying float vY;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvY = transformed.y;');
-            sh.fragmentShader = 'varying float vY;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= 1.0 - 0.035 * smoothstep(0.88, 0.97, fract(vY * 7.0));');
-        };
-        const casing = new THREE.Mesh(pyramidGeo(P.half, 0, CAP_Y, capHalf), casingMat);
+        // Le revêtement : des assises de blocs (plus hautes en bas), des joints fins en relief,
+        // chaque bloc un peu différent, des fossiles dans la pierre, et du sable poussé contre la base
+        const casingTex = casingTextures();
+        const casingMat = new THREE.MeshStandardMaterial({
+            map: casingTex.map,
+            bumpMap: casingTex.bump,
+            bumpScale: 0.006,
+            roughnessMap: casingTex.rough,
+            roughness: 1,
+            envMap,
+            envMapIntensity: 0.35,
+        });
+        const casing = new THREE.Mesh(pyramidGeo(P.half, 0, CAP_Y, capHalf, {
+            u: (s, k) => s / (2 * P.half) + 0.5 + k * 0.27,
+            v: (y) => y / CAP_Y,
+        }), casingMat);
         casing.castShadow = true;
         casing.receiveShadow = true;
         pyramid.add(casing);
-        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc84a, metalness: 1, roughness: 0.2, envMap: goldEnv, envMapIntensity: 1.3, emissive: 0x4a2f00, emissiveIntensity: 0.45 });
-        const cap = new THREE.Mesh(pyramidGeo(capHalf + 0.004, CAP_Y - 0.002, P.h, 0), goldMat);
+
+        // Le socle : une large dalle de pierre sur laquelle repose la pyramide
+        const slabTex = slabTexture();
+        slabTex.repeat.set(6, 6);
+        const plinthSide = new THREE.MeshStandardMaterial({ color: 0xd7c9ab, roughness: 0.9 });
+        const plinthTop = new THREE.MeshStandardMaterial({ map: slabTex, roughness: 0.85 });
+        const plinth = new THREE.Mesh(new THREE.BoxGeometry(2 * (P.half + 0.16), 0.09, 2 * (P.half + 0.16)), [plinthSide, plinthSide, plinthTop, plinthSide, plinthSide, plinthSide]);
+        plinth.position.y = 0.005;
+        plinth.castShadow = true;
+        plinth.receiveShadow = true;
+        pyramid.add(plinth);
+
+        // L'entrée, sur la face au soleil : une ouverture sombre, un encadrement et des dalles en chevron
+        const SLOPE = Math.atan2(P.h, P.half);
+        const DOOR_Y = 0.46;
+        const door = new THREE.Group();
+        door.position.set(0, DOOR_Y, P.half * (1 - DOOR_Y / P.h));
+        door.rotation.x = -(Math.PI / 2 - SLOPE);
+        pyramid.add(door);
+        const hole = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.2), new THREE.MeshStandardMaterial({ color: 0x241b15, roughness: 1 }));
+        hole.position.z = 0.004;
+        door.add(hole);
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0xece3cf, roughness: 0.6, flatShading: true });
+        [[-0.1, 0, 0.04, 0.24], [0.1, 0, 0.04, 0.24], [0, 0.13, 0.26, 0.04]].forEach(([x, y, w, h]) => {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.035), frameMat);
+            m.position.set(x, y, 0.012);
+            m.castShadow = true;
+            door.add(m);
+        });
+        [-1, 1].forEach((sd) => {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.04, 0.035), frameMat);
+            m.position.set(sd * 0.072, 0.205, 0.014);
+            m.rotation.z = -sd * 0.55;
+            m.castShadow = true;
+            door.add(m);
+        });
+
+        // Le pyramidion en or : un disque solaire gravé, ses rayons, et l'œil d'Horus
+        const goldTex = goldTextures();
+        const goldBase = { color: 0xffc84a, metalness: 1, roughness: 0.2, envMap: goldEnv, envMapIntensity: 1.3, emissive: 0x4a2f00, emissiveIntensity: 0.45 };
+        const capMat = new THREE.MeshStandardMaterial(Object.assign({ map: goldTex.capMap, bumpMap: goldTex.capBump, bumpScale: 0.004 }, goldBase));
+        const capH = capHalf + 0.004;
+        const cap = new THREE.Mesh(pyramidGeo(capH, CAP_Y - 0.002, P.h, 0, {
+            u: (s) => s / (2 * capH) + 0.5,
+            v: (y) => (y - (CAP_Y - 0.002)) / (P.h - CAP_Y + 0.002),
+        }), capMat);
         cap.castShadow = true;
         pyramid.add(cap);
-        // Une fine bande d'or sous le pyramidion
-        const band = new THREE.Mesh(pyramidGeo(capHalf + 0.03, CAP_Y - 0.06, CAP_Y, capHalf + 0.004), goldMat);
+        // Une bande d'or sous le pyramidion, gravée d'une frise de hiéroglyphes
+        const bandMat = new THREE.MeshStandardMaterial(Object.assign({ map: goldTex.bandMap, bumpMap: goldTex.bandBump, bumpScale: 0.003 }, goldBase));
+        const bandH = capHalf * (1 + BAND / (P.h - CAP_Y)) + 0.02;
+        const band = new THREE.Mesh(pyramidGeo(bandH, CAP_Y - BAND, CAP_Y, capHalf + 0.012, {
+            u: (s) => s / (2 * bandH) + 0.5,
+            v: (y) => (y - (CAP_Y - BAND)) / BAND,
+        }), bandMat);
         pyramid.add(band);
-        const pyramidMeshes = [casing, cap, band];
+        const pyramidMeshes = [casing, cap, band, plinth];
+        door.traverse((m) => { if (m.isMesh) pyramidMeshes.push(m); });
         // L'éclat du soleil sur l'or : une étoile qui brille quand le reflet arrive vers nous
         const starTex = (() => {
             const cv = document.createElement('canvas');
@@ -5537,7 +5604,7 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             const gs = (0.55 + shine * 1.8 + flare * 2.2) * twinkle;
             glint.scale.setScalar(gs);
             glint.material.opacity = clamp(0.45 + shine * 0.8 + flare, 0, 1);
-            goldMat.emissiveIntensity = 0.4 + shine * 0.6 + flare * 1.2;
+            capMat.emissiveIntensity = bandMat.emissiveIntensity = 0.4 + shine * 0.6 + flare * 1.2;
 
             // Palmiers et papyrus dans le vent chaud
             palms.forEach((p) => {
@@ -5720,6 +5787,379 @@ diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
             const m = new THREE.Mesh(g, mat);
             m.receiveShadow = shadow;
             return m;
+        }
+
+        // Les textures du revêtement : couleur, relief (joints, arêtes) et brillance (blocs polis, joints mats)
+        function casingTextures() {
+            const W = 1024;
+            const H = 1024;
+            const make = (fill) => {
+                const cv = document.createElement('canvas');
+                cv.width = W;
+                cv.height = H;
+                const g = cv.getContext('2d');
+                g.fillStyle = fill;
+                g.fillRect(0, 0, W, H);
+                return [cv, g];
+            };
+            const [cc, cg] = make('rgb(208,196,172)');
+            const [bc, bg] = make('rgb(30,30,30)');
+            const [rc, rg] = make('rgb(245,245,245)');
+            const rnd = mulberry32(31);
+            const rgb = (r, g, b2, a = 1) => `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b2)},${a})`;
+            // Les assises : 26 rangées, plus hautes en bas qu'en haut ; chaque rangée fait le tour sans couture
+            const ROWS = 26;
+            const weights = Array.from({ length: ROWS }, (_, i) => 1.3 - 0.55 * i / (ROWS - 1));
+            const total = weights.reduce((x, y) => x + y, 0);
+            const blocks = [];
+            let yb = H;
+            for (let r = 0; r < ROWS; r++) {
+                const h = (weights[r] / total) * H;
+                const yt = yb - h;
+                const x0 = -rnd() * 80;
+                let x = x0;
+                while (x < x0 + W - 1) {
+                    let w = 50 + rnd() * 52;
+                    if (x0 + W - (x + w) < 36) w = x0 + W - x;
+                    blocks.push({ x, y: yt, w, h, l: 0.93 + rnd() * 0.1, warm: rnd() * 10 - 4, rough: 95 + rnd() * 60, high: 205 + rnd() * 30, row: r });
+                    x += w;
+                }
+                yb = yt;
+            }
+            const J = 1.5;
+            blocks.forEach((bk) => {
+                const base = [236 * bk.l + bk.warm, 229 * bk.l + bk.warm * 0.6, 211 * bk.l - bk.warm * 0.3];
+                [bk.x, bk.x + W].forEach((x) => {
+                    if (x > W || x + bk.w < 0) return;
+                    const x1 = x + J;
+                    const y1 = bk.y + J;
+                    const w = bk.w - 2 * J;
+                    const h = bk.h - 2 * J;
+                    cg.fillStyle = rgb(...base);
+                    cg.fillRect(x1, y1, w, h);
+                    // L'arête du haut prend la lumière, celle du bas est dans l'ombre
+                    const gr = cg.createLinearGradient(0, y1, 0, y1 + h);
+                    gr.addColorStop(0, 'rgba(255,252,240,0.3)');
+                    gr.addColorStop(0.14, 'rgba(255,252,240,0)');
+                    gr.addColorStop(0.8, 'rgba(110,85,50,0)');
+                    gr.addColorStop(1, 'rgba(110,85,50,0.14)');
+                    cg.fillStyle = gr;
+                    cg.fillRect(x1, y1, w, h);
+                    // Relief : le bloc est plein, ses bords s'arrondissent vers le joint
+                    bg.fillStyle = rgb(bk.high - 70, bk.high - 70, bk.high - 70);
+                    bg.fillRect(x1, y1, w, h);
+                    bg.fillStyle = rgb(bk.high - 30, bk.high - 30, bk.high - 30);
+                    bg.fillRect(x1 + 1.5, y1 + 1.5, w - 3, h - 3);
+                    bg.fillStyle = rgb(bk.high, bk.high, bk.high);
+                    bg.fillRect(x1 + 3, y1 + 3, w - 6, h - 6);
+                    rg.fillStyle = rgb(bk.rough, bk.rough, bk.rough);
+                    rg.fillRect(x1, y1, w, h);
+                });
+            });
+            const both = (x, cb) => { cb(x); if (x < 12) cb(x + W); if (x > W - 12) cb(x - W); };
+            // Le grain de la pierre
+            for (let i = 0; i < 14000; i++) {
+                const x = rnd() * W;
+                const y = rnd() * H;
+                const lightDot = rnd() < 0.5;
+                cg.fillStyle = lightDot ? `rgba(255,253,245,${0.05 + rnd() * 0.1})` : `rgba(120,100,70,${0.04 + rnd() * 0.07})`;
+                cg.fillRect(x, y, 1 + rnd() * 1.4, 1 + rnd() * 1.4);
+                if (i % 3 === 0) {
+                    const v = lightDot ? 255 : 150;
+                    bg.fillStyle = `rgba(${v},${v},${v},0.25)`;
+                    bg.fillRect(x, y, 1.2, 1.2);
+                }
+            }
+            // Des nummulites : les petits fossiles ronds du calcaire égyptien
+            for (let i = 0; i < 520; i++) {
+                const x = rnd() * W;
+                const y = rnd() * H;
+                const r = 1.2 + rnd() * 2.4;
+                const a = rnd() * Math.PI;
+                both(x, (xx) => {
+                    cg.fillStyle = `rgba(176,158,124,${0.25 + rnd() * 0.2})`;
+                    cg.beginPath();
+                    cg.ellipse(xx, y, r * 1.3, r, a, 0, Math.PI * 2);
+                    cg.fill();
+                    cg.fillStyle = 'rgba(250,244,228,0.5)';
+                    cg.beginPath();
+                    cg.ellipse(xx, y, r * 0.5, r * 0.4, a, 0, Math.PI * 2);
+                    cg.fill();
+                    bg.fillStyle = 'rgba(140,140,140,0.35)';
+                    bg.beginPath();
+                    bg.ellipse(xx, y, r * 1.2, r * 0.9, a, 0, Math.PI * 2);
+                    bg.fill();
+                });
+            }
+            // Quelques fines fissures et des coins ébréchés
+            for (let i = 0; i < 34; i++) {
+                const bk = blocks[Math.floor(rnd() * blocks.length)];
+                let x = bk.x + bk.w * (0.2 + rnd() * 0.6);
+                let y = bk.y + bk.h * (0.15 + rnd() * 0.3);
+                cg.strokeStyle = 'rgba(120,102,74,0.5)';
+                bg.strokeStyle = 'rgba(70,70,70,0.8)';
+                cg.lineWidth = bg.lineWidth = 0.9;
+                cg.beginPath();
+                bg.beginPath();
+                cg.moveTo(x, y);
+                bg.moveTo(x, y);
+                for (let s2 = 0; s2 < 6; s2++) {
+                    x += (rnd() - 0.5) * 9;
+                    y += 2 + rnd() * 5;
+                    cg.lineTo(x, y);
+                    bg.lineTo(x, y);
+                }
+                cg.stroke();
+                bg.stroke();
+            }
+            for (let i = 0; i < 40; i++) {
+                const bk = blocks[Math.floor(rnd() * blocks.length)];
+                const right = rnd() < 0.5;
+                const cx = right ? bk.x + bk.w - J : bk.x + J;
+                const cy = bk.y + J;
+                const sz = 4 + rnd() * 6;
+                const tri = (g, fill) => {
+                    g.fillStyle = fill;
+                    g.beginPath();
+                    g.moveTo(cx, cy);
+                    g.lineTo(cx + (right ? -sz : sz), cy);
+                    g.lineTo(cx, cy + sz * 0.8);
+                    g.fill();
+                };
+                tri(cg, 'rgba(178,160,128,0.75)');
+                tri(bg, 'rgb(110,110,110)');
+            }
+            // Des traînées laissées par les rares pluies, très légères
+            for (let i = 0; i < 46; i++) {
+                const x = rnd() * W;
+                const y = rnd() * H * 0.8;
+                const len = 50 + rnd() * 180;
+                const w = 2 + rnd() * 5;
+                const gr = cg.createLinearGradient(0, y, 0, y + len);
+                gr.addColorStop(0, 'rgba(150,128,96,0.07)');
+                gr.addColorStop(1, 'rgba(150,128,96,0)');
+                cg.fillStyle = gr;
+                both(x, (xx) => cg.fillRect(xx, y, w, len));
+            }
+            // Le haut du revêtement, mieux poli, un peu plus clair
+            const top = cg.createLinearGradient(0, 0, 0, H * 0.35);
+            top.addColorStop(0, 'rgba(255,253,246,0.18)');
+            top.addColorStop(1, 'rgba(255,253,246,0)');
+            cg.fillStyle = top;
+            cg.fillRect(0, 0, W, H * 0.35);
+            // Le sable poussé par le vent contre la base : une dune basse qui ondule le long de la face
+            const dunePath = (g, lift) => {
+                g.beginPath();
+                g.moveTo(0, H);
+                for (let x = 0; x <= W; x += 8) {
+                    const u = (x / W) * Math.PI * 2;
+                    const h = (0.035 + 0.025 * Math.sin(u * 3 + 0.7) + 0.012 * Math.sin(u * 7 + 2.1) + lift) * H;
+                    g.lineTo(x, H - Math.max(4, h));
+                }
+                g.lineTo(W, H);
+                g.closePath();
+            };
+            const sandGrad = cg.createLinearGradient(0, H * 0.78, 0, H);
+            sandGrad.addColorStop(0, 'rgba(228,204,158,0)');
+            sandGrad.addColorStop(1, 'rgba(228,204,158,0.45)');
+            cg.fillStyle = sandGrad;
+            cg.fillRect(0, H * 0.78, W, H * 0.22);
+            [[0.025, 'rgba(234,210,162,0.4)'], [0.012, 'rgba(234,210,162,0.6)'], [0, 'rgba(232,207,158,0.92)']].forEach(([lift, col]) => {
+                cg.fillStyle = col;
+                dunePath(cg, lift);
+                cg.fill();
+            });
+            bg.fillStyle = 'rgb(170,170,170)';
+            dunePath(bg, 0);
+            bg.fill();
+            rg.fillStyle = 'rgb(250,250,250)';
+            dunePath(rg, 0);
+            rg.fill();
+            const tex = (cv, srgb) => {
+                const t = new THREE.CanvasTexture(cv);
+                t.wrapS = THREE.RepeatWrapping;
+                t.anisotropy = 8;
+                if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+                return t;
+            };
+            return { map: tex(cc, true), bump: tex(bc, false), rough: tex(rc, false) };
+        }
+
+        // Les grandes dalles du socle
+        function slabTexture() {
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = 256;
+            const g = cv.getContext('2d');
+            g.fillStyle = 'rgb(186,172,146)';
+            g.fillRect(0, 0, 256, 256);
+            const rnd = mulberry32(17);
+            for (let r = 0; r < 3; r++) {
+                const off = r % 2 ? 43 : 0;
+                for (let k = -1; k < 3; k++) {
+                    const l = 0.93 + rnd() * 0.09;
+                    g.fillStyle = `rgb(${Math.round(232 * l)},${Math.round(222 * l)},${Math.round(200 * l)})`;
+                    g.fillRect(k * 86 + off + 1.5, r * 85.33 + 1.5, 83, 82.3);
+                }
+            }
+            for (let i = 0; i < 2500; i++) {
+                g.fillStyle = rnd() < 0.5 ? 'rgba(255,250,236,0.12)' : 'rgba(110,92,64,0.08)';
+                g.fillRect(rnd() * 256, rnd() * 256, 1.3, 1.3);
+            }
+            const t = new THREE.CanvasTexture(cv);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            t.colorSpace = THREE.SRGBColorSpace;
+            t.anisotropy = 8;
+            return t;
+        }
+
+        // L'or gravé : sur chaque face du pyramidion, un disque solaire dont les rayons descendent,
+        // surmonté de l'œil d'Horus ; sur la bande, une frise (ankh, œil, eau, roseau…)
+        function goldTextures() {
+            const make = (w, h) => {
+                const mk = (fill) => {
+                    const cv = document.createElement('canvas');
+                    cv.width = w;
+                    cv.height = h;
+                    const g = cv.getContext('2d');
+                    g.fillStyle = fill;
+                    g.fillRect(0, 0, w, h);
+                    return [cv, g];
+                };
+                return [mk('rgb(255,248,232)'), mk('rgb(210,210,210)')];
+            };
+            const rnd = mulberry32(23);
+            const LINE = 'rgb(168,120,42)';
+            const DEEP = 'rgb(70,70,70)';
+            // Un dessin fait deux fois : en couleur (or plus sombre dans les creux) et en relief
+            const engrave = (pairs, draw) => {
+                pairs.forEach(([cv, g], i) => {
+                    g.strokeStyle = g.fillStyle = i ? DEEP : LINE;
+                    g.lineCap = 'round';
+                    g.lineJoin = 'round';
+                    draw(g);
+                });
+            };
+            // Le pyramidion (un triangle : base en bas, pointe en haut)
+            const [[capC, capG], [capB, capBG]] = make(512, 512);
+            for (let i = 0; i < 4000; i++) {
+                capG.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(150,110,40,0.06)';
+                capG.beginPath();
+                capG.arc(rnd() * 512, rnd() * 512, 1 + rnd() * 2.5, 0, Math.PI * 2);
+                capG.fill();
+            }
+            engrave([[capC, capG], [capB, capBG]], (g) => {
+                g.lineWidth = 7;
+                g.beginPath();
+                g.moveTo(52, 486);
+                g.lineTo(460, 486);
+                g.lineTo(256, 70);
+                g.closePath();
+                g.stroke();
+                // Disque solaire
+                g.lineWidth = 7;
+                g.beginPath();
+                g.arc(256, 340, 46, 0, Math.PI * 2);
+                g.stroke();
+                g.beginPath();
+                g.arc(256, 340, 20, 0, Math.PI * 2);
+                g.fill();
+                // Rayons qui descendent, terminés par de petites mains
+                g.lineWidth = 4;
+                for (let k = 0; k < 9; k++) {
+                    const a = Math.PI * (0.15 + 0.7 * k / 8);
+                    const x0 = 256 + Math.cos(a) * 56;
+                    const y0 = 340 + Math.sin(a) * 56;
+                    const x1 = 256 + Math.cos(a) * 128;
+                    const y1 = Math.min(470, 340 + Math.sin(a) * 128);
+                    g.beginPath();
+                    g.moveTo(x0, y0);
+                    g.lineTo(x1, y1);
+                    g.stroke();
+                    g.beginPath();
+                    g.arc(x1, y1, 6, 0, Math.PI * 2);
+                    g.fill();
+                }
+                // L'œil d'Horus
+                g.lineWidth = 5;
+                g.beginPath();
+                g.moveTo(206, 220);
+                g.quadraticCurveTo(256, 178, 306, 220);
+                g.quadraticCurveTo(256, 250, 206, 220);
+                g.stroke();
+                g.beginPath();
+                g.arc(256, 216, 11, 0, Math.PI * 2);
+                g.fill();
+                g.beginPath();
+                g.moveTo(212, 196);
+                g.quadraticCurveTo(256, 168, 304, 192);
+                g.stroke();
+                g.beginPath();
+                g.moveTo(246, 240);
+                g.lineTo(238, 272);
+                g.moveTo(286, 234);
+                g.quadraticCurveTo(300, 262, 318, 252);
+                g.stroke();
+            });
+            // La frise de la bande : 10 cases
+            const [[bandC, bandG], [bandB, bandBG]] = make(1024, 96);
+            engrave([[bandC, bandG], [bandB, bandBG]], (g) => {
+                g.lineWidth = 4;
+                g.beginPath();
+                g.moveTo(0, 8);
+                g.lineTo(1024, 8);
+                g.moveTo(0, 88);
+                g.lineTo(1024, 88);
+                g.stroke();
+                for (let k = 0; k < 10; k++) {
+                    const cx = 51.2 + k * 102.4;
+                    g.lineWidth = 4;
+                    g.beginPath();
+                    switch (k % 5) {
+                        case 0: // ankh
+                            g.ellipse(cx, 30, 10, 14, 0, 0, Math.PI * 2);
+                            g.moveTo(cx, 44);
+                            g.lineTo(cx, 80);
+                            g.moveTo(cx - 18, 52);
+                            g.lineTo(cx + 18, 52);
+                            break;
+                        case 1: // œil
+                            g.moveTo(cx - 24, 48);
+                            g.quadraticCurveTo(cx, 26, cx + 24, 48);
+                            g.quadraticCurveTo(cx, 62, cx - 24, 48);
+                            g.moveTo(cx - 6, 60);
+                            g.lineTo(cx - 10, 78);
+                            break;
+                        case 2: // l'eau
+                            for (let r = 0; r < 3; r++) {
+                                g.moveTo(cx - 26, 32 + r * 16);
+                                for (let s2 = 0; s2 < 6; s2++) g.lineTo(cx - 26 + (s2 + 1) * 8.7, 32 + r * 16 + (s2 % 2 ? 0 : -6));
+                            }
+                            break;
+                        case 3: // roseau
+                            g.moveTo(cx, 80);
+                            g.lineTo(cx, 26);
+                            g.moveTo(cx, 26);
+                            g.quadraticCurveTo(cx + 16, 30, cx + 10, 46);
+                            g.moveTo(cx - 12, 80);
+                            g.lineTo(cx + 12, 80);
+                            break;
+                        default: // disque et cobra
+                            g.arc(cx, 38, 12, 0, Math.PI * 2);
+                            g.moveTo(cx - 20, 78);
+                            g.quadraticCurveTo(cx - 22, 56, cx - 8, 56);
+                            g.moveTo(cx + 20, 78);
+                            g.quadraticCurveTo(cx + 22, 56, cx + 8, 56);
+                    }
+                    g.stroke();
+                }
+            });
+            const tex = (cv, srgb) => {
+                const t = new THREE.CanvasTexture(cv);
+                t.anisotropy = 8;
+                if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+                return t;
+            };
+            return { capMap: tex(capC, true), capBump: tex(capB, false), bandMap: tex(bandC, true), bandBump: tex(bandB, false) };
         }
 
         // Les couches de grès sur les côtés : ocre, rose, rouille, avec des veines claires
