@@ -2333,6 +2333,17 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="snow"] .diorama-sky--snow { opacity: 1; }
 
+/* La salle de classe : un fond crème et doré, comme un après-midi au soleil */
+.diorama-sky--classroom {
+    opacity: 0;
+    background:
+        radial-gradient(60% 50% at 25% 20%, rgba(255, 238, 200, 0.9), transparent),
+        radial-gradient(90% 60% at 70% 100%, rgba(214, 170, 130, 0.45), transparent),
+        linear-gradient(180deg, #f7ead6 0%, #f1dcc0 55%, #e3c4a0 100%);
+}
+
+.diorama-overlay[data-scene="classroom"] .diorama-sky--classroom { opacity: 1; }
+
 .diorama-canvas {
     position: absolute;
     inset: 0;

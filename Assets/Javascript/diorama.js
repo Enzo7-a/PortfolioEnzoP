@@ -52,6 +52,8 @@
         desertHelp: touch() ? 'Drag to turn · pinch to zoom · tap the pyramid, the camels or the water' : 'Drag to turn · scroll to zoom · click the pyramid, the camels or the water',
         lighthouseHelp: touch() ? 'Drag to turn · pinch to zoom · tap the lighthouse, the monsters or the water' : 'Drag to turn · scroll to zoom · click the lighthouse, the monsters or the water',
         snowTitle: 'The chalet in the snow.',
+        classroomTitle: 'Revision time.',
+        classroomHelp: touch() ? 'Drag to turn · pinch to zoom · tap a student, the teacher or the board' : 'Drag to turn · scroll to zoom · click a student, the teacher or the board',
         snowHelp: touch() ? 'Drag to turn · pinch to zoom · tap the chalet, the fir trees or the snowman' : 'Drag to turn · scroll to zoom · click the chalet, the fir trees or the snowman',
     } : {
         open: 'Afficher les dioramas',
@@ -85,6 +87,8 @@
         desertHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche la pyramide, les chameaux ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur la pyramide, les chameaux ou l\'eau',
         lighthouseHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le phare, les monstres ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur le phare, les monstres ou l\'eau',
         snowTitle: 'Le chalet sous la neige.',
+        classroomTitle: 'L\'heure des révisions.',
+        classroomHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche un élève, la prof ou le tableau' : 'Glisse pour tourner · molette pour zoomer · clique sur un élève, la prof ou le tableau',
         snowHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le chalet, les sapins ou le bonhomme de neige' : 'Glisse pour tourner · molette pour zoomer · clique sur le chalet, les sapins ou le bonhomme de neige',
     });
 
@@ -95,6 +99,7 @@
         { id: 'lighthouse', build: (THREE, stage) => buildLighthouse(THREE, stage) },
         { id: 'desert', build: (THREE, stage) => buildDesert(THREE, stage) },
         { id: 'snow', build: (THREE, stage) => buildSnow(THREE, stage) },
+        { id: 'classroom', build: (THREE, stage) => buildClassroom(THREE, stage) },
     ];
 
     let egg;
@@ -131,6 +136,7 @@
                     <div class="diorama-sky diorama-sky--storm"></div>
                     <div class="diorama-sky diorama-sky--desert"></div>
                     <div class="diorama-sky diorama-sky--snow"></div>
+                    <div class="diorama-sky diorama-sky--classroom"></div>
                     <p class="diorama-loading">${t.loading}</p>
                 </div>
                 <div class="diorama-side">
@@ -204,8 +210,8 @@
             current = (i + SCENES.length) % SCENES.length;
             const mine = ++token;
             o.dataset.scene = SCENES[current].id;
-            // Interface claire sur les scènes sombres, sombre sur le désert en plein jour
-            o.classList.toggle('is-night', SCENES[current].id !== 'desert');
+            // Interface claire sur les scènes sombres, sombre sur les scènes en plein jour
+            o.classList.toggle('is-night', !['desert', 'classroom'].includes(SCENES[current].id));
             caption();
             if (scene3d) {
                 o.classList.remove('is-ready');
@@ -7441,6 +7447,1507 @@ void main() {
 }`,
                 transparent: true,
                 depthWrite: false,
+            });
+            const pts = new THREE.Points(g, m);
+            pts.frustumCulled = false;
+            pts.renderOrder = 9;
+            scene.add(pts);
+            const items = Array.from({ length: count }, () => ({}));
+            return {
+                items,
+                set(i, x, y, z, s, c, a) {
+                    pos[i * 3] = x;
+                    pos[i * 3 + 1] = y;
+                    pos[i * 3 + 2] = z;
+                    col[i * 3] = c[0];
+                    col[i * 3 + 1] = c[1];
+                    col[i * 3 + 2] = c[2];
+                    size[i] = s;
+                    alpha[i] = a;
+                },
+                update() {
+                    g.attributes.position.needsUpdate = true;
+                    g.attributes.aColor.needsUpdate = true;
+                    g.attributes.aSize.needsUpdate = true;
+                    g.attributes.aAlpha.needsUpdate = true;
+                },
+            };
+        }
+
+        function radialTexture(inner, outer) {
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = 256;
+            const g = cv.getContext('2d');
+            const grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+            grad.addColorStop(0, inner);
+            grad.addColorStop(1, outer);
+            g.fillStyle = grad;
+            g.fillRect(0, 0, 256, 256);
+            const tex = new THREE.CanvasTexture(cv);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Sixième diorama : la salle de classe. Un après-midi calme, le soleil entre
+    // par les fenêtres, les élèves révisent tranquillement (ils écrivent, lisent,
+    // tournent les pages) et la prof, ravie, se promène devant le tableau.
+    // Les murs côté caméra s'effacent, comme dans une maison de poupée.
+    // ---------------------------------------------------------------------
+    function buildClassroom(THREE, stage) {
+        const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
+        const S = 10;
+        const HALF = S / 2;
+        const BASE = -0.55;
+        const WALL_H = 2.75;
+        const WALL_T = 0.14;
+        const rand = mulberry32(61);
+        const rr = (a, b) => a + (b - a) * rand();
+        const pick = (list) => list[Math.floor(rand() * list.length)];
+        const color = (hex) => new THREE.Color(hex);
+        const V = (x, y, z) => new THREE.Vector3(x, y, z);
+        const flat = (hex, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.8 }, extra || {}));
+        const smooth = (u) => u * u * (3 - 2 * u);
+        const still = calm();
+        const english = en();
+
+        // --- Rendu ---
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.75 : 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x000000, 0);
+        renderer.domElement.className = 'diorama-canvas';
+        stage.appendChild(renderer.domElement);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
+
+        // --- Lumière d'après-midi : le soleil entre par les fenêtres de gauche ---
+        const hemi = new THREE.HemisphereLight(0xfff3e2, 0x8a6a50, 1.25);
+        scene.add(hemi);
+        const sun = new THREE.DirectionalLight(0xffe2b0, 2.9);
+        sun.position.set(-11, 7.5, 3.2);
+        sun.target.position.set(0, 0, 0);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(phone ? 1536 : 2048, phone ? 1536 : 2048);
+        Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 30 });
+        sun.shadow.bias = -0.0006;
+        sun.shadow.normalBias = 0.02;
+        scene.add(sun, sun.target);
+        const fill = new THREE.DirectionalLight(0xe8eeff, 0.55);
+        fill.position.set(6, 6, 7);
+        scene.add(fill);
+
+        // --- Le plancher ---
+        const floorTex = plankTexture();
+        floorTex.repeat.set(2.5, 2.5);
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(S, 0.1, S), [
+            flat(0x8a5d3b), flat(0x8a5d3b),
+            new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.7 }),
+            flat(0x6e4a30), flat(0x8a5d3b), flat(0x8a5d3b),
+        ]);
+        floor.position.y = -0.05;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        // Le socle sous la pièce
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(S, -BASE - 0.1, S), flat(0xd8c3a5, { roughness: 1 }));
+        slab.position.y = (BASE - 0.1) / 2;
+        scene.add(slab);
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(S + 0.02, 0.06, S + 0.02), flat(0x6b4a33));
+        trim.position.y = -0.11;
+        scene.add(trim);
+        const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(80,50,30,0.35)', 'rgba(80,50,30,0)'), transparent: true, depthWrite: false }));
+        contact.rotation.x = -Math.PI / 2;
+        contact.position.y = BASE - 0.02;
+        scene.add(contact);
+        // Un grand tapis au fond, pour le coin lecture
+        const rug = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 1 }));
+        rug.rotation.x = -Math.PI / 2;
+        rug.position.set(1.4, 0.006, 4.05);
+        rug.receiveShadow = true;
+        scene.add(rug);
+
+        // --- Les murs : chacun s'efface quand la caméra passe de son côté ---
+        const wallPaint = flat(0xf2e3c8, { roughness: 0.95 });
+        const wainscot = flat(0x9fbf9c, { roughness: 0.9 });
+        const woodTrim = flat(0x7a5236);
+        const walls = [];
+        // Un mur : le long de l'axe x (side 'z', à z = c) ou de l'axe z (side 'x', à x = c), avec des trous (fenêtres, porte)
+        function makeWall(side, c, inward, holes) {
+            const g = new THREE.Group();
+            scene.add(g);
+            const solid = [];
+            const deco = [];
+            const box = (u0, u1, y0, y1, mat, depth = WALL_T, off = 0) => {
+                if (u1 - u0 < 0.001 || y1 - y0 < 0.001) return null;
+                const geo = side === 'z' ? new THREE.BoxGeometry(u1 - u0, y1 - y0, depth) : new THREE.BoxGeometry(depth, y1 - y0, u1 - u0);
+                const m = new THREE.Mesh(geo, mat);
+                const u = (u0 + u1) / 2;
+                const cc = c + inward * off;
+                if (side === 'z') m.position.set(u, (y0 + y1) / 2, cc); else m.position.set(cc, (y0 + y1) / 2, u);
+                m.castShadow = true;
+                m.receiveShadow = true;
+                g.add(m);
+                return m;
+            };
+            // Le mur découpé autour des trous
+            const sorted = holes.slice().sort((a, b) => a.u0 - b.u0);
+            const yLow = sorted.length ? Math.min(...sorted.map((h) => h.y0)) : WALL_H;
+            const yHigh = sorted.length ? Math.max(...sorted.map((h) => h.y1)) : WALL_H;
+            solid.push(box(-HALF, HALF, 0, yLow, wallPaint), box(-HALF, HALF, yHigh, WALL_H, wallPaint));
+            let u = -HALF;
+            sorted.forEach((h) => {
+                solid.push(box(u, h.u0, yLow, yHigh, wallPaint));
+                solid.push(box(h.u0, h.u1, yLow, h.y0, wallPaint), box(h.u0, h.u1, h.y1, yHigh, wallPaint));
+                u = h.u1;
+            });
+            solid.push(box(u, HALF, yLow, yHigh, wallPaint));
+            // Le soubassement vert et sa moulure, côté intérieur
+            let w = -HALF;
+            const wainTop = 0.9;
+            sorted.filter((h) => h.y0 < wainTop).forEach((h) => {
+                deco.push(box(w, h.u0, 0, wainTop, wainscot, 0.02, WALL_T / 2 + 0.01));
+                deco.push(box(w, h.u0, wainTop - 0.02, wainTop + 0.04, woodTrim, 0.04, WALL_T / 2 + 0.02));
+                w = h.u1;
+            });
+            deco.push(box(w, HALF, 0, wainTop, wainscot, 0.02, WALL_T / 2 + 0.01));
+            deco.push(box(w, HALF, wainTop - 0.02, wainTop + 0.04, woodTrim, 0.04, WALL_T / 2 + 0.02));
+            // Le bandeau en haut du mur
+            solid.push(box(-HALF, HALF, WALL_H - 0.03, WALL_H + 0.03, woodTrim, WALL_T + 0.04));
+            const wall = { g, solid: solid.filter(Boolean), deco: deco.filter(Boolean), side, c, inward, shown: true };
+            walls.push(wall);
+            return wall;
+        }
+        // Place un objet contre l'intérieur d'un mur (u le long du mur, y en hauteur, d vers l'intérieur)
+        const onWall = (wall, obj, u, y, d = 0) => {
+            const off = WALL_T / 2 + d;
+            if (wall.side === 'z') {
+                obj.position.set(u, y, wall.c + wall.inward * off);
+                obj.rotation.y = wall.inward > 0 ? 0 : Math.PI;
+            } else {
+                obj.position.set(wall.c + wall.inward * off, y, u);
+                obj.rotation.y = wall.inward > 0 ? Math.PI / 2 : -Math.PI / 2;
+            }
+            wall.g.add(obj);
+            wall.deco.push(obj);
+            obj.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            return obj;
+        };
+
+        const WIN = [-2.9, 0, 2.9].map((u) => ({ u0: u - 0.85, u1: u + 0.85, y0: 0.95, y1: 2.25 }));
+        const front = makeWall('z', -HALF + WALL_T / 2, 1, []);
+        const left = makeWall('x', -HALF + WALL_T / 2, 1, WIN);
+        const back = makeWall('z', HALF - WALL_T / 2, -1, []);
+        const DOOR = { u0: -3.6, u1: -2.5, y0: 0, y1: 2.05 };
+        const right = makeWall('x', HALF - WALL_T / 2, -1, [DOOR]);
+
+        // --- Le tableau noir, et ce qui est écrit dessus ---
+        const BOARD_W = 4.6;
+        const BOARD_H = 1.45;
+        const boardCanvas = document.createElement('canvas');
+        boardCanvas.width = 1380;
+        boardCanvas.height = 435;
+        const boardTex = new THREE.CanvasTexture(boardCanvas);
+        boardTex.colorSpace = THREE.SRGBColorSpace;
+        boardTex.anisotropy = 8;
+        const MESSAGES = english ? [
+            { title: 'Revision day!', lines: ['Take your time, you\'ve got this', 'Chapter 5: summary + exercises'], doodle: 'sun' },
+            { title: 'Exam on Friday', lines: ['SELECT * FROM students', 'WHERE motivated = TRUE;'], doodle: 'heart' },
+            { title: 'Today\'s formulas', lines: ['E = mc²     a² + b² = c²', 'σ = √( Σ(x − μ)² / n )'], doodle: 'star' },
+            { title: 'Proud of you all!', lines: ['Small steps every day', 'Questions? Raise your hand :)'], doodle: 'heart' },
+        ] : [
+            { title: 'Jour de révisions !', lines: ['Prenez votre temps, vous allez y arriver', 'Chapitre 5 : fiche + exercices'], doodle: 'sun' },
+            { title: 'Contrôle vendredi', lines: ['SELECT * FROM eleves', 'WHERE motive = TRUE;'], doodle: 'heart' },
+            { title: 'Les formules du jour', lines: ['E = mc²     a² + b² = c²', 'σ = √( Σ(x − μ)² / n )'], doodle: 'star' },
+            { title: 'Fière de vous !', lines: ['Un petit pas chaque jour', 'Une question ? Levez la main :)'], doodle: 'heart' },
+        ];
+        let boardMsg = 0;
+        // Le texte s'écrit petit à petit, comme à la craie
+        let boardWrite = 1;
+        function drawBoard(k = 1) {
+            const g = boardCanvas.getContext('2d');
+            const Wc = boardCanvas.width;
+            const Hc = boardCanvas.height;
+            const grad = g.createLinearGradient(0, 0, Wc, Hc);
+            grad.addColorStop(0, '#2c4a3b');
+            grad.addColorStop(1, '#25402f');
+            g.fillStyle = grad;
+            g.fillRect(0, 0, Wc, Hc);
+            // Les traces d'anciennes craies effacées
+            const rnd = mulberry32(3 + boardMsg);
+            for (let i = 0; i < 26; i++) {
+                g.fillStyle = `rgba(230,240,230,${0.025 + rnd() * 0.03})`;
+                g.beginPath();
+                g.ellipse(rnd() * Wc, rnd() * Hc, 60 + rnd() * 160, 14 + rnd() * 30, rnd() * 0.4 - 0.2, 0, Math.PI * 2);
+                g.fill();
+            }
+            const m = MESSAGES[boardMsg];
+            const all = [m.title, ...m.lines];
+            const total = all.reduce((a, s) => a + s.length, 0);
+            let budget = Math.floor(total * k);
+            g.textBaseline = 'middle';
+            g.shadowColor = 'rgba(255,255,255,0.35)';
+            g.shadowBlur = 3;
+            all.forEach((s, i) => {
+                const shown = s.slice(0, Math.max(0, budget));
+                budget -= s.length;
+                if (!shown) return;
+                g.fillStyle = i === 0 ? 'rgba(255,240,170,0.95)' : 'rgba(244,246,240,0.9)';
+                g.font = i === 0 ? '700 84px "Segoe Print", "Comic Sans MS", "Chalkboard SE", cursive' : '500 54px "Segoe Print", "Comic Sans MS", "Chalkboard SE", cursive';
+                g.textAlign = 'left';
+                g.fillText(shown, 70, i === 0 ? 92 : 210 + (i - 1) * 92);
+                if (i === 0 && shown.length === s.length) {
+                    // On souligne le titre
+                    const tw = g.measureText(s).width;
+                    g.strokeStyle = 'rgba(255,240,170,0.7)';
+                    g.lineWidth = 5;
+                    g.beginPath();
+                    g.moveTo(70, 142);
+                    g.quadraticCurveTo(70 + tw / 2, 152, 70 + tw, 138);
+                    g.stroke();
+                }
+            });
+            g.shadowBlur = 0;
+            if (k >= 1) {
+                const cx = Wc - 170;
+                const cy = Hc / 2 - 10;
+                g.strokeStyle = 'rgba(255,190,200,0.85)';
+                g.fillStyle = 'rgba(255,190,200,0.18)';
+                g.lineWidth = 6;
+                g.beginPath();
+                if (m.doodle === 'heart') {
+                    g.moveTo(cx, cy + 70);
+                    g.bezierCurveTo(cx - 120, cy - 10, cx - 60, cy - 100, cx, cy - 40);
+                    g.bezierCurveTo(cx + 60, cy - 100, cx + 120, cy - 10, cx, cy + 70);
+                } else if (m.doodle === 'sun') {
+                    g.strokeStyle = 'rgba(255,225,140,0.9)';
+                    g.fillStyle = 'rgba(255,225,140,0.15)';
+                    g.arc(cx, cy, 52, 0, Math.PI * 2);
+                    for (let r = 0; r < 10; r++) {
+                        const a = (r / 10) * Math.PI * 2;
+                        g.moveTo(cx + Math.cos(a) * 70, cy + Math.sin(a) * 70);
+                        g.lineTo(cx + Math.cos(a) * 100, cy + Math.sin(a) * 100);
+                    }
+                    g.moveTo(cx - 22, cy - 12);
+                    g.arc(cx - 22, cy - 12, 3, 0, Math.PI * 2);
+                    g.moveTo(cx + 25, cy - 12);
+                    g.arc(cx + 22, cy - 12, 3, 0, Math.PI * 2);
+                    g.moveTo(cx - 26, cy + 14);
+                    g.quadraticCurveTo(cx, cy + 38, cx + 26, cy + 14);
+                } else {
+                    g.strokeStyle = 'rgba(200,225,255,0.9)';
+                    g.fillStyle = 'rgba(200,225,255,0.15)';
+                    for (let p = 0; p < 10; p++) {
+                        const a = -Math.PI / 2 + (p / 10) * Math.PI * 2;
+                        const r = p % 2 ? 40 : 95;
+                        if (p) g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); else g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+                    }
+                    g.closePath();
+                }
+                g.fill();
+                g.stroke();
+            }
+            // Un peu de poussière de craie en bas
+            g.fillStyle = 'rgba(240,240,235,0.08)';
+            g.fillRect(0, Hc - 26, Wc, 26);
+            boardTex.needsUpdate = true;
+        }
+        drawBoard(1);
+        const boardGroup = new THREE.Group();
+        const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(BOARD_W + 0.16, BOARD_H + 0.16, 0.06), flat(0x6b4529));
+        boardGroup.add(boardFrame);
+        const boardFace = new THREE.Mesh(new THREE.PlaneGeometry(BOARD_W, BOARD_H), new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.92 }));
+        boardFace.position.z = 0.032;
+        boardGroup.add(boardFace);
+        // La rigole à craies, avec des craies et la brosse
+        const ledge = new THREE.Mesh(new THREE.BoxGeometry(BOARD_W, 0.04, 0.12), flat(0x6b4529));
+        ledge.position.set(0, -BOARD_H / 2 - 0.06, 0.06);
+        boardGroup.add(ledge);
+        [[0xffffff, -1.2], [0xffe9a0, -1.05], [0xffb8c8, -0.9], [0xb8e0ff, 1.5]].forEach(([c, x]) => {
+            const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.09, 6).rotateZ(Math.PI / 2), flat(c));
+            ch.position.set(x, -BOARD_H / 2 - 0.028, 0.07);
+            boardGroup.add(ch);
+        });
+        const eraser = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.08), flat(0x3d3d48));
+        eraser.position.set(0.8, -BOARD_H / 2 - 0.015, 0.07);
+        boardGroup.add(eraser);
+        const eraserTop = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.08), flat(0xc89058));
+        eraserTop.position.set(0.8, -BOARD_H / 2 + 0.02, 0.07);
+        boardGroup.add(eraserTop);
+        onWall(front, boardGroup, -0.3, 1.58, 0.03);
+        const boardMeshes = [boardFrame, boardFace];
+
+        // L'horloge au-dessus de la porte du couloir... non : à droite du tableau, à l'heure du vrai monde
+        const wallClock = new THREE.Group();
+        const face = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 32).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ map: clockTexture(), roughness: 0.5 }));
+        face.rotation.z = Math.PI;
+        wallClock.add(face);
+        const rimC = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.03, 8, 32), flat(0xc0392b));
+        wallClock.add(rimC);
+        const handH = new THREE.Group();
+        handH.add(new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.14, 0.01).translate(0, 0.06, 0), flat(0x222228)));
+        handH.position.z = 0.025;
+        const handM = new THREE.Group();
+        handM.add(new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.21, 0.01).translate(0, 0.09, 0), flat(0x222228)));
+        handM.position.z = 0.032;
+        const handS = new THREE.Group();
+        handS.add(new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.22, 0.006).translate(0, 0.08, 0), flat(0xc0392b)));
+        handS.position.z = 0.038;
+        wallClock.add(handH, handM, handS);
+        onWall(front, wallClock, 3.25, 2.2, 0.02);
+
+        // Les fenêtres : cadres, croisillons, vitres, rebords avec des plantes
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0xcfe6f5, transparent: true, opacity: 0.18, roughness: 0.05, metalness: 0.1, depthWrite: false });
+        const frameMat = flat(0xf7f3ea, { roughness: 0.6 });
+        WIN.forEach((h, wi) => {
+            const wg = new THREE.Group();
+            const ww = h.u1 - h.u0;
+            const wh = h.y1 - h.y0;
+            [[ww + 0.1, 0.07, 0, wh / 2], [ww + 0.1, 0.07, 0, -wh / 2], [0.07, wh, -ww / 2, 0], [0.07, wh, ww / 2, 0], [0.05, wh, 0, 0], [ww, 0.05, 0, wh * 0.12]].forEach(([a, b, x, y]) => {
+                const f = new THREE.Mesh(new THREE.BoxGeometry(a, b, WALL_T + 0.04), frameMat);
+                f.position.set(x, y, -WALL_T / 2);
+                wg.add(f);
+            });
+            const glass = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), glassMat);
+            glass.position.z = -WALL_T / 2;
+            glass.castShadow = false;
+            wg.add(glass);
+            const sill = new THREE.Mesh(new THREE.BoxGeometry(ww + 0.2, 0.05, 0.24), frameMat);
+            sill.position.set(0, -wh / 2 - 0.02, 0.06);
+            wg.add(sill);
+            // Des pots de plantes sur le rebord
+            const potCol = [0xc4673f, 0xd4885a, 0x6f8fb0][wi];
+            [-0.45, 0.35].forEach((px, k) => {
+                if (wi === 1 && k === 1) return;
+                const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.13, 8), flat(potCol));
+                pot.position.set(px, -wh / 2 + 0.07, 0.08);
+                wg.add(pot);
+                const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11 + k * 0.03, 0), flat(k ? 0x5f9a4c : 0x4b8a45));
+                leaves.position.set(px, -wh / 2 + 0.2 + k * 0.03, 0.08);
+                leaves.scale.set(1, 1.2, 1);
+                wg.add(leaves);
+                if (!k) {
+                    // Une petite fleur
+                    const fl = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), flat([0xff7aa2, 0xffd54f, 0xff8a65][wi]));
+                    fl.position.set(px + 0.03, -wh / 2 + 0.33, 0.1);
+                    wg.add(fl);
+                }
+            });
+            onWall(left, wg, (h.u0 + h.u1) / 2, (h.y0 + h.y1) / 2, 0);
+            glass.castShadow = false;
+        });
+
+        // La porte du couloir, entrouverte
+        const doorG = new THREE.Group();
+        const dW = DOOR.u1 - DOOR.u0;
+        const doorFrame = [[dW + 0.14, 0.08, 0, DOOR.y1 + 0.04], [0.08, DOOR.y1, -dW / 2 - 0.03, DOOR.y1 / 2], [0.08, DOOR.y1, dW / 2 + 0.03, DOOR.y1 / 2]];
+        doorFrame.forEach(([a, b, x, y]) => {
+            const f = new THREE.Mesh(new THREE.BoxGeometry(a, b, WALL_T + 0.06), woodTrim);
+            f.position.set(x, y, -WALL_T / 2);
+            doorG.add(f);
+        });
+        const leaf = new THREE.Group();
+        leaf.position.set(-dW / 2, 0, 0);
+        leaf.rotation.y = 0.55;
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(dW - 0.04, DOOR.y1 - 0.03, 0.05), flat(0xd28b4f));
+        panel.position.set(dW / 2, (DOOR.y1 - 0.03) / 2, 0);
+        leaf.add(panel);
+        const doorPane = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.55), new THREE.MeshStandardMaterial({ color: 0xdff0ff, emissive: 0x9ab8cc, emissiveIntensity: 0.4 }));
+        doorPane.position.set(dW / 2, 1.45, 0.027);
+        leaf.add(doorPane);
+        const handle = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), flat(0xd8b35a, { metalness: 0.6, roughness: 0.35 }));
+        handle.position.set(dW - 0.12, 1.0, 0.05);
+        leaf.add(handle);
+        doorG.add(leaf);
+        // Le couloir, un peu plus lumineux derrière la porte
+        const hall = new THREE.Mesh(new THREE.PlaneGeometry(dW, DOOR.y1), new THREE.MeshBasicMaterial({ color: 0xf4ead8 }));
+        hall.position.set(0, DOOR.y1 / 2, -WALL_T - 0.02);
+        doorG.add(hall);
+        onWall(right, doorG, (DOOR.u0 + DOOR.u1) / 2, 0, 0);
+
+        // Les affiches et les dessins des élèves
+        const POSTERS = english ? [
+            { wall: right, u: 0.3, y: 1.75, w: 1.3, h: 0.85, kind: 'sign', text: ['Quiet please,', 'we are revising'] },
+            { wall: right, u: 2.4, y: 1.7, w: 1.1, h: 1.1, kind: 'alphabet' },
+            { wall: back, u: -2.2, y: 1.8, w: 1.9, h: 1.05, kind: 'map' },
+            { wall: back, u: 0.35, y: 1.95, w: 1.5, h: 0.75, kind: 'drawings' },
+        ] : [
+            { wall: right, u: 0.3, y: 1.75, w: 1.3, h: 0.85, kind: 'sign', text: ['Chut,', 'on révise'] },
+            { wall: right, u: 2.4, y: 1.7, w: 1.1, h: 1.1, kind: 'alphabet' },
+            { wall: back, u: -2.2, y: 1.8, w: 1.9, h: 1.05, kind: 'map' },
+            { wall: back, u: 0.35, y: 1.95, w: 1.5, h: 0.75, kind: 'drawings' },
+        ];
+        POSTERS.forEach((p) => {
+            const tex = posterTexture(p);
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
+            onWall(p.wall, m, p.u, p.y, 0.012);
+        });
+
+        // Les portemanteaux avec les sacs à dos, près de la porte
+        const hooks = new THREE.Group();
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.1, 0.04), woodTrim);
+        hooks.add(rail);
+        [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0x9b59b6].forEach((c, i) => {
+            const x = -0.8 + i * 0.4;
+            const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 5).rotateX(Math.PI / 2), flat(0xbfbfc6, { metalness: 0.5 }));
+            hook.position.set(x, 0, 0.05);
+            hooks.add(hook);
+            if (i === 3) return;
+            const bag = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.36, 0.14), flat(c));
+            bag.position.set(x, -0.2, 0.1);
+            bag.rotation.z = rr(-0.08, 0.08);
+            hooks.add(bag);
+            const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.05), flat(new THREE.Color(c).multiplyScalar(0.8).getHex()));
+            pocket.position.set(x, -0.28, 0.18);
+            hooks.add(pocket);
+        });
+        onWall(right, hooks, -1.5, 1.45, 0.02);
+
+        // La bibliothèque du fond, pleine de livres de toutes les couleurs
+        const shelf = new THREE.Group();
+        const shelfWood = flat(0xa8734a);
+        const SH_W = 2.6;
+        [[SH_W, 0.05, 0, 0], [SH_W, 0.05, 0, 0.45], [SH_W, 0.05, 0, 0.9], [SH_W, 0.05, 0, 1.3], [0.05, 1.3, -SH_W / 2, 0.65], [0.05, 1.3, SH_W / 2, 0.65], [0.05, 1.3, 0, 0.65]].forEach(([a, b, x, y]) => {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(a, b, 0.36), shelfWood);
+            p.position.set(x, y, 0.18);
+            shelf.add(p);
+        });
+        const BOOKS = [0xc0392b, 0x2980b9, 0x27ae60, 0xf39c12, 0x8e44ad, 0x16a085, 0xd35400, 0x2c3e50, 0xe84393, 0xfdcb6e];
+        [0.03, 0.48, 0.93].forEach((y) => {
+            [-1, 1].forEach((half) => {
+                let x = half < 0 ? -SH_W / 2 + 0.06 : 0.06;
+                const end = half < 0 ? -0.06 : SH_W / 2 - 0.06;
+                while (x < end - 0.05) {
+                    const bw = rr(0.05, 0.09);
+                    const bh = rr(0.26, 0.38);
+                    if (rand() < 0.08) {
+                        x += 0.12;
+                        continue;
+                    }
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, rr(0.22, 0.28)), flat(pick(BOOKS)));
+                    b.position.set(x + bw / 2, y + bh / 2, 0.17);
+                    if (rand() < 0.1) b.rotation.z = 0.25;
+                    shelf.add(b);
+                    x += bw + 0.008;
+                }
+            });
+        });
+        // Un globe et une petite plante sur le dessus
+        const plant = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), flat(0x4f8f4a));
+        plant.position.set(-0.9, 1.52, 0.18);
+        shelf.add(plant);
+        const plantPot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.16, 8), flat(0xe8d6b8));
+        plantPot.position.set(-0.9, 1.4, 0.18);
+        shelf.add(plantPot);
+        onWall(back, shelf, 2.6, 0, 0);
+
+        // Des coussins sur le tapis du coin lecture
+        [[0.4, 0xf6b26b], [1.2, 0x8fc1e3], [2.3, 0xe39fc1]].forEach(([x, c]) => {
+            const cu = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.1, 10), flat(c, { roughness: 1 }));
+            cu.position.set(x, 0.05, 4.1);
+            cu.castShadow = true;
+            cu.receiveShadow = true;
+            scene.add(cu);
+        });
+        // La poubelle et la corbeille à papier près du bureau
+        const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.34, 10, 1, true), flat(0x4a90a4, { side: THREE.DoubleSide }));
+        bin.position.set(4.45, 0.17, -3.0);
+        bin.castShadow = true;
+        scene.add(bin);
+
+        // --- Les personnages ---
+        const SKIN = [0xf3cfb1, 0xe7b48f, 0xc98c62, 0x8d5a3b, 0xf6dcc6, 0xd9a07a];
+        const HAIR = [0x231a14, 0x4b2f1c, 0x6e4526, 0xd6b062, 0xa1452a, 0x2e2018];
+        const SHIRT = [0xe57373, 0x64b5f6, 0x81c784, 0xffd54f, 0xba68c8, 0x4db6ac, 0xff8a65, 0x7986cb, 0xf06292, 0xaed581, 0x90a4ae, 0xffb74d];
+        const PANTS = [0x34495e, 0x3d5a80, 0x5d4037, 0x2c3e50, 0x546e7a];
+        const pickable = [];
+        const coal = flat(0x24201e);
+        const cheekMat = new THREE.MeshBasicMaterial({ color: 0xff8a8a, transparent: true, opacity: 0.45, depthWrite: false });
+        // Un membre (cylindre d'un point à l'autre)
+        function limb(a, b, r1, r2, mat) {
+            const dir = new THREE.Vector3().subVectors(b, a);
+            const len = dir.length();
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 7), mat);
+            m.position.copy(a).addScaledVector(dir, 0.5);
+            m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+            return m;
+        }
+        // Une tête souriante : yeux ronds (ou fermés de bonheur), sourire, joues roses, cheveux
+        function makeHead(r, skin, hair, opts) {
+            const head = new THREE.Group();
+            const skinMat = flat(skin, { roughness: 0.7 });
+            head.add(new THREE.Mesh(new THREE.IcosahedronGeometry(r, 2), skinMat));
+            const hairMat = flat(hair, { roughness: 0.9 });
+            const cap = new THREE.Mesh(new THREE.SphereGeometry(r * 1.07, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), hairMat);
+            cap.rotation.x = -0.42;
+            cap.position.set(0, r * 0.06, -r * 0.05);
+            head.add(cap);
+            if (opts.long) {
+                const back = new THREE.Mesh(new THREE.CapsuleGeometry(r * 0.78, r * 1.0, 3, 10), hairMat);
+                back.position.set(0, -r * 0.55, -r * 0.48);
+                back.scale.set(1.1, 1, 0.55);
+                head.add(back);
+            }
+            if (opts.pony) {
+                const pony = new THREE.Mesh(new THREE.CapsuleGeometry(r * 0.25, r * 0.9, 3, 8), hairMat);
+                pony.position.set(0, -r * 0.1, -r * 1.1);
+                pony.rotation.x = 0.5;
+                head.add(pony);
+                const tie = new THREE.Mesh(new THREE.TorusGeometry(r * 0.22, r * 0.06, 5, 10), flat(0xff6f91));
+                tie.position.set(0, r * 0.3, -r * 0.95);
+                tie.rotation.x = 1.2;
+                head.add(tie);
+            }
+            if (opts.bun) {
+                const bun = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 0.45, 1), hairMat);
+                bun.position.set(0, r * 0.75, -r * 0.65);
+                head.add(bun);
+            }
+            const fz = r * 0.93;
+            if (opts.happy) {
+                // Les yeux plissés de bonheur : ^ ^
+                [-1, 1].forEach((e) => {
+                    const eye = new THREE.Mesh(new THREE.TorusGeometry(r * 0.13, r * 0.03, 4, 10, Math.PI), coal);
+                    eye.position.set(e * r * 0.36, r * 0.12, fz + r * 0.02);
+                    head.add(eye);
+                });
+            } else {
+                [-1, 1].forEach((e) => {
+                    const eye = new THREE.Mesh(new THREE.SphereGeometry(r * 0.1, 6, 5), coal);
+                    eye.position.set(e * r * 0.34, r * 0.1, fz);
+                    eye.scale.set(1, 1.25, 0.6);
+                    head.add(eye);
+                });
+            }
+            const smile = new THREE.Mesh(new THREE.TorusGeometry(r * (opts.happy ? 0.28 : 0.2), r * 0.035, 4, 12, Math.PI), flat(opts.happy ? 0x9b2c2c : 0x5a2a20));
+            smile.rotation.z = Math.PI;
+            smile.position.set(0, -r * 0.2, fz);
+            head.add(smile);
+            [-1, 1].forEach((e) => {
+                const ch = new THREE.Mesh(new THREE.CircleGeometry(r * 0.16, 10), cheekMat);
+                ch.position.set(e * r * 0.55, -r * 0.12, r * 0.84);
+                ch.rotation.y = e * 0.55;
+                head.add(ch);
+            });
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(r * 0.1, 6, 4), skinMat);
+            nose.position.set(0, -r * 0.03, fz + r * 0.04);
+            head.add(nose);
+            if (opts.glasses) {
+                const gm = flat(0x6b3f26, { metalness: 0.3 });
+                [-1, 1].forEach((e) => {
+                    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.2, r * 0.03, 5, 14), gm);
+                    ring.position.set(e * r * 0.36, r * 0.1, fz + r * 0.06);
+                    head.add(ring);
+                });
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(r * 0.3, r * 0.03, r * 0.03), gm);
+                bridge.position.set(0, r * 0.12, fz + r * 0.07);
+                head.add(bridge);
+            }
+            head.traverse((m) => { if (m.isMesh && m.material !== cheekMat) m.castShadow = true; });
+            return head;
+        }
+
+        // Un élève assis à son pupitre, tourné vers +z (on tourne le tout vers le tableau ensuite)
+        function makeStudent(i, x, z) {
+            const st = new THREE.Group();
+            st.position.set(x, 0, z);
+            st.rotation.y = Math.PI;
+            scene.add(st);
+            const skin = pick(SKIN);
+            const hairC = pick(HAIR);
+            const shirtC = SHIRT[i % SHIRT.length];
+            const shirt = flat(shirtC, { roughness: 0.85 });
+            const pants = flat(pick(PANTS));
+            const skinMat = flat(skin, { roughness: 0.7 });
+            const style = i % 4;
+            // La chaise
+            const chairMat = flat([0xe67e22, 0x3498db, 0x2ecc71, 0xe74c3c][i % 4], { roughness: 0.6 });
+            const metal = flat(0x8a8f99, { metalness: 0.4, roughness: 0.5 });
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.04, 0.36), chairMat);
+            seat.position.set(0, 0.4, -0.03);
+            st.add(seat);
+            const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.03), chairMat);
+            backrest.position.set(0, 0.68, -0.22);
+            backrest.rotation.x = -0.08;
+            st.add(backrest);
+            [[-0.16, -0.18], [0.16, -0.18], [-0.16, 0.12], [0.16, 0.12]].forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 5), metal);
+                leg.position.set(lx, 0.2, lz);
+                st.add(leg);
+            });
+            [-0.16, 0.16].forEach((lx) => {
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 5), metal);
+                post.position.set(lx, 0.55, -0.2);
+                st.add(post);
+            });
+            // Le pupitre
+            const deskWood = flat(0xd9b07a, { roughness: 0.7 });
+            const top = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.035, 0.46), deskWood);
+            top.position.set(0, 0.62, 0.44);
+            st.add(top);
+            const cubby = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.12, 0.38), metal);
+            cubby.position.set(0, 0.54, 0.46);
+            st.add(cubby);
+            [[-0.33, 0.25], [0.33, 0.25], [-0.33, 0.64], [0.33, 0.64]].forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.6, 5), metal);
+                leg.position.set(lx, 0.3, lz);
+                st.add(leg);
+            });
+            // Le livre ouvert, avec une page qui peut se tourner
+            const bookCol = pick(BOOKS);
+            const cover = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.012, 0.25), flat(bookCol));
+            cover.position.set(-0.06, 0.643, 0.42);
+            st.add(cover);
+            const pageMat = flat(0xfbf6ea, { roughness: 0.9 });
+            const linesTex = pageTexture();
+            const pageFace = new THREE.MeshStandardMaterial({ map: linesTex, roughness: 0.9 });
+            [-1, 1].forEach((e) => {
+                const pg = new THREE.Mesh(new THREE.BoxGeometry(0.165, 0.016, 0.23), [pageMat, pageMat, pageFace, pageMat, pageMat, pageMat]);
+                pg.position.set(-0.06 + e * 0.085, 0.655, 0.42);
+                pg.rotation.z = -e * 0.07;
+                st.add(pg);
+            });
+            const pagePivot = new THREE.Group();
+            pagePivot.position.set(-0.06, 0.664, 0.42);
+            st.add(pagePivot);
+            const turning = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.004, 0.22).translate(-0.08, 0, 0), [pageMat, pageMat, pageFace, pageFace, pageMat, pageMat]);
+            pagePivot.add(turning);
+            pagePivot.visible = false;
+            // Le cahier et la trousse
+            const note = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.01, 0.24), new THREE.MeshStandardMaterial({ map: linesTex, roughness: 0.9 }));
+            note.position.set(0.22, 0.643, 0.44);
+            note.rotation.y = -0.15;
+            st.add(note);
+            if (i % 3 === 0) {
+                const pencilCase = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.14, 3, 8).rotateZ(Math.PI / 2), flat(pick(SHIRT)));
+                pencilCase.position.set(0.18, 0.66, 0.62);
+                st.add(pencilCase);
+            }
+            // Le corps
+            const body = new THREE.Group();
+            st.add(body);
+            const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.2, 4, 10), shirt);
+            torso.position.set(0, 0.68, 0.0);
+            torso.scale.set(1.1, 1, 0.75);
+            body.add(torso);
+            [-1, 1].forEach((e) => {
+                body.add(limb(V(e * 0.065, 0.45, -0.02), V(e * 0.065, 0.46, 0.3), 0.055, 0.05, pants));
+                body.add(limb(V(e * 0.065, 0.46, 0.3), V(e * 0.065, 0.06, 0.34), 0.045, 0.04, pants));
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.15), flat(0x2d2d33));
+                shoe.position.set(e * 0.065, 0.03, 0.38);
+                body.add(shoe);
+            });
+            const headPivot = new THREE.Group();
+            headPivot.position.set(0, 0.86, 0.01);
+            body.add(headPivot);
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.06, 6), skinMat);
+            neck.position.y = 0.01;
+            headPivot.add(neck);
+            const head = makeHead(0.11, skin, hairC, { long: style === 1, pony: style === 2, glasses: i % 5 === 3 });
+            head.position.y = 0.12;
+            headPivot.add(head);
+            // Les bras : l'épaule pivote, la main gauche tient le livre, la droite écrit
+            const arms = [-1, 1].map((e) => {
+                const piv = new THREE.Group();
+                piv.position.set(e * 0.15, 0.8, 0);
+                body.add(piv);
+                const elbow = V(e * 0.04, -0.19, 0.12);
+                const hand = V(e * -0.03, -0.14, 0.33);
+                piv.add(limb(V(0, 0, 0), elbow, 0.04, 0.036, shirt));
+                piv.add(limb(elbow, hand, 0.034, 0.03, skinMat));
+                const h = new THREE.Mesh(new THREE.SphereGeometry(0.035, 7, 5), skinMat);
+                h.position.copy(hand);
+                piv.add(h);
+                if (e > 0) {
+                    const pencil = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.14, 5), flat(0xf2c94c));
+                    pencil.position.copy(hand).add(V(0.01, 0.04, -0.01));
+                    pencil.rotation.set(-0.5, 0, 0.3);
+                    piv.add(pencil);
+                }
+                return piv;
+            });
+            st.traverse((m) => {
+                if (!m.isMesh) return;
+                if (m.material !== cheekMat) m.castShadow = true;
+                m.receiveShadow = true;
+                m.userData.student = i;
+                pickable.push(m);
+            });
+            return {
+                st, body, torso, headPivot, arms, pagePivot,
+                ph: rr(0, 6.28),
+                state: pick(['write', 'read', 'write']),
+                until: rr(2, 7),
+                page: 0,
+                raise: 0,
+                pose: { hx: 0.42, hy: 0, rx: 0, ry: 0, lx: 0 },
+            };
+        }
+
+        const students = [];
+        const COLS = [-2.55, -0.85, 0.85, 2.55];
+        const ROWS = [-1.15, 0.55, 2.25];
+        ROWS.forEach((z) => COLS.forEach((x) => students.push(makeStudent(students.length, x + rr(-0.06, 0.06), z + rr(-0.05, 0.05)))));
+
+        // --- Le bureau de la prof : pile de copies, pomme, globe, mug ---
+        const desk = new THREE.Group();
+        desk.position.set(3.3, 0, -3.25);
+        desk.rotation.y = -0.15;
+        scene.add(desk);
+        const dWood = flat(0xb07a4a, { roughness: 0.7 });
+        const dTop = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.7), dWood);
+        dTop.position.y = 0.76;
+        desk.add(dTop);
+        [-0.7, 0.7].forEach((x) => {
+            const side = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.74, 0.66), dWood);
+            side.position.set(x, 0.37, 0);
+            desk.add(side);
+        });
+        const modesty = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.5, 0.04), dWood);
+        modesty.position.set(0, 0.5, 0.3);
+        desk.add(modesty);
+        const papers = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.22), flat(0xfbf8f0));
+        papers.position.set(-0.4, 0.82, -0.05);
+        papers.rotation.y = 0.2;
+        desk.add(papers);
+        const apple = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 1), flat(0xd8342c, { roughness: 0.4 }));
+        apple.position.set(0.05, 0.84, 0.1);
+        desk.add(apple);
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.04, 4), flat(0x5a3a20));
+        stem.position.set(0.05, 0.91, 0.1);
+        desk.add(stem);
+        const leafA = new THREE.Mesh(new THREE.SphereGeometry(0.02, 5, 3), flat(0x4caf50));
+        leafA.scale.set(1.4, 0.4, 0.8);
+        leafA.position.set(0.075, 0.915, 0.1);
+        desk.add(leafA);
+        const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.1, 10), flat(0xffffff));
+        mug.position.set(0.3, 0.83, 0.12);
+        desk.add(mug);
+        const mugHandle = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 5, 10), flat(0xffffff));
+        mugHandle.position.set(0.35, 0.83, 0.12);
+        desk.add(mugHandle);
+        const heartMug = new THREE.Mesh(new THREE.CircleGeometry(0.018, 8), new THREE.MeshBasicMaterial({ color: 0xff5c8a }));
+        heartMug.position.set(0.3, 0.83, 0.167);
+        desk.add(heartMug);
+        const globeStand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.04, 8), flat(0x8a6a3a));
+        globeStand.position.set(0.55, 0.8, -0.12);
+        desk.add(globeStand);
+        const globe = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), new THREE.MeshStandardMaterial({ map: globeTexture(), roughness: 0.5 }));
+        globe.position.set(0.55, 0.96, -0.12);
+        globe.rotation.z = 0.4;
+        desk.add(globe);
+        const globeArc = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.008, 5, 18, Math.PI), flat(0xc9a04f, { metalness: 0.6 }));
+        globeArc.position.copy(globe.position);
+        globeArc.rotation.set(0, Math.PI / 2, 0.4 - Math.PI / 2);
+        desk.add(globeArc);
+        const tChair = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.06, 0.42), flat(0xc0392b));
+        tChair.position.set(0.1, 0.46, -0.6);
+        desk.add(tChair);
+        const tBack = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.05), flat(0xc0392b));
+        tBack.position.set(0.1, 0.68, -0.8);
+        desk.add(tBack);
+        const tLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.44, 6), flat(0x777c86));
+        tLeg.position.set(0.1, 0.22, -0.6);
+        desk.add(tLeg);
+        desk.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+
+        // --- La prof : debout, ravie, avec son livre sous le bras ---
+        const teacher = new THREE.Group();
+        scene.add(teacher);
+        const tBody = new THREE.Group();
+        teacher.add(tBody);
+        const tSkin = flat(0xf1c7a6, { roughness: 0.7 });
+        const blouse = flat(0xf7a7b8, { roughness: 0.8 });
+        const skirt = flat(0x4a6fa5, { roughness: 0.85 });
+        const tLegs = [-1, 1].map((e) => {
+            const piv = new THREE.Group();
+            piv.position.set(e * 0.08, 0.84, 0);
+            tBody.add(piv);
+            piv.add(limb(V(0, 0, 0), V(0, -0.78, 0), 0.05, 0.04, tSkin));
+            const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.06, 0.17), flat(0x7b2d3b));
+            shoe.position.set(0, -0.8, 0.04);
+            piv.add(shoe);
+            return piv;
+        });
+        const skirtM = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 0.42, 12), skirt);
+        skirtM.position.y = 0.72;
+        tBody.add(skirtM);
+        const tTorso = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.26, 4, 12), blouse);
+        tTorso.position.y = 1.1;
+        tTorso.scale.set(1.05, 1, 0.75);
+        tBody.add(tTorso);
+        const collar = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.02, 5, 12).rotateX(Math.PI / 2), flat(0xffffff));
+        collar.position.y = 1.33;
+        tBody.add(collar);
+        // Un petit badge fleur
+        const brooch = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 4), flat(0xffe066));
+        brooch.position.set(0.07, 1.22, 0.1);
+        tBody.add(brooch);
+        const tHeadPivot = new THREE.Group();
+        tHeadPivot.position.set(0, 1.36, 0);
+        tBody.add(tHeadPivot);
+        const tNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.08, 6), tSkin);
+        tHeadPivot.add(tNeck);
+        const tHead = makeHead(0.13, 0xf1c7a6, 0x7a4a2a, { bun: true, happy: true, glasses: true });
+        tHead.position.y = 0.14;
+        tHeadPivot.add(tHead);
+        const tArms = [-1, 1].map((e) => {
+            const piv = new THREE.Group();
+            piv.position.set(e * 0.18, 1.3, 0);
+            tBody.add(piv);
+            const elbow = V(e * 0.04, -0.24, 0.0);
+            const hand = V(e * 0.02, -0.46, 0.06);
+            piv.add(limb(V(0, 0, 0), elbow, 0.045, 0.04, blouse));
+            piv.add(limb(elbow, hand, 0.038, 0.033, tSkin));
+            const h = new THREE.Mesh(new THREE.SphereGeometry(0.04, 7, 5), tSkin);
+            h.position.copy(hand);
+            piv.add(h);
+            return { piv, hand };
+        });
+        // Le livre qu'elle tient contre elle
+        const tBook = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 0.22), flat(0x2e86de));
+        tBook.position.copy(tArms[0].hand).add(V(0.0, 0.08, 0.05));
+        tArms[0].piv.add(tBook);
+        teacher.traverse((m) => {
+            if (!m.isMesh) return;
+            if (m.material !== cheekMat) m.castShadow = true;
+            m.receiveShadow = true;
+        });
+        const teacherMeshes = [];
+        teacher.traverse((m) => { if (m.isMesh) teacherMeshes.push(m); });
+        const T = { x: -0.6, z: -2.9, heading: 0, state: 'pause', until: 3, goal: -0.6, gait: 0, move: 0, hop: 0, look: null, lookUntil: 0, heartAt: 2 };
+
+        // --- Les petits cœurs de la prof heureuse ---
+        const heartShape = new THREE.Shape();
+        heartShape.moveTo(0, -0.05);
+        heartShape.bezierCurveTo(-0.09, 0.02, -0.05, 0.09, 0, 0.04);
+        heartShape.bezierCurveTo(0.05, 0.09, 0.09, 0.02, 0, -0.05);
+        const heartGeo = new THREE.ShapeGeometry(heartShape, 6);
+        const hearts = Array.from({ length: 10 }, () => {
+            const m = new THREE.Mesh(heartGeo, new THREE.MeshBasicMaterial({ color: 0xff5c8a, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+            m.visible = false;
+            m.renderOrder = 8;
+            scene.add(m);
+            return { m, t: 1, vx: 0, vz: 0 };
+        });
+        function heart(x, y, z, n = 1) {
+            for (let k = 0; k < n; k++) {
+                const h = hearts.find((q2) => q2.t >= 1) || hearts[0];
+                h.t = -k * 0.12;
+                h.m.position.set(x + rr(-0.12, 0.12), y, z + rr(-0.12, 0.12));
+                h.vx = rr(-0.12, 0.12);
+                h.vz = rr(-0.12, 0.12);
+                h.m.material.color.setHex(pick([0xff5c8a, 0xff7aa2, 0xffa3c0, 0xff4d6d]));
+            }
+        }
+
+        // --- La poussière qui danse dans les rayons du soleil ---
+        const pointScale = { value: 1 };
+        const dust = particles(phone ? 50 : 90);
+        dust.items.forEach((p) => {
+            p.x = rr(-HALF + 0.3, -2.6);
+            p.y = rr(0.3, 2.4);
+            p.z = rr(-4.4, 4.4);
+            p.ph = rr(0, 6.28);
+            p.sp = rr(0.03, 0.08);
+            p.s = rr(0.012, 0.022);
+        });
+
+        // --- Caméra : de biais, depuis le fond de la classe, le tableau et les fenêtres en face ---
+        const target = V(0.1, 0.8, -0.2);
+        const HOME_EL = 0.52;
+        let az = 0.95;
+        let el = HOME_EL;
+        let zoom = 0.6;
+        let fit = 26;
+        let lastInput = -10;
+        let touched = false;
+        const pointers = new Map();
+        let pinch = 0;
+        let downAt = null;
+        const canvas = renderer.domElement;
+        const spread = () => {
+            const [a, b] = [...pointers.values()];
+            return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        };
+        const onDown = (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 1) downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+            if (pointers.size === 2) pinch = spread();
+            lastInput = clock;
+            touched = true;
+        };
+        const onMove = (e) => {
+            const p = pointers.get(e.pointerId);
+            if (!p) return;
+            const dx = e.clientX - p.x;
+            const dy = e.clientY - p.y;
+            p.x = e.clientX;
+            p.y = e.clientY;
+            if (pointers.size === 1) {
+                az -= dx * 0.0065;
+                el = clamp(el + dy * 0.0045, 0.12, 1.25);
+            } else if (pointers.size === 2) {
+                const s = spread();
+                if (pinch) zoom = clamp(zoom * pinch / s, 0.22, 1.5);
+                pinch = s;
+            }
+            lastInput = clock;
+        };
+        const onUp = (e) => {
+            pointers.delete(e.pointerId);
+            pinch = 0;
+            if (downAt && pointers.size === 0) {
+                const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+                if (moved < 7 && performance.now() - downAt.t < 400) tap(e);
+            }
+            downAt = null;
+        };
+        const onWheel = (e) => {
+            e.preventDefault();
+            zoom = clamp(zoom * Math.exp(e.deltaY * 0.0012), 0.22, 1.5);
+            lastInput = clock;
+        };
+        canvas.addEventListener('pointerdown', onDown);
+        canvas.addEventListener('pointermove', onMove);
+        canvas.addEventListener('pointerup', onUp);
+        canvas.addEventListener('pointercancel', onUp);
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+
+        // Toucher un élève : il lève la main, la prof se tourne vers lui toute contente.
+        // La prof : elle sautille et des cœurs s'envolent. Le tableau : un nouveau message s'écrit.
+        const raycaster = new THREE.Raycaster();
+        const ndc = new THREE.Vector2();
+        function tap(e) {
+            const r = canvas.getBoundingClientRect();
+            ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+            raycaster.setFromCamera(ndc, camera);
+            const visibleBoard = front.shown ? boardMeshes : [];
+            const hit = raycaster.intersectObjects([...pickable, ...teacherMeshes, ...visibleBoard], false)[0];
+            if (!hit) return;
+            if (hit.object.userData.student != null) {
+                const s = students[hit.object.userData.student];
+                s.raise = 3.5;
+                T.look = s;
+                T.lookUntil = clock + 3.5;
+                T.state = 'pause';
+                T.until = clock + 3.5;
+                heart(T.x, 1.85, T.z, 1);
+                return;
+            }
+            if (teacherMeshes.includes(hit.object)) {
+                T.hop = 1;
+                heart(T.x, 1.8, T.z, 5);
+                return;
+            }
+            if (boardMeshes.includes(hit.object)) {
+                boardMsg = (boardMsg + 1) % MESSAGES.length;
+                boardWrite = 0;
+            }
+        }
+
+        function resize() {
+            const w = stage.clientWidth || 1;
+            const h = stage.clientHeight || 1;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+            fit = Math.max(14 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.7 : 0.6;
+            camera.updateProjectionMatrix();
+            pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
+        }
+        const ro = new ResizeObserver(resize);
+        ro.observe(stage);
+        resize();
+
+        // Les murs côté caméra : on ne les dessine plus, mais ils gardent leur ombre (le soleil passe toujours par les fenêtres)
+        function setWall(wall, shown) {
+            if (wall.shown === shown) return;
+            wall.shown = shown;
+            wall.solid.forEach((m) => {
+                m.material = shown ? m.userData.mat || m.material : hiddenMat;
+                if (!shown) return;
+            });
+            wall.deco.forEach((o) => { o.visible = shown; });
+        }
+        const hiddenMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+        walls.forEach((w) => w.solid.forEach((m) => { m.userData.mat = m.material; }));
+
+        // --- Boucle ---
+        let clock = 0;
+        let last = performance.now();
+        let raf = 0;
+        let alive = true;
+        const ease = (cur, want, k) => cur + (want - cur) * k;
+
+        function frame(now) {
+            if (!alive) return;
+            const real = Math.min(0.25, (now - last) / 1000);
+            const dt = Math.min(0.05, real);
+            last = now;
+            clock += dt;
+            const t = clock;
+
+            if (!still && !pointers.size) {
+                const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
+                az += 0.045 * dt * idle;
+                el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
+            }
+            const dist = fit * zoom;
+            camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
+            camera.lookAt(target);
+            // Les deux murs entre la caméra et la classe disparaissent
+            setWall(front, camera.position.z > 0.5);
+            setWall(back, camera.position.z < -0.5);
+            setWall(left, camera.position.x > 0.5);
+            setWall(right, camera.position.x < -0.5);
+
+            // L'horloge donne l'heure du vrai monde
+            const d = new Date();
+            const sec = d.getSeconds() + d.getMilliseconds() / 1000;
+            const min = d.getMinutes() + sec / 60;
+            const hr = (d.getHours() % 12) + min / 60;
+            handS.rotation.z = -(sec / 60) * Math.PI * 2;
+            handM.rotation.z = -(min / 60) * Math.PI * 2;
+            handH.rotation.z = -(hr / 12) * Math.PI * 2;
+
+            // Le tableau : la craie écrit le nouveau message
+            if (boardWrite < 1) {
+                boardWrite = Math.min(1, boardWrite + dt * 0.45);
+                drawBoard(boardWrite);
+            }
+
+            // Les élèves révisent : ils écrivent, lisent, tournent les pages, lèvent le nez de temps en temps
+            const k = Math.min(1, dt * 4);
+            students.forEach((s) => {
+                if (t > s.until) {
+                    const r2 = rand();
+                    s.state = r2 < 0.45 ? 'write' : r2 < 0.75 ? 'read' : r2 < 0.9 ? 'flip' : 'look';
+                    s.until = t + (s.state === 'flip' ? 1.2 : s.state === 'look' ? rr(1.5, 2.5) : rr(3, 8));
+                    if (s.state === 'flip') s.page = 0;
+                }
+                s.raise = Math.max(0, s.raise - dt);
+                const p = s.pose;
+                const raising = s.raise > 0;
+                let hx = 0.45;
+                let hy = Math.sin(t * 0.3 + s.ph) * 0.05;
+                let rx = 0;
+                let ry = 0;
+                if (s.state === 'write') {
+                    ry = Math.sin(t * 9 + s.ph) * 0.07;
+                    rx = Math.sin(t * 14 + s.ph) * 0.025;
+                    hy += Math.sin(t * 1.2 + s.ph) * 0.06;
+                } else if (s.state === 'read') {
+                    hx = 0.38;
+                    hy += Math.sin(t * 0.9 + s.ph) * 0.15;
+                } else if (s.state === 'flip') {
+                    rx = -0.15;
+                    s.page = Math.min(1, s.page + dt / 0.9);
+                } else if (s.state === 'look') {
+                    hx = 0.02;
+                    hy = Math.sin(s.ph) * 0.25;
+                }
+                if (raising) {
+                    hx = -0.05;
+                    hy = 0;
+                    rx = -2.25 + Math.sin(t * 6) * 0.08;
+                    ry = 0;
+                }
+                p.hx = ease(p.hx, hx, k);
+                p.hy = ease(p.hy, hy, k);
+                p.rx = ease(p.rx, rx, raising ? Math.min(1, dt * 6) : k);
+                p.ry = ease(p.ry, ry, k);
+                s.headPivot.rotation.x = p.hx;
+                s.headPivot.rotation.y = p.hy;
+                s.arms[1].rotation.x = p.rx;
+                s.arms[1].rotation.y = p.ry;
+                s.arms[1].rotation.z = raising ? 0.12 : 0;
+                s.torso.scale.y = 1 + Math.sin(t * 1.6 + s.ph) * 0.02;
+                s.body.rotation.x = 0.05 + Math.sin(t * 0.4 + s.ph) * 0.015;
+                // La page se tourne de droite à gauche
+                s.pagePivot.visible = s.state === 'flip' && s.page < 1;
+                s.pagePivot.rotation.z = Math.PI * (1 - smooth(s.page));
+            });
+
+            // La prof se promène devant le tableau, s'arrête pour regarder sa classe, toute contente
+            if (T.look && t > T.lookUntil) T.look = null;
+            if (t > T.until && !T.look) {
+                if (T.state === 'pause') {
+                    T.state = 'walk';
+                    T.goal = rr(-2.6, 1.9);
+                    if (Math.abs(T.goal - T.x) < 0.8) T.goal = T.x > 0 ? T.goal - 1.5 : T.goal + 1.5;
+                    T.until = t + 20;
+                } else {
+                    T.state = 'pause';
+                    T.until = t + rr(3, 6);
+                }
+            }
+            let wantHeading = 0;
+            let moving = 0;
+            if (T.state === 'walk' && !T.look) {
+                const dx = T.goal - T.x;
+                if (Math.abs(dx) < 0.05) {
+                    T.state = 'pause';
+                    T.until = t + rr(3, 6);
+                } else {
+                    T.x += Math.sign(dx) * Math.min(Math.abs(dx), dt * 0.55);
+                    wantHeading = Math.sign(dx) * Math.PI / 2;
+                    moving = 1;
+                }
+            }
+            if (T.look) {
+                const sp2 = T.look.st.position;
+                wantHeading = Math.atan2(sp2.x - T.x, sp2.z - T.z);
+            }
+            T.heading += Math.atan2(Math.sin(wantHeading - T.heading), Math.cos(wantHeading - T.heading)) * Math.min(1, dt * 4);
+            T.move = ease(T.move, moving, Math.min(1, dt * 5));
+            T.gait += dt * 6 * T.move;
+            T.hop = Math.max(0, T.hop - dt * 1.2);
+            const hopY = T.hop > 0 ? Math.abs(Math.sin((1 - T.hop) * Math.PI * 3)) * 0.18 * T.hop : 0;
+            teacher.position.set(T.x, hopY + Math.abs(Math.sin(T.gait)) * 0.02 * T.move, T.z);
+            teacher.rotation.y = T.heading;
+            tLegs.forEach((l, i) => { l.rotation.x = Math.sin(T.gait + i * Math.PI) * 0.45 * T.move; });
+            // En marchant, le bras libre se balance ; à l'arrêt, un petit signe de la main de temps en temps
+            const wave = T.look || T.hop > 0 ? 1 : 0;
+            tArms[1].piv.rotation.x = ease(tArms[1].piv.rotation.x, wave ? -2.5 : Math.sin(T.gait + Math.PI) * 0.4 * T.move, Math.min(1, dt * 6));
+            tArms[1].piv.rotation.z = wave ? 0.25 + Math.sin(t * 9) * 0.25 : 0.05;
+            tArms[0].piv.rotation.x = -0.6;
+            tArms[0].piv.rotation.z = 0.15;
+            tHeadPivot.rotation.z = Math.sin(t * 1.3) * 0.08;
+            tHeadPivot.rotation.x = -0.05 + Math.sin(t * 0.7) * 0.04;
+            tBody.rotation.z = Math.sin(t * 1.3 + 0.5) * 0.02 * (1 - T.move);
+            // De temps en temps, un petit cœur : elle est fière de ses élèves
+            if (t > T.heartAt) {
+                if (T.state === 'pause') heart(T.x, 1.85, T.z, 1);
+                T.heartAt = t + rr(3.5, 6);
+            }
+            hearts.forEach((h) => {
+                if (h.t >= 1) {
+                    h.m.visible = false;
+                    return;
+                }
+                h.t += dt / 2.2;
+                if (h.t < 0) return;
+                h.m.visible = true;
+                h.m.position.y += dt * 0.35;
+                h.m.position.x += h.vx * dt + Math.sin(t * 3 + h.vz * 50) * 0.003;
+                h.m.position.z += h.vz * dt;
+                h.m.quaternion.copy(camera.quaternion);
+                h.m.scale.setScalar(0.6 + easeOut(Math.min(1, h.t * 4)) * 0.7);
+                h.m.material.opacity = Math.min(1, h.t * 6) * (1 - smooth(h.t));
+            });
+
+            // La poussière flotte dans la lumière
+            dust.items.forEach((p, i) => {
+                p.y += Math.sin(t * 0.5 + p.ph) * 0.002;
+                p.x += Math.sin(t * 0.3 + p.ph * 2) * 0.0015 + p.sp * dt * 0.2;
+                p.z += Math.cos(t * 0.25 + p.ph) * 0.002;
+                if (p.x > -2.4) p.x = -HALF + 0.3;
+                dust.set(i, p.x, p.y, p.z, p.s, [1, 0.92, 0.72], 0.18 + 0.16 * Math.sin(t * 1.4 + p.ph * 3));
+            });
+            dust.update();
+
+            renderer.render(scene, camera);
+            raf = requestAnimationFrame(frame);
+        }
+        raf = requestAnimationFrame(frame);
+
+        return {
+            dispose() {
+                alive = false;
+                cancelAnimationFrame(raf);
+                ro.disconnect();
+                canvas.removeEventListener('wheel', onWheel);
+                walls.forEach((w) => w.solid.forEach((m) => { m.material = m.userData.mat; }));
+                scene.traverse((o) => {
+                    if (o.geometry) o.geometry.dispose();
+                    if (o.material) {
+                        [].concat(o.material).forEach((m) => {
+                            Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose(); });
+                            m.dispose();
+                        });
+                    }
+                });
+                hiddenMat.dispose();
+                renderer.dispose();
+                canvas.remove();
+            },
+        };
+
+        // ---------------- Outils de la scène ----------------
+        function canvasTex(w, h, draw, repeat) {
+            const cv = document.createElement('canvas');
+            cv.width = w;
+            cv.height = h;
+            draw(cv.getContext('2d'), w, h);
+            const tex = new THREE.CanvasTexture(cv);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 8;
+            if (repeat) tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        // Le parquet : des lattes de chêne miel, décalées
+        function plankTexture() {
+            return canvasTex(1024, 1024, (g, w, h) => {
+                const rnd = mulberry32(11);
+                const rowH = h / 10;
+                for (let r = 0; r < 10; r++) {
+                    let x = -rnd() * 300;
+                    while (x < w) {
+                        const len = 220 + rnd() * 260;
+                        const b = 0.86 + rnd() * 0.22;
+                        g.fillStyle = `rgb(${Math.round(196 * b)},${Math.round(146 * b)},${Math.round(96 * b)})`;
+                        g.fillRect(x, r * rowH, len, rowH);
+                        // Les veines du bois
+                        for (let v = 0; v < 5; v++) {
+                            g.strokeStyle = `rgba(110,70,40,${0.08 + rnd() * 0.1})`;
+                            g.lineWidth = 1 + rnd();
+                            g.beginPath();
+                            const y = r * rowH + 8 + rnd() * (rowH - 16);
+                            g.moveTo(x, y);
+                            g.bezierCurveTo(x + len * 0.3, y + rnd() * 8 - 4, x + len * 0.7, y + rnd() * 8 - 4, x + len, y);
+                            g.stroke();
+                        }
+                        g.fillStyle = 'rgba(70,40,20,0.55)';
+                        g.fillRect(x, r * rowH, 2, rowH);
+                        x += len;
+                    }
+                    g.fillStyle = 'rgba(70,40,20,0.5)';
+                    g.fillRect(0, r * rowH, w, 2);
+                }
+            }, true);
+        }
+
+        function rugTexture() {
+            return canvasTex(512, 256, (g, w, h) => {
+                g.fillStyle = '#e8c07a';
+                g.fillRect(0, 0, w, h);
+                const cols = ['#e57373', '#64b5f6', '#81c784', '#ffd54f', '#ba68c8'];
+                g.fillStyle = '#c75b5b';
+                g.fillRect(12, 12, w - 24, h - 24);
+                g.fillStyle = '#f6e2b3';
+                g.fillRect(24, 24, w - 48, h - 48);
+                for (let i = 0; i < 5; i++) {
+                    g.fillStyle = cols[i];
+                    g.beginPath();
+                    g.arc(80 + i * 88, h / 2, 30, 0, Math.PI * 2);
+                    g.fill();
+                }
+            });
+        }
+
+        function pageTexture() {
+            return canvasTex(128, 160, (g, w, h) => {
+                g.fillStyle = '#fbf6ea';
+                g.fillRect(0, 0, w, h);
+                g.strokeStyle = 'rgba(90,120,180,0.45)';
+                g.lineWidth = 2;
+                for (let y = 22; y < h; y += 14) {
+                    g.beginPath();
+                    g.moveTo(10, y);
+                    g.lineTo(w - 10, y);
+                    g.stroke();
+                }
+                g.strokeStyle = 'rgba(40,40,60,0.55)';
+                g.lineWidth = 2;
+                const rnd = mulberry32(5);
+                for (let y = 18; y < h - 10; y += 14) {
+                    let x = 14;
+                    const end = 30 + rnd() * (w - 44);
+                    g.beginPath();
+                    g.moveTo(x, y);
+                    while (x < end) {
+                        x += 4;
+                        g.lineTo(x, y + Math.sin(x * 0.9) * 2);
+                    }
+                    g.stroke();
+                }
+            });
+        }
+
+        function clockTexture() {
+            return canvasTex(256, 256, (g, w) => {
+                g.fillStyle = '#fffdf6';
+                g.fillRect(0, 0, w, w);
+                g.fillStyle = '#2b2b30';
+                for (let i = 0; i < 12; i++) {
+                    const a = (i / 12) * Math.PI * 2;
+                    g.save();
+                    g.translate(w / 2 + Math.sin(a) * 100, w / 2 - Math.cos(a) * 100);
+                    g.rotate(a);
+                    g.fillRect(-3, -10, 6, i % 3 ? 14 : 22);
+                    g.restore();
+                }
+            });
+        }
+
+        function globeTexture() {
+            return canvasTex(256, 128, (g, w, h) => {
+                g.fillStyle = '#4a90c8';
+                g.fillRect(0, 0, w, h);
+                g.fillStyle = '#7cb35b';
+                const rnd = mulberry32(8);
+                for (let i = 0; i < 14; i++) {
+                    g.beginPath();
+                    g.ellipse(rnd() * w, 20 + rnd() * (h - 40), 12 + rnd() * 26, 8 + rnd() * 18, rnd() * 3, 0, Math.PI * 2);
+                    g.fill();
+                }
+            });
+        }
+
+        function posterTexture(p) {
+            const W2 = 512;
+            const H2 = Math.round(512 * p.h / p.w);
+            return canvasTex(W2, H2, (g, w, h) => {
+                if (p.kind === 'sign') {
+                    g.fillStyle = '#fff6d6';
+                    g.fillRect(0, 0, w, h);
+                    g.strokeStyle = '#f2a65a';
+                    g.lineWidth = 14;
+                    g.strokeRect(10, 10, w - 20, h - 20);
+                    g.fillStyle = '#3a4a6b';
+                    g.textAlign = 'center';
+                    g.textBaseline = 'middle';
+                    g.font = '700 64px "Comic Sans MS", "Chalkboard SE", cursive';
+                    g.fillText(p.text[0], w / 2, h * 0.36);
+                    g.font = '600 52px "Comic Sans MS", "Chalkboard SE", cursive';
+                    g.fillText(p.text[1], w / 2, h * 0.64);
+                    g.fillStyle = '#ff7aa2';
+                    g.beginPath();
+                    g.arc(w - 60, h - 56, 14, 0, Math.PI * 2);
+                    g.fill();
+                } else if (p.kind === 'alphabet') {
+                    g.fillStyle = '#ffffff';
+                    g.fillRect(0, 0, w, h);
+                    const cols = ['#e57373', '#64b5f6', '#81c784', '#ffb74d', '#ba68c8', '#4db6ac'];
+                    g.textAlign = 'center';
+                    g.textBaseline = 'middle';
+                    g.font = '700 62px "Comic Sans MS", "Chalkboard SE", cursive';
+                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((c, i) => {
+                        g.fillStyle = cols[i % cols.length];
+                        g.fillText(c, 50 + (i % 6) * 82, 60 + Math.floor(i / 6) * 94);
+                    });
+                } else if (p.kind === 'map') {
+                    g.fillStyle = '#9fd0ea';
+                    g.fillRect(0, 0, w, h);
+                    g.fillStyle = '#9cc97a';
+                    const blobs = [[0.2, 0.35, 0.12, 0.18], [0.27, 0.7, 0.07, 0.16], [0.5, 0.3, 0.07, 0.1], [0.52, 0.6, 0.08, 0.17], [0.72, 0.35, 0.16, 0.16], [0.82, 0.72, 0.07, 0.07]];
+                    blobs.forEach(([x, y, rx, ry]) => {
+                        g.beginPath();
+                        g.ellipse(x * w, y * h, rx * w, ry * h, 0.3, 0, Math.PI * 2);
+                        g.fill();
+                    });
+                    g.strokeStyle = 'rgba(255,255,255,0.5)';
+                    g.lineWidth = 2;
+                    for (let i = 1; i < 6; i++) {
+                        g.beginPath();
+                        g.moveTo((i / 6) * w, 0);
+                        g.lineTo((i / 6) * w, h);
+                        g.moveTo(0, (i / 6) * h);
+                        g.lineTo(w, (i / 6) * h);
+                        g.stroke();
+                    }
+                    g.strokeStyle = '#6b4a33';
+                    g.lineWidth = 16;
+                    g.strokeRect(0, 0, w, h);
+                } else {
+                    // Les dessins des élèves, punaisés
+                    g.fillStyle = 'rgba(0,0,0,0)';
+                    g.clearRect(0, 0, w, h);
+                    g.fillStyle = '#c9a77c';
+                    g.fillRect(0, 0, w, h);
+                    const rnd = mulberry32(19);
+                    for (let i = 0; i < 4; i++) {
+                        const x = 18 + i * 124;
+                        const y = 24 + (i % 2) * 18;
+                        g.save();
+                        g.translate(x + 50, y + 70);
+                        g.rotate((rnd() - 0.5) * 0.15);
+                        g.fillStyle = '#ffffff';
+                        g.fillRect(-52, -70, 104, 140);
+                        if (i === 0) {
+                            g.fillStyle = '#ffd54f';
+                            g.beginPath();
+                            g.arc(-20, -30, 20, 0, Math.PI * 2);
+                            g.fill();
+                            g.fillStyle = '#81c784';
+                            g.fillRect(-48, 30, 96, 36);
+                        } else if (i === 1) {
+                            g.fillStyle = '#e57373';
+                            g.fillRect(-30, -10, 60, 50);
+                            g.beginPath();
+                            g.moveTo(-38, -10);
+                            g.lineTo(0, -48);
+                            g.lineTo(38, -10);
+                            g.fill();
+                        } else if (i === 2) {
+                            g.fillStyle = '#64b5f6';
+                            g.beginPath();
+                            g.arc(0, 0, 32, 0, Math.PI * 2);
+                            g.fill();
+                            g.fillStyle = '#2b2b30';
+                            g.beginPath();
+                            g.arc(-10, -6, 4, 0, Math.PI * 2);
+                            g.arc(10, -6, 4, 0, Math.PI * 2);
+                            g.fill();
+                        } else {
+                            g.fillStyle = '#ff7aa2';
+                            g.beginPath();
+                            g.moveTo(0, 30);
+                            g.bezierCurveTo(-50, -5, -25, -45, 0, -15);
+                            g.bezierCurveTo(25, -45, 50, -5, 0, 30);
+                            g.fill();
+                        }
+                        g.fillStyle = '#d94040';
+                        g.beginPath();
+                        g.arc(0, -62, 6, 0, Math.PI * 2);
+                        g.fill();
+                        g.restore();
+                    }
+                }
+            });
+        }
+
+        function particles(count) {
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+            const size = new Float32Array(count);
+            const alpha = new Float32Array(count);
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+            g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+            g.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+            const m = new THREE.ShaderMaterial({
+                uniforms: { uScale: pointScale },
+                vertexShader: `attribute vec3 aColor;
+attribute float aSize;
+attribute float aAlpha;
+uniform float uScale;
+varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = aSize * uScale / -mv.z;
+    vColor = aColor;
+    vAlpha = aAlpha;
+}`,
+                fragmentShader: `varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    float r = length(gl_PointCoord - 0.5);
+    float a = smoothstep(0.5, 0.05, r) * vAlpha;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(vColor, a);
+}`,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
             });
             const pts = new THREE.Points(g, m);
             pts.frustumCulled = false;
