@@ -2304,6 +2304,17 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="lighthouse"] .diorama-sky--storm { opacity: 1; }
 
+/* Le désert : un grand ciel bleu, plus pâle et doré vers l'horizon, le soleil en haut à gauche */
+.diorama-sky--desert {
+    opacity: 0;
+    background:
+        radial-gradient(28% 22% at 22% 16%, rgba(255, 246, 220, 0.85), transparent),
+        radial-gradient(90% 40% at 50% 72%, rgba(250, 226, 178, 0.55), transparent),
+        linear-gradient(180deg, #5f9dd0 0%, #8fbfe0 36%, #cfe0e4 58%, #f0dcb2 74%, #d9b585 100%);
+}
+
+.diorama-overlay[data-scene="desert"] .diorama-sky--desert { opacity: 1; }
+
 .diorama-canvas {
     position: absolute;
     inset: 0;

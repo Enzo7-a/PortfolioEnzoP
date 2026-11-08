@@ -48,6 +48,8 @@
         boatTitle: 'Lost at sea.',
         boatHelp: touch() ? 'Drag to turn · pinch to zoom · tap the boat, the water or the sky' : 'Drag to turn · scroll to zoom · click the boat, the water or the sky',
         lighthouseTitle: 'The lighthouse in the storm.',
+        desertTitle: 'The pharaoh\'s oasis.',
+        desertHelp: touch() ? 'Drag to turn · pinch to zoom · tap the pyramid, the camels or the water' : 'Drag to turn · scroll to zoom · click the pyramid, the camels or the water',
         lighthouseHelp: touch() ? 'Drag to turn · pinch to zoom · tap the lighthouse, the monsters or the water' : 'Drag to turn · scroll to zoom · click the lighthouse, the monsters or the water',
     } : {
         open: 'Afficher les dioramas',
@@ -77,6 +79,8 @@
         boatTitle: 'Perdu au large.',
         boatHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le bateau, l\'eau ou le ciel' : 'Glisse pour tourner · molette pour zoomer · clique sur le bateau, l\'eau ou le ciel',
         lighthouseTitle: 'Le phare dans la tempête.',
+        desertTitle: 'L\'oasis du pharaon.',
+        desertHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche la pyramide, les chameaux ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur la pyramide, les chameaux ou l\'eau',
         lighthouseHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le phare, les monstres ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur le phare, les monstres ou l\'eau',
     });
 
@@ -85,6 +89,7 @@
         { id: 'forest', build: (THREE, stage) => buildForest(THREE, stage) },
         { id: 'boat', build: (THREE, stage) => buildBoat(THREE, stage) },
         { id: 'lighthouse', build: (THREE, stage) => buildLighthouse(THREE, stage) },
+        { id: 'desert', build: (THREE, stage) => buildDesert(THREE, stage) },
     ];
 
     let egg;
@@ -119,6 +124,7 @@
                     <div class="diorama-sky diorama-sky--day"></div>
                     <div class="diorama-sky diorama-sky--boat"></div>
                     <div class="diorama-sky diorama-sky--storm"></div>
+                    <div class="diorama-sky diorama-sky--desert"></div>
                     <p class="diorama-loading">${t.loading}</p>
                 </div>
                 <div class="diorama-side">
@@ -192,7 +198,8 @@
             current = (i + SCENES.length) % SCENES.length;
             const mine = ++token;
             o.dataset.scene = SCENES[current].id;
-            o.classList.add('is-night');
+            // Interface claire sur les scènes sombres, sombre sur le désert en plein jour
+            o.classList.toggle('is-night', SCENES[current].id !== 'desert');
             caption();
             if (scene3d) {
                 o.classList.remove('is-ready');
@@ -4793,6 +4800,1013 @@ void main() {
             const pts = new THREE.Points(g, m);
             pts.frustumCulled = false;
             pts.renderOrder = order;
+            scene.add(pts);
+            const items = Array.from({ length: count }, () => ({}));
+            return {
+                items,
+                set(i, x, y, z, s, c, a) {
+                    pos[i * 3] = x;
+                    pos[i * 3 + 1] = y;
+                    pos[i * 3 + 2] = z;
+                    col[i * 3] = c[0];
+                    col[i * 3 + 1] = c[1];
+                    col[i * 3 + 2] = c[2];
+                    size[i] = s;
+                    alpha[i] = a;
+                },
+                update() {
+                    g.attributes.position.needsUpdate = true;
+                    g.attributes.aColor.needsUpdate = true;
+                    g.attributes.aSize.needsUpdate = true;
+                    g.attributes.aAlpha.needsUpdate = true;
+                },
+            };
+        }
+
+        function radialTexture(inner, outer) {
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = 256;
+            const g = cv.getContext('2d');
+            const grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+            grad.addColorStop(0, inner);
+            grad.addColorStop(1, outer);
+            g.fillStyle = grad;
+            g.fillRect(0, 0, 256, 256);
+            const tex = new THREE.CanvasTexture(cv);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Quatrième diorama : le désert au temps des pharaons. Des dunes sculptées par
+    // le vent, une petite oasis avec ses palmiers, et une pyramide intacte, couverte
+    // de calcaire blanc poli, dont la pointe en or renvoie l'éclat du soleil.
+    // Une caravane de chameaux fait le tour, des faucons planent au-dessus.
+    // ---------------------------------------------------------------------
+    function buildDesert(THREE, stage) {
+        const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
+        const S = 10;
+        const HALF = S / 2;
+        const N = phone ? 48 : 72;
+        const BASE = -3.0;
+        const WATER = -0.14;
+        const rand = mulberry32(7);
+        const rr = (a, b) => a + (b - a) * rand();
+        const color = (hex) => new THREE.Color(hex);
+        const V = (x, y, z) => new THREE.Vector3(x, y, z);
+        const flat = (hex, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.85 }, extra || {}));
+        const tmp = new THREE.Color();
+        const smooth = (u) => u * u * (3 - 2 * u);
+        const still = calm();
+
+        // --- Plan de la scène ---
+        const P = { x: -1.7, z: -1.9, half: 2.1, h: 2.75 };
+        const O = { x: 2.1, z: 1.75 };
+        const PONDS = [[2.1, 1.7, 1.0], [2.85, 2.3, 0.68], [1.4, 2.2, 0.58]];
+        const pondD = (x, z) => {
+            let d = Infinity;
+            for (const [cx, cz, r] of PONDS) d = Math.min(d, Math.hypot(x - cx, z - cz) - r);
+            return d;
+        };
+        // Les dunes : un dos en pente douce face au vent, une face raide derrière, et deux cornes en croissant
+        const DUNES = [
+            [3.6, -3.1, 0.95, 0.35, 2.2, 0.85, 1.6, 0.22],
+            [-3.8, 3.3, 0.8, 0.25, 2.0, 0.8, 1.5, 0.22],
+            [4.4, -0.3, 0.5, 0.4, 1.5, 0.6, 1.1, 0.3],
+            [-0.6, 4.5, 0.55, 0.3, 1.7, 0.7, 1.4, 0.25],
+            [-4.5, -0.1, 0.6, 0.35, 1.6, 0.7, 1.3, 0.2],
+            [1.2, -4.6, 0.45, 0.35, 1.4, 0.6, 1.2, 0.2],
+        ];
+        const dune = (x, z, [cx, cz, A, th, w1, w2, wv, c]) => {
+            const dx = x - cx;
+            const dz = z - cz;
+            const u = dx * Math.cos(th) + dz * Math.sin(th);
+            const v = -dx * Math.sin(th) + dz * Math.cos(th);
+            const uu = u + c * v * v;
+            const p = uu < 0 ? Math.exp(-Math.pow(uu / w1, 2)) : Math.exp(-Math.pow(uu / w2, 2));
+            return A * p * Math.exp(-Math.pow(v / wv, 2));
+        };
+        const footprint = (x, z) => Math.max(Math.abs(x - P.x), Math.abs(z - P.z)) - P.half;
+        const height = (x, z) => {
+            let h = 0.06 * Math.sin(x * 0.7 + z * 0.3) + 0.05 * Math.sin(z * 0.9 - x * 0.4) + 0.03 * Math.sin((x + z) * 1.7);
+            for (const d of DUNES) h += dune(x, z, d);
+            // L'oasis creuse une cuvette, l'eau au fond
+            const d = pondD(x, z);
+            h = lerp(h, 0.0, 1 - smooth(clamp(d / 1.6, 0, 1)));
+            if (d < 0) {
+                const k = Math.min(1, -d / 0.7);
+                h = -0.02 - 0.5 * smooth(k);
+            }
+            // Le parvis de la pyramide, bien plat
+            return lerp(h, 0.04, 1 - smooth(clamp((footprint(x, z) - 0.15) / 0.9, 0, 1)));
+        };
+
+        // --- Rendu ---
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.75 : 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x000000, 0);
+        renderer.domElement.className = 'diorama-canvas';
+        stage.appendChild(renderer.domElement);
+        const scene = new THREE.Scene();
+        // Une brume de chaleur, couleur de sable, qui adoucit le lointain
+        scene.fog = new THREE.Fog(0xead8b2, 20, 50);
+        const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
+        const uTime = { value: 0 };
+
+        // --- Plein soleil ---
+        const SUN = V(-7, 9, 5);
+        const sunDir = SUN.clone().normalize();
+        const hemi = new THREE.HemisphereLight(0xc4def2, 0xd9b98a, 0.95);
+        scene.add(hemi);
+        const sun = new THREE.DirectionalLight(0xfff0d4, 2.5);
+        sun.position.copy(SUN);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
+        Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 });
+        sun.shadow.bias = -0.0005;
+        sun.shadow.normalBias = 0.03;
+        scene.add(sun);
+        const bounce = new THREE.DirectionalLight(0xf2d6a8, 0.35);
+        bounce.position.set(6, 3, -6);
+        scene.add(bounce);
+
+        // Un ciel en miniature, pour que l'or et l'eau aient quelque chose à refléter
+        // (l'or a le sien, plus chaud : un or qui reflète du bleu tournerait au vert)
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        function skyEnv(top, horizon, ground) {
+            const envScene = new THREE.Scene();
+            const skyGeo = new THREE.SphereGeometry(10, 32, 16);
+            const skyCol = [];
+            const sp = skyGeo.attributes.position;
+            for (let i = 0; i < sp.count; i++) {
+                const y = sp.getY(i) / 10;
+                if (y > 0.05) tmp.copy(color(horizon)).lerp(color(top), smooth(clamp(y * 1.6, 0, 1)));
+                else tmp.copy(color(horizon)).lerp(color(ground), smooth(clamp(-y * 3, 0, 1)));
+                skyCol.push(tmp.r, tmp.g, tmp.b);
+            }
+            skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(skyCol, 3));
+            envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+            const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(14, 12, 8) }));
+            sunDisc.position.copy(sunDir).multiplyScalar(8.5);
+            envScene.add(sunDisc);
+            const tex = pmrem.fromScene(envScene, 0.02).texture;
+            envScene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+            return tex;
+        }
+        const envMap = skyEnv(0x6fa6d6, 0xf3e2bd, 0xc9a46e);
+        const goldEnv = skyEnv(0xfff1d6, 0xffe2a8, 0xb98a50);
+        pmrem.dispose();
+
+        // --- Le sol : sable, sable mouillé, herbe de l'oasis, fond de l'eau, dalles du parvis ---
+        const grid = new THREE.PlaneGeometry(S, S, N, N);
+        grid.rotateX(-Math.PI / 2);
+        const gp = grid.attributes.position;
+        for (let i = 0; i < gp.count; i++) gp.setY(i, height(gp.getX(i), gp.getZ(i)));
+        const terrainGeo = grid.toNonIndexed();
+        grid.dispose();
+        const tp = terrainGeo.attributes.position;
+        const tc = new Float32Array(tp.count * 3);
+        const SAND = [0xe8cf9e, 0xe2c693, 0xedd6a8, 0xdcbd88].map(color);
+        const WET = color(0xb89c6e);
+        const GRASS = [0x7a9a3e, 0x8aa848, 0x6b8c38].map(color);
+        const BED = color(0x8c7a52);
+        const DEEP = color(0x3f6a62);
+        const SLAB = [0xeae0ca, 0xe2d6bd, 0xefe6d3].map(color);
+        for (let f = 0; f < tp.count; f += 3) {
+            const x = (tp.getX(f) + tp.getX(f + 1) + tp.getX(f + 2)) / 3;
+            const y = (tp.getY(f) + tp.getY(f + 1) + tp.getY(f + 2)) / 3;
+            const z = (tp.getZ(f) + tp.getZ(f + 1) + tp.getZ(f + 2)) / 3;
+            const h = hash(x, z);
+            const d = pondD(x, z);
+            if (footprint(x, z) < 0.4) tmp.copy(SLAB[Math.floor(hash(Math.floor((x - P.x) * 2.2), Math.floor((z - P.z) * 2.2)) * SLAB.length)]);
+            else if (y < WATER - 0.02) tmp.copy(BED).lerp(DEEP, clamp((WATER - y) / 0.4, 0, 1));
+            else if (y < WATER + 0.06) tmp.copy(WET);
+            else if (d < 0.75 || (d < 1.15 && h < 0.45)) tmp.copy(GRASS[Math.floor(h * GRASS.length)]);
+            else tmp.copy(SAND[Math.floor(h * SAND.length)]);
+            for (let k = 0; k < 3; k++) tmp.toArray(tc, (f + k) * 3);
+        }
+        terrainGeo.setAttribute('color', new THREE.BufferAttribute(tc, 3));
+        terrainGeo.computeVertexNormals();
+        const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 });
+        // Les rides que le vent dessine sur le sable (pas sur le parvis ni dans l'oasis)
+        terrainMat.onBeforeCompile = (sh) => {
+            sh.vertexShader = 'varying vec3 vRip;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvRip = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+            sh.fragmentShader = 'varying vec3 vRip;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+float pav = step(max(abs(vRip.x - (${P.x.toFixed(2)})), abs(vRip.z - (${P.z.toFixed(2)}))), ${(P.half + 0.45).toFixed(2)});
+float oas = 1.0 - smoothstep(1.4, 2.2, length(vRip.xz - vec2(${O.x.toFixed(2)}, ${O.z.toFixed(2)})));
+float rp = sin(dot(vRip.xz, vec2(0.94, 0.34)) * 26.0 + sin(vRip.x * 1.7 + vRip.z * 1.1) * 2.5);
+diffuseColor.rgb *= 1.0 + 0.05 * rp * (1.0 - pav) * (1.0 - oas);`);
+        };
+        const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+        terrain.receiveShadow = true;
+        scene.add(terrain);
+
+        // --- Côtés du bloc : des couches de grès ---
+        const sideMat = new THREE.MeshStandardMaterial({ map: strataTexture(), roughness: 1 });
+        const lipMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+        const EDGES = [
+            { x0: -HALF, z0: HALF, dx: 1, dz: 0 },
+            { x0: HALF, z0: HALF, dx: 0, dz: -1 },
+            { x0: HALF, z0: -HALF, dx: -1, dz: 0 },
+            { x0: -HALF, z0: -HALF, dx: 0, dz: 1 },
+        ];
+        const LIP_TOP = color(0xe2c693);
+        const LIP_LOW = color(0xc89a62);
+        EDGES.forEach((e, ei) => {
+            const body = [];
+            const bodyUv = [];
+            const lip = [];
+            const lipCol = [];
+            for (let i = 0; i <= N; i++) {
+                const x = e.x0 + e.dx * S * i / N;
+                const z = e.z0 + e.dz * S * i / N;
+                const top = height(x, z);
+                lip.push(x, top, z, x, top - 0.1, z);
+                LIP_TOP.toArray(lipCol, lipCol.length);
+                LIP_LOW.toArray(lipCol, lipCol.length);
+                body.push(x, top - 0.1, z, x, BASE, z);
+                const u = (ei * S + S * i / N) / 6;
+                bodyUv.push(u, (top - 0.1 - BASE) / (1.2 - BASE), u, 0);
+            }
+            const normal = [-e.dz, 0, e.dx];
+            scene.add(strip(body, bodyUv, null, normal, sideMat, true));
+            scene.add(strip(lip, null, lipCol, normal, lipMat, true));
+        });
+        const bottom = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x8a5c3c }));
+        bottom.position.y = BASE;
+        scene.add(bottom);
+        const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(60,40,20,0.4)', 'rgba(60,40,20,0)'), transparent: true, depthWrite: false, fog: false }));
+        contact.rotation.x = -Math.PI / 2;
+        contact.position.set(1.2, BASE - 0.02, 1.0);
+        scene.add(contact);
+
+        // --- L'eau de l'oasis : claire, verte au bord, qui reflète le ciel ---
+        const waterGeo = new THREE.PlaneGeometry(3.8, 3.2, 38, 32);
+        waterGeo.rotateX(-Math.PI / 2);
+        waterGeo.translate(2.2, 0, 2.05);
+        const wp = waterGeo.attributes.position;
+        const waveIdx = [];
+        for (let i = 0; i < wp.count; i++) if (height(wp.getX(i), wp.getZ(i)) < WATER + 0.1) waveIdx.push(i);
+        const water = new THREE.Mesh(waterGeo, new THREE.MeshStandardMaterial({ color: 0x2e8a86, transparent: true, opacity: 0.8, roughness: 0.06, metalness: 0.1, flatShading: true, envMap, envMapIntensity: 0.9, depthWrite: false }));
+        water.position.y = WATER;
+        water.renderOrder = 2;
+        scene.add(water);
+
+        // --- La pyramide : calcaire blanc poli, et le pyramidion en or ---
+        // Un tronc de pyramide (ou une pyramide entière quand top = 0) : quatre faces bien plates
+        function pyramidGeo(half, y0, y1, top) {
+            const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+            const pos = [];
+            for (let k = 0; k < 4; k++) {
+                const [ax, az] = c[k];
+                const [bx, bz] = c[(k + 1) % 4];
+                const A = [ax * half, y0, az * half];
+                const B = [bx * half, y0, bz * half];
+                const Ct = [bx * top, y1, bz * top];
+                const D = [ax * top, y1, az * top];
+                pos.push(...A, ...D, ...B);
+                if (top > 0) pos.push(...B, ...D, ...Ct);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.computeVertexNormals();
+            return g;
+        }
+        const CAP_Y = P.h * 0.86;
+        const capHalf = P.half * (1 - CAP_Y / P.h);
+        const pyramid = new THREE.Group();
+        pyramid.position.set(P.x, 0.04, P.z);
+        scene.add(pyramid);
+        const casingMat = new THREE.MeshStandardMaterial({ color: 0xe9e0cc, roughness: 0.45, metalness: 0, envMap, envMapIntensity: 0.3 });
+        // De très fines assises de blocs, à peine visibles : juste pour donner l'échelle
+        casingMat.onBeforeCompile = (sh) => {
+            sh.vertexShader = 'varying float vY;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvY = transformed.y;');
+            sh.fragmentShader = 'varying float vY;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= 1.0 - 0.035 * smoothstep(0.88, 0.97, fract(vY * 7.0));');
+        };
+        const casing = new THREE.Mesh(pyramidGeo(P.half, 0, CAP_Y, capHalf), casingMat);
+        casing.castShadow = true;
+        casing.receiveShadow = true;
+        pyramid.add(casing);
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc84a, metalness: 1, roughness: 0.2, envMap: goldEnv, envMapIntensity: 1.3, emissive: 0x4a2f00, emissiveIntensity: 0.45 });
+        const cap = new THREE.Mesh(pyramidGeo(capHalf + 0.004, CAP_Y - 0.002, P.h, 0), goldMat);
+        cap.castShadow = true;
+        pyramid.add(cap);
+        // Une fine bande d'or sous le pyramidion
+        const band = new THREE.Mesh(pyramidGeo(capHalf + 0.03, CAP_Y - 0.06, CAP_Y, capHalf + 0.004), goldMat);
+        pyramid.add(band);
+        const pyramidMeshes = [casing, cap, band];
+        // L'éclat du soleil sur l'or : une étoile qui brille quand le reflet arrive vers nous
+        const starTex = (() => {
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = 256;
+            const g = cv.getContext('2d');
+            const rg = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+            rg.addColorStop(0, 'rgba(255,250,225,1)');
+            rg.addColorStop(0.12, 'rgba(255,225,150,0.75)');
+            rg.addColorStop(0.4, 'rgba(255,200,110,0.12)');
+            rg.addColorStop(1, 'rgba(255,190,90,0)');
+            g.fillStyle = rg;
+            g.fillRect(0, 0, 256, 256);
+            g.globalCompositeOperation = 'lighter';
+            [[0, 1, 128], [Math.PI / 2, 1, 128], [Math.PI / 4, 0.45, 80], [-Math.PI / 4, 0.45, 80]].forEach(([a, w, len]) => {
+                g.save();
+                g.translate(128, 128);
+                g.rotate(a);
+                const lg = g.createLinearGradient(-len, 0, len, 0);
+                lg.addColorStop(0, 'rgba(255,230,170,0)');
+                lg.addColorStop(0.5, 'rgba(255,250,230,0.9)');
+                lg.addColorStop(1, 'rgba(255,230,170,0)');
+                g.fillStyle = lg;
+                g.fillRect(-len, -2.2 * w, len * 2, 4.4 * w);
+                g.restore();
+            });
+            const tex = new THREE.CanvasTexture(cv);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        })();
+        const glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true, fog: false }));
+        glint.position.set(P.x, 0.04 + P.h + 0.02, P.z);
+        glint.renderOrder = 12;
+        scene.add(glint);
+        // Les normales des quatre faces du pyramidion, pour savoir quand le reflet nous atteint
+        const capNormals = [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([nx, nz]) => V(nx * P.h, P.half, nz * P.h).normalize());
+
+        // --- L'oasis : palmiers dattiers, papyrus, herbes, buissons ---
+        const frondGeo = (() => {
+            // Une palme : une longue feuille qui part vers l'extérieur et retombe, pliée en V
+            const pos = [];
+            const SEGS = 8;
+            const pt = (s, side) => {
+                const x = s * 0.95;
+                const y = 0.22 * s - 0.55 * s * s;
+                const w = 0.17 * Math.sin(Math.PI * Math.min(1, s * 1.15)) * (1 - s * 0.35);
+                return [x, y + Math.abs(side) * w * 0.25, side * w];
+            };
+            for (let i = 0; i < SEGS; i++) {
+                const s0 = i / SEGS;
+                const s1 = (i + 1) / SEGS;
+                const a0 = pt(s0, 0);
+                const a1 = pt(s1, 0);
+                const l0 = pt(s0, -1);
+                const l1 = pt(s1, -1);
+                const r0 = pt(s0, 1);
+                const r1 = pt(s1, 1);
+                pos.push(...a0, ...l0, ...a1, ...a1, ...l0, ...l1, ...a0, ...a1, ...r0, ...r0, ...a1, ...r1);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.computeVertexNormals();
+            return g;
+        })();
+        const frondMats = [flat(0x4f7d34, { side: THREE.DoubleSide }), flat(0x5f8f3c, { side: THREE.DoubleSide }), flat(0x6a9a42, { side: THREE.DoubleSide })];
+        const barkMats = [flat(0x8a6a45), flat(0x75583a)];
+        const dateMat = flat(0xb5652a, { roughness: 0.6 });
+        const palms = [];
+        [[0.75, 1.0, 1.9], [1.3, 0.85, 1.6], [3.3, 1.35, 1.75], [3.75, 2.55, 1.45], [2.35, 3.25, 1.85], [0.7, 2.9, 1.5], [3.0, 0.7, 1.3]].slice(0, phone ? 5 : 7).forEach(([x, z, h], i) => {
+            const g = new THREE.Group();
+            const lean = rr(0, 6.28);
+            const bend = rr(0.15, 0.35);
+            const SEG = 7;
+            let prev = V(0, 0, 0);
+            for (let k = 1; k <= SEG; k++) {
+                const u = k / SEG;
+                const p = V(Math.cos(lean) * bend * u * u, h * u, Math.sin(lean) * bend * u * u);
+                const r = lerp(0.075, 0.05, u);
+                const seg = limb(prev, p, r, r * 0.92, barkMats[k % 2]);
+                g.add(seg);
+                prev = p;
+            }
+            const crown = new THREE.Group();
+            crown.position.copy(prev);
+            g.add(crown);
+            const n = 9;
+            for (let k = 0; k < n; k++) {
+                const f = new THREE.Mesh(frondGeo, frondMats[(k + i) % 3]);
+                f.rotation.order = 'YZX';
+                f.rotation.y = (k / n) * Math.PI * 2 + rr(-0.2, 0.2);
+                f.rotation.z = rr(-0.15, 0.25);
+                f.scale.setScalar(rr(0.85, 1.15));
+                crown.add(f);
+            }
+            for (let k = 0; k < 3; k++) {
+                const a = (k / 3) * Math.PI * 2 + rr(0, 1);
+                const cl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.06, 0).scale(1, 1.5, 1), dateMat);
+                cl.position.set(Math.cos(a) * 0.08, -0.1, Math.sin(a) * 0.08);
+                crown.add(cl);
+            }
+            g.position.set(x, height(x, z) - 0.03, z);
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            scene.add(g);
+            palms.push({ crown, ph: rr(0, 6.28) });
+        });
+        const papyrus = [];
+        for (let tries = 0; tries < 2000 && papyrus.length < (phone ? 28 : 46); tries++) {
+            const x = rr(0.4, 4.2);
+            const z = rr(0.4, 3.8);
+            const d = pondD(x, z);
+            if (d > -0.05 && d < 0.18) papyrus.push({ x, z, y: height(x, z) - 0.02, h: rr(0.35, 0.65), phase: rr(0, 6.28), yaw: rr(0, 6.28) });
+        }
+        const stalkMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.012, 1, 4).translate(0, 0.5, 0), flat(0x6f9a3e), Math.max(1, papyrus.length));
+        const umbelMesh = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 0.1, 7).rotateX(Math.PI).translate(0, 0.02, 0), flat(0x9fbf4f, { side: THREE.DoubleSide }), Math.max(1, papyrus.length));
+        stalkMesh.castShadow = true;
+        scene.add(stalkMesh, umbelMesh);
+        const tufts = [];
+        for (let tries = 0; tries < 3000 && tufts.length < (phone ? 80 : 150); tries++) {
+            const x = rr(-0.2, 4.8);
+            const z = rr(-0.2, 4.8);
+            const d = pondD(x, z);
+            if (d < 0.05 || d > 1.0) continue;
+            tufts.push({ x, z, y: height(x, z) - 0.01, s: rr(0.7, 1.3), yaw: rr(0, 6.28), phase: rr(0, 6.28) });
+        }
+        const tuftMesh = new THREE.InstancedMesh(tuftGeometry(), flat(0xffffff, { side: THREE.DoubleSide }), Math.max(1, tufts.length));
+        tufts.forEach((p, i) => tuftMesh.setColorAt(i, color([0x7a9a3e, 0x8fae4c, 0x6b8c38][Math.floor(hash(p.x * 2.3, p.z) * 3)])));
+        scene.add(tuftMesh);
+        const bushes = [];
+        for (let tries = 0; tries < 800 && bushes.length < (phone ? 7 : 12); tries++) {
+            const x = rr(0, 4.6);
+            const z = rr(0, 4.6);
+            const d = pondD(x, z);
+            if (d < 0.3 || d > 1.0) continue;
+            bushes.push({ x, z, y: height(x, z), s: rr(0.6, 1.1), yaw: rr(0, 6.28) });
+        }
+        instanced(new THREE.IcosahedronGeometry(0.17, 0).scale(1.2, 0.75, 1).translate(0, 0.08, 0), flat(0xffffff), bushes, (p) => color(hash(p.x, p.z) < 0.5 ? 0x5f8a3a : 0x6f9a44), true);
+        // Quelques rochers de grès dans le sable
+        const rocks = [];
+        for (let tries = 0; tries < 800 && rocks.length < 11; tries++) {
+            const x = rr(-4.6, 4.6);
+            const z = rr(-4.6, 4.6);
+            if (footprint(x, z) < 0.8 || pondD(x, z) < 1.2) continue;
+            rocks.push({ x, z, y: height(x, z) - 0.03, s: rr(0.6, 1.5), yaw: rr(0, 6.28), tilt: rr(-0.3, 0.3) });
+        }
+        instanced(new THREE.DodecahedronGeometry(0.14, 0).scale(1.3, 0.7, 1), flat(0xffffff, { roughness: 0.95 }), rocks, (p) => color([0xc79b68, 0xb7895a, 0xd4ab78][Math.floor(hash(p.x, p.z) * 3)]), true);
+
+        // --- La caravane : trois chameaux (un chamelier sur le premier) qui font le tour ---
+        const trail = new THREE.CatmullRomCurve3([
+            [0.9, -0.35], [-0.25, 1.0], [0.25, 3.45], [2.35, 4.2], [4.15, 3.3], [4.1, 0.75], [2.6, -0.45],
+        ].map(([x, z]) => V(x, 0, z)), true, 'centripetal');
+        const trailLen = trail.getLength();
+        const furMats = [flat(0xc8995f), flat(0xb98a54), flat(0xd2a86e)];
+        const darkMat = flat(0x3a2a1f);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x140e0a });
+        function makeCamel(i) {
+            const fur = furMats[i % 3];
+            const g = new THREE.Group();
+            const body = new THREE.Group();
+            g.add(body);
+            body.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1).scale(0.75, 0.7, 1.35), fur));
+            const hump = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 1).scale(1, 0.95, 1.25), fur);
+            hump.position.set(0, 0.15, -0.02);
+            body.add(hump);
+            // Le cou pivote à l'épaule, la tête au bout
+            const neck = new THREE.Group();
+            neck.position.set(0, 0.04, 0.22);
+            body.add(neck);
+            neck.add(limb(V(0, 0, 0), V(0, 0.26, 0.2), 0.06, 0.04, fur));
+            const head = new THREE.Group();
+            head.position.set(0, 0.26, 0.2);
+            neck.add(head);
+            head.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0).scale(0.75, 0.72, 1.6).translate(0, 0, 0.07), fur));
+            [-1, 1].forEach((sd) => {
+                const ear = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.05, 4), fur);
+                ear.position.set(sd * 0.035, 0.05, -0.01);
+                head.add(ear);
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.011, 5, 4), eyeMat);
+                eye.position.set(sd * 0.042, 0.022, 0.05);
+                head.add(eye);
+            });
+            const legs = [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sz]) => {
+                const hip = new THREE.Group();
+                hip.position.set(sx * 0.085, -0.06, sz * 0.19);
+                hip.add(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.03, 0.44, 5).translate(0, -0.22, 0), fur));
+                hip.add(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 6).translate(0, -0.44, 0.01), darkMat));
+                body.add(hip);
+                // L'amble : les deux pattes d'un même côté avancent ensemble
+                return { hip, phase: sx > 0 ? 0 : Math.PI };
+            });
+            const tail = limb(V(0, 0.02, -0.26), V(0, -0.12, -0.3), 0.012, 0.008, fur);
+            body.add(tail);
+            // Le chargement : une couverture rayée, des sacs sur les flancs
+            const blanket = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.3), flat(i === 0 ? 0xa3322b : 0x2f5d8c));
+            blanket.position.set(0, 0.24, -0.02);
+            body.add(blanket);
+            if (i > 0) {
+                [-1, 1].forEach((sd) => {
+                    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.16), flat(i % 2 ? 0xd9c9a2 : 0x8c6d4a));
+                    bag.position.set(sd * 0.19, 0.08, -0.02);
+                    body.add(bag);
+                });
+            } else {
+                // Le chamelier : une tunique blanche, un foulard bleu
+                const rider = new THREE.Group();
+                rider.position.set(0, 0.26, 0.0);
+                rider.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.2, 7).translate(0, 0.1, 0), flat(0xeee6d6)));
+                const face = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), flat(0x9c6b48));
+                face.position.y = 0.25;
+                rider.add(face);
+                const scarf = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.62), flat(0x3d5f8a));
+                scarf.position.y = 0.26;
+                rider.add(scarf);
+                [-1, 1].forEach((sd) => rider.add(limb(V(sd * 0.055, 0.17, 0), V(sd * 0.05, 0.08, 0.1), 0.016, 0.014, flat(0xeee6d6))));
+                [-1, 1].forEach((sd) => rider.add(limb(V(sd * 0.06, 0.02, 0.02), V(sd * 0.12, -0.12, 0.06), 0.018, 0.015, flat(0xeee6d6))));
+                body.add(rider);
+            }
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            g.scale.setScalar(0.8);
+            scene.add(g);
+            return { g, body, neck, head, legs, tail, pos: V(0, 0, 0), heading: 0, gait: 0, move: 0, ph: rr(0, 6.28), lag: i * 0.75 };
+        }
+        const camels = [0, 1, 2].map(makeCamel);
+        const caravan = { s: rr(0, trailLen), state: 'walk', until: rr(8, 12), look: 0 };
+        const v0 = new THREE.Vector3();
+        camels.forEach((c) => {
+            const u = (((caravan.s - c.lag) / trailLen) % 1 + 1) % 1;
+            trail.getPointAt(u, c.pos);
+            trail.getTangentAt(u, v0);
+            c.heading = Math.atan2(v0.x, v0.z);
+        });
+
+        // --- Des faucons qui planent en grands cercles ---
+        const birds = [];
+        for (let i = 0; i < (phone ? 2 : 3); i++) {
+            const g = new THREE.Group();
+            const mat = flat(0x6b4b2e);
+            g.add(new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.15, 5).rotateX(Math.PI / 2), mat));
+            const wings = [-1, 1].map((sd) => {
+                const piv = new THREE.Group();
+                piv.add(new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.06).rotateX(-Math.PI / 2).translate(sd * 0.1, 0, -0.005), flat(0x7d5a38, { side: THREE.DoubleSide })));
+                g.add(piv);
+                return { piv, sd };
+            });
+            g.rotation.order = 'YXZ';
+            scene.add(g);
+            birds.push({ g, wings, cx: rr(-2, 1), cz: rr(-2, 1), r: rr(2.2, 3.4), h: rr(3.8, 4.8), w: rr(0.22, 0.32) * (i % 2 ? 1 : -1), a: rr(0, 6.28), ph: rr(0, 6.28) });
+        }
+
+        // --- Le vent soulève un peu de sable sur les crêtes ---
+        const pointScale = { value: 1 };
+        const WIND = V(Math.cos(0.35), 0, Math.sin(0.35));
+        const sand = particles(phone ? 90 : 160);
+        sand.items.forEach((p) => resetGrain(p, true));
+        function resetGrain(p, anywhere) {
+            // On repart d'une crête de dune, du côté d'où vient le vent
+            const d = DUNES[Math.floor(rand() * DUNES.length)];
+            p.x = d[0] + rr(-1.2, 0.6);
+            p.z = d[1] + rr(-1.2, 1.2);
+            p.age = anywhere ? rr(0, 1) : 0;
+            p.life = rr(2.5, 4.5);
+            p.sp = rr(0.6, 1.2);
+            p.ph = rr(0, 6.28);
+        }
+
+        const rings = [];
+        const ringGeo = new THREE.RingGeometry(0.9, 1, 40);
+        ringGeo.rotateX(-Math.PI / 2);
+        for (let i = 0; i < 10; i++) {
+            const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+            m.visible = false;
+            m.renderOrder = 5;
+            scene.add(m);
+            rings.push({ m, t: 1, max: 0.5, dur: 1 });
+        }
+        function ripple(x, z, max = 0.45, dur = 1.4, delay = 0) {
+            const r = rings.find(k => k.t >= 1) || rings[0];
+            Object.assign(r, { t: -delay / dur, max, dur });
+            r.m.position.set(x, WATER + 0.03, z);
+        }
+
+        // --- Caméra : au départ, près de l'oasis, la pyramide derrière les palmiers ---
+        const target = V(0.4, 0.75, 0.2);
+        const HOME_EL = 0.36;
+        let az = 0.6;
+        let el = HOME_EL;
+        let zoom = 0.45;
+        let fit = 26;
+        let lastInput = -10;
+        let touched = false;
+        const pointers = new Map();
+        let pinch = 0;
+        let downAt = null;
+        const canvas = renderer.domElement;
+        const spread = () => {
+            const [a, b] = [...pointers.values()];
+            return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        };
+        const onDown = (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 1) downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+            if (pointers.size === 2) pinch = spread();
+            lastInput = clock;
+            touched = true;
+        };
+        const onMove = (e) => {
+            const p = pointers.get(e.pointerId);
+            if (!p) return;
+            const dx = e.clientX - p.x;
+            const dy = e.clientY - p.y;
+            p.x = e.clientX;
+            p.y = e.clientY;
+            if (pointers.size === 1) {
+                az -= dx * 0.0065;
+                el = clamp(el + dy * 0.0045, 0.05, 1.2);
+            } else if (pointers.size === 2) {
+                const s = spread();
+                if (pinch) zoom = clamp(zoom * pinch / s, 0.25, 1.5);
+                pinch = s;
+            }
+            lastInput = clock;
+        };
+        const onUp = (e) => {
+            pointers.delete(e.pointerId);
+            pinch = 0;
+            if (downAt && pointers.size === 0) {
+                const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+                if (moved < 7 && performance.now() - downAt.t < 400) tap(e);
+            }
+            downAt = null;
+        };
+        const onWheel = (e) => {
+            e.preventDefault();
+            zoom = clamp(zoom * Math.exp(e.deltaY * 0.0012), 0.25, 1.5);
+            lastInput = clock;
+        };
+        canvas.addEventListener('pointerdown', onDown);
+        canvas.addEventListener('pointermove', onMove);
+        canvas.addEventListener('pointerup', onUp);
+        canvas.addEventListener('pointercancel', onUp);
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+
+        // Toucher la pyramide : la pointe s'embrase. Les chameaux : ils s'arrêtent et regardent. L'eau : des ronds.
+        const raycaster = new THREE.Raycaster();
+        const ndc = new THREE.Vector2();
+        const camelTargets = [];
+        camels.forEach((c) => c.g.traverse((m) => { if (m.isMesh) camelTargets.push(m); }));
+        let flare = 0;
+        function tap(e) {
+            const r = canvas.getBoundingClientRect();
+            ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+            raycaster.setFromCamera(ndc, camera);
+            if (raycaster.intersectObjects(pyramidMeshes, false).length) {
+                flare = 1;
+                return;
+            }
+            if (raycaster.intersectObjects(camelTargets, false).length) {
+                caravan.look = 3;
+                return;
+            }
+            const w = raycaster.intersectObject(water)[0];
+            if (!w || height(w.point.x, w.point.z) > WATER - 0.02) return;
+            ripple(w.point.x, w.point.z, 0.5, 1.5);
+            ripple(w.point.x, w.point.z, 0.32, 1.3, 0.22);
+        }
+
+        function resize() {
+            const w = stage.clientWidth || 1;
+            const h = stage.clientHeight || 1;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+            fit = Math.max(14 / tanV / 2, (camera.aspect < 0.8 ? 14 : 15.6) / (tanV * camera.aspect) / 2);
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.62 : 0.45;
+            camera.updateProjectionMatrix();
+            pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
+        }
+        const ro = new ResizeObserver(resize);
+        ro.observe(stage);
+        resize();
+
+        // --- Boucle ---
+        const m4 = new THREE.Matrix4();
+        const q = new THREE.Quaternion();
+        const qYaw = new THREE.Quaternion();
+        const v3 = new THREE.Vector3();
+        const v4 = new THREE.Vector3();
+        const sc = new THREE.Vector3();
+        const up = new THREE.Vector3(0, 1, 0);
+        const windAxis = new THREE.Vector3(-Math.sin(0.35), 0, Math.cos(0.35));
+        let clock = 0;
+        let last = performance.now();
+        let raf = 0;
+        let alive = true;
+
+        function frame(now) {
+            if (!alive) return;
+            const real = Math.min(0.25, (now - last) / 1000);
+            const dt = Math.min(0.05, real);
+            last = now;
+            clock += dt;
+            const t = clock;
+            uTime.value = t;
+
+            // Au repos : tour lent, en revenant doucement à la hauteur de départ
+            if (!still && !pointers.size) {
+                const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
+                az += 0.05 * dt * idle;
+                el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
+            }
+            const dist = fit * zoom;
+            camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
+            camera.lookAt(target);
+            scene.fog.near = dist - 2;
+            scene.fog.far = dist + 28;
+
+            // L'eau de l'oasis frissonne
+            for (const i of waveIdx) {
+                const x = wp.getX(i);
+                const z = wp.getZ(i);
+                wp.setY(i, 0.012 * Math.sin(x * 3.1 + t * 1.4) * Math.cos(z * 2.6 - t * 1.1) + 0.006 * Math.sin((x + z) * 6 + t * 2.3));
+            }
+            wp.needsUpdate = true;
+            waterGeo.computeVertexNormals();
+
+            // L'éclat de l'or : fort quand le reflet du soleil sur une face du pyramidion arrive vers nous
+            flare = Math.max(0, flare - dt * 0.7);
+            v3.copy(camera.position).sub(glint.position).normalize();
+            let best = 0;
+            for (const n of capNormals) {
+                // Seules les faces au soleil renvoient un éclat : le rayon réfléchi part dans cette direction
+                if (sunDir.dot(n) <= 0) continue;
+                v4.copy(sunDir).negate().reflect(n);
+                best = Math.max(best, v4.dot(v3));
+            }
+            const shine = Math.pow(Math.max(0, best), 10);
+            const twinkle = 0.85 + 0.15 * Math.sin(t * 5.3) * Math.sin(t * 3.1);
+            const gs = (0.55 + shine * 1.8 + flare * 2.2) * twinkle;
+            glint.scale.setScalar(gs);
+            glint.material.opacity = clamp(0.45 + shine * 0.8 + flare, 0, 1);
+            goldMat.emissiveIntensity = 0.4 + shine * 0.6 + flare * 1.2;
+
+            // Palmiers et papyrus dans le vent chaud
+            palms.forEach((p) => {
+                p.crown.rotation.x = Math.sin(t * 1.3 + p.ph) * 0.05;
+                p.crown.rotation.z = Math.sin(t * 1.7 + p.ph * 2) * 0.06;
+            });
+            papyrus.forEach((p, i) => {
+                q.setFromAxisAngle(windAxis, Math.sin(t * 1.6 + p.phase) * 0.08);
+                m4.compose(v3.set(p.x, p.y, p.z), q, sc.set(1, p.h, 1));
+                stalkMesh.setMatrixAt(i, m4);
+                v4.set(0, p.h, 0).applyQuaternion(q).add(v3);
+                qYaw.setFromAxisAngle(up, p.yaw);
+                m4.compose(v4, q.multiply(qYaw), sc.setScalar(1));
+                umbelMesh.setMatrixAt(i, m4);
+            });
+            stalkMesh.instanceMatrix.needsUpdate = true;
+            umbelMesh.instanceMatrix.needsUpdate = true;
+            tufts.forEach((p, i) => {
+                q.setFromAxisAngle(windAxis, Math.sin(t * 1.8 + p.phase) * 0.12);
+                qYaw.setFromAxisAngle(up, p.yaw);
+                q.multiply(qYaw);
+                m4.compose(v3.set(p.x, p.y, p.z), q, sc.setScalar(p.s));
+                tuftMesh.setMatrixAt(i, m4);
+            });
+            tuftMesh.instanceMatrix.needsUpdate = true;
+
+            // La caravane avance, fait une pause de temps en temps ; touchée, elle s'arrête et regarde
+            caravan.look = Math.max(0, caravan.look - dt);
+            if (t > caravan.until) {
+                caravan.state = caravan.state === 'walk' ? 'rest' : 'walk';
+                caravan.until = t + (caravan.state === 'walk' ? rr(9, 14) : rr(3, 5));
+            }
+            const walking = caravan.state === 'walk' && caravan.look <= 0;
+            if (walking) caravan.s += dt * 0.2;
+            camels.forEach((c, i) => {
+                const u = (((caravan.s - c.lag) / trailLen) % 1 + 1) % 1;
+                trail.getPointAt(u, v4);
+                trail.getTangentAt(u, v3);
+                c.pos.lerp(v4, Math.min(1, dt * 5));
+                const want = Math.atan2(v3.x, v3.z);
+                c.heading += Math.atan2(Math.sin(want - c.heading), Math.cos(want - c.heading)) * Math.min(1, dt * 3);
+                c.move += ((walking ? 1 : 0) - c.move) * Math.min(1, dt * 3);
+                c.gait += dt * 5.5 * c.move;
+                const swing = c.move * 0.4;
+                c.legs.forEach((l) => { l.hip.rotation.x = Math.sin(c.gait + l.phase) * swing; });
+                // Le cou se balance en marchant ; au repos ou surpris, la tête se lève et tourne
+                const alert = caravan.look > 0 ? 1 : 0;
+                c.neck.rotation.x = Math.sin(c.gait * 2) * 0.06 * c.move - alert * 0.35 + (1 - c.move) * (1 - alert) * (0.25 + Math.sin(t * 0.7 + c.ph) * 0.1);
+                c.head.rotation.y = (1 - c.move) * Math.sin(t * 0.5 + c.ph) * 0.5;
+                c.tail.rotation.z = Math.sin(t * 3 + i) * 0.3;
+                const ground = height(c.pos.x, c.pos.z);
+                c.g.position.set(c.pos.x, ground + 0.5 * 0.8 + Math.abs(Math.sin(c.gait)) * 0.015 * c.move, c.pos.z);
+                c.g.rotation.y = c.heading;
+                c.body.rotation.z = Math.sin(c.gait) * 0.05 * c.move;
+            });
+
+            // Faucons
+            birds.forEach((b) => {
+                b.a += b.w * dt;
+                b.g.position.set(b.cx + Math.cos(b.a) * b.r, b.h + Math.sin(t * 0.5 + b.ph) * 0.2, b.cz + Math.sin(b.a) * b.r);
+                b.g.rotation.y = Math.atan2(-Math.sin(b.a) * Math.sign(b.w), Math.cos(b.a) * Math.sign(b.w));
+                b.g.rotation.z = -Math.sign(b.w) * 0.3;
+                const flap = Math.sin(t * 0.6 + b.ph) > 0.6 ? Math.sin(t * 12 + b.ph) * 0.6 : 0.08;
+                b.wings.forEach(({ piv, sd }) => { piv.rotation.z = sd * flap; });
+            });
+
+            // Sable soufflé par le vent
+            sand.items.forEach((p, i) => {
+                p.age += real / p.life;
+                if (p.age >= 1) resetGrain(p, false);
+                p.x += WIND.x * p.sp * dt;
+                p.z += WIND.z * p.sp * dt;
+                if (Math.abs(p.x) > HALF - 0.05 || Math.abs(p.z) > HALF - 0.05) resetGrain(p, false);
+                const k = p.age;
+                const y = height(p.x, p.z) + 0.04 + Math.sin(k * Math.PI) * 0.12 + Math.sin(t * 6 + p.ph) * 0.01;
+                sand.set(i, p.x, y, p.z, 0.035, [0.95, 0.85, 0.66], Math.sin(k * Math.PI) * 0.55);
+            });
+            sand.update();
+
+            rings.forEach((r) => {
+                if (r.t >= 1) {
+                    r.m.visible = false;
+                    return;
+                }
+                r.t += dt / r.dur;
+                if (r.t < 0) return;
+                const k = Math.min(1, r.t);
+                r.m.visible = true;
+                r.m.scale.setScalar(0.04 + r.max * easeOut(k));
+                r.m.material.opacity = (1 - k) * 0.55;
+            });
+
+            renderer.render(scene, camera);
+            raf = requestAnimationFrame(frame);
+        }
+        raf = requestAnimationFrame(frame);
+
+        return {
+            dispose() {
+                alive = false;
+                cancelAnimationFrame(raf);
+                ro.disconnect();
+                canvas.removeEventListener('wheel', onWheel);
+                scene.traverse((o) => {
+                    if (o.geometry) o.geometry.dispose();
+                    if (o.material) {
+                        [].concat(o.material).forEach((m) => {
+                            Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose(); });
+                            m.dispose();
+                        });
+                    }
+                });
+                envMap.dispose();
+                goldEnv.dispose();
+                renderer.dispose();
+                canvas.remove();
+            },
+        };
+
+        // ---------------- Outils de la scène ----------------
+        function instanced(geo, mat, list, tint, shadow) {
+            const m = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));
+            m.count = list.length;
+            const rot = new THREE.Quaternion();
+            const yAxis = new THREE.Vector3(0, 1, 0);
+            const xAxis = new THREE.Vector3(1, 0, 0);
+            list.forEach((p, i) => {
+                rot.setFromAxisAngle(yAxis, p.yaw || 0);
+                if (p.tilt) rot.multiply(new THREE.Quaternion().setFromAxisAngle(xAxis, p.tilt));
+                m.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), rot, new THREE.Vector3(p.s, p.s, p.s)));
+                if (tint) m.setColorAt(i, tint(p, i));
+            });
+            m.castShadow = !!shadow;
+            m.receiveShadow = true;
+            scene.add(m);
+            return m;
+        }
+
+        function limb(a, b, r1, r2, mat) {
+            const dir = new THREE.Vector3().subVectors(b, a);
+            const len = dir.length();
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 7), mat);
+            m.position.copy(a).addScaledVector(dir, 0.5);
+            m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+            return m;
+        }
+
+        function tuftGeometry() {
+            const pos = [];
+            for (let k = 0; k < 5; k++) {
+                const a = k * 1.257 + 0.3;
+                const lean = 0.035 + (k % 2) * 0.02;
+                const h = 0.13 + (k % 3) * 0.035;
+                const cx = Math.cos(a);
+                const cz = Math.sin(a);
+                const w = 0.018;
+                pos.push(-cz * w, 0, cx * w, cz * w, 0, -cx * w, cx * lean, h, cz * lean);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.computeVertexNormals();
+            return g;
+        }
+
+        function strip(pts, uv, cols, normal, mat, shadow) {
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+            const count = pts.length / 3;
+            const nrm = [];
+            for (let i = 0; i < count; i++) nrm.push(...normal);
+            g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+            if (uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+            if (cols) g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+            const idx = [];
+            for (let i = 0; i < count / 2 - 1; i++) {
+                const a = i * 2;
+                idx.push(a + 1, a + 3, a + 2, a + 1, a + 2, a);
+            }
+            g.setIndex(idx);
+            const m = new THREE.Mesh(g, mat);
+            m.receiveShadow = shadow;
+            return m;
+        }
+
+        // Les couches de grès sur les côtés : ocre, rose, rouille, avec des veines claires
+        function strataTexture() {
+            const W = 1024;
+            const H = 512;
+            const cv = document.createElement('canvas');
+            cv.width = W;
+            cv.height = H;
+            const g = cv.getContext('2d');
+            const yPx = (y) => (1 - (y - BASE) / (1.2 - BASE)) * H;
+            const STOPS = [[1.2, [222, 190, 140]], [0.2, [214, 178, 126]], [-0.5, [201, 150, 102]], [-1.1, [214, 168, 120]], [-1.7, [178, 116, 78]], [-2.3, [196, 138, 94]], [BASE, [150, 94, 62]]];
+            for (let x = 0; x < W; x += 4) {
+                const u = (x / W) * Math.PI * 2;
+                const grad = g.createLinearGradient(0, 0, 0, H);
+                STOPS.forEach(([y, c], k) => {
+                    const off = k && k < STOPS.length - 1 ? Math.sin(u * 2 + k) * 8 + Math.sin(u * 5 + k * 2) * 3 : 0;
+                    grad.addColorStop(clamp((yPx(y) + off) / H, 0, 1), `rgb(${c[0]},${c[1]},${c[2]})`);
+                });
+                g.fillStyle = grad;
+                g.fillRect(x, 0, 4, H);
+            }
+            const rnd = mulberry32(9);
+            // Fines veines claires, un peu ondulées
+            for (let k = 0; k < 9; k++) {
+                const y0 = yPx(rnd() * (0.1 - BASE) + BASE);
+                g.strokeStyle = `rgba(250,232,200,${0.18 + rnd() * 0.18})`;
+                g.lineWidth = 1 + rnd() * 2;
+                g.beginPath();
+                for (let x = 0; x <= W; x += 16) {
+                    const y = y0 + Math.sin((x / W) * Math.PI * 4 + k) * 4;
+                    if (x) g.lineTo(x, y); else g.moveTo(x, y);
+                }
+                g.stroke();
+            }
+            for (let i = 0; i < 1400; i++) {
+                const x = rnd() * W;
+                const y = rnd() * H;
+                g.fillStyle = `rgba(${rnd() < 0.5 ? '255,240,215' : '90,50,30'},${0.05 + rnd() * 0.08})`;
+                g.fillRect(x, y, 1.5 + rnd() * 1.5, 1 + rnd());
+            }
+            const tex = new THREE.CanvasTexture(cv);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 4;
+            return tex;
+        }
+
+        function particles(count) {
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+            const size = new Float32Array(count);
+            const alpha = new Float32Array(count);
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+            g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+            g.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+            const m = new THREE.ShaderMaterial({
+                uniforms: { uScale: pointScale },
+                vertexShader: `attribute vec3 aColor;
+attribute float aSize;
+attribute float aAlpha;
+uniform float uScale;
+varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = aSize * uScale / -mv.z;
+    vColor = aColor;
+    vAlpha = aAlpha;
+}`,
+                fragmentShader: `varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    float r = length(gl_PointCoord - 0.5);
+    float a = smoothstep(0.5, 0.05, r) * vAlpha;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(vColor, a);
+}`,
+                transparent: true,
+                depthWrite: false,
+            });
+            const pts = new THREE.Points(g, m);
+            pts.frustumCulled = false;
+            pts.renderOrder = 9;
             scene.add(pts);
             const items = Array.from({ length: count }, () => ({}));
             return {
