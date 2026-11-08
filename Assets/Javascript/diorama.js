@@ -47,6 +47,8 @@
         forestHelp: touch() ? 'Drag to turn · pinch to zoom · tap the animals or the pond' : 'Drag to turn · scroll to zoom · click the animals or the pond',
         boatTitle: 'Lost at sea.',
         boatHelp: touch() ? 'Drag to turn · pinch to zoom · tap the boat, the water or the sky' : 'Drag to turn · scroll to zoom · click the boat, the water or the sky',
+        lighthouseTitle: 'The lighthouse in the storm.',
+        lighthouseHelp: touch() ? 'Drag to turn · pinch to zoom · tap the lighthouse, the monsters or the water' : 'Drag to turn · scroll to zoom · click the lighthouse, the monsters or the water',
     } : {
         open: 'Afficher les dioramas',
         dialog: 'Dioramas',
@@ -74,12 +76,15 @@
         forestHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche les animaux ou l\'étang' : 'Glisse pour tourner · molette pour zoomer · clique sur les animaux ou l\'étang',
         boatTitle: 'Perdu au large.',
         boatHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le bateau, l\'eau ou le ciel' : 'Glisse pour tourner · molette pour zoomer · clique sur le bateau, l\'eau ou le ciel',
+        lighthouseTitle: 'Le phare dans la tempête.',
+        lighthouseHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le phare, les monstres ou l\'eau' : 'Glisse pour tourner · molette pour zoomer · clique sur le phare, les monstres ou l\'eau',
     });
 
     // Les dioramas, dans l'ordre des flèches
     const SCENES = [
         { id: 'forest', build: (THREE, stage) => buildForest(THREE, stage) },
         { id: 'boat', build: (THREE, stage) => buildBoat(THREE, stage) },
+        { id: 'lighthouse', build: (THREE, stage) => buildLighthouse(THREE, stage) },
     ];
 
     let egg;
@@ -113,6 +118,7 @@
                 <div class="diorama-stage">
                     <div class="diorama-sky diorama-sky--day"></div>
                     <div class="diorama-sky diorama-sky--boat"></div>
+                    <div class="diorama-sky diorama-sky--storm"></div>
                     <p class="diorama-loading">${t.loading}</p>
                 </div>
                 <div class="diorama-side">
@@ -3346,6 +3352,1357 @@ void main() {
             return m;
         }
 
+        function mergeGeos(list) {
+            const pos = [];
+            list.forEach((g) => {
+                const n = g.index ? g.toNonIndexed() : g;
+                pos.push(...n.attributes.position.array);
+            });
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.computeVertexNormals();
+            return g;
+        }
+
+        function particles(count, additive, deep, order) {
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+            const size = new Float32Array(count);
+            const alpha = new Float32Array(count);
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+            g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+            g.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+            const m = new THREE.ShaderMaterial({
+                uniforms: { uScale: pointScale },
+                vertexShader: `attribute vec3 aColor;
+attribute float aSize;
+attribute float aAlpha;
+uniform float uScale;
+varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = aSize * uScale / -mv.z;
+    vColor = aColor;
+    vAlpha = aAlpha;
+}`,
+                fragmentShader: `varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    float r = length(gl_PointCoord - 0.5);
+    float a = smoothstep(0.5, 0.05, r) * vAlpha;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(vColor, a);
+}`,
+                transparent: true,
+                depthWrite: false,
+                blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+            });
+            if (deep) gate(m);
+            const pts = new THREE.Points(g, m);
+            pts.frustumCulled = false;
+            pts.renderOrder = order;
+            scene.add(pts);
+            const items = Array.from({ length: count }, () => ({}));
+            return {
+                items,
+                set(i, x, y, z, s, c, a) {
+                    pos[i * 3] = x;
+                    pos[i * 3 + 1] = y;
+                    pos[i * 3 + 2] = z;
+                    col[i * 3] = c[0];
+                    col[i * 3 + 1] = c[1];
+                    col[i * 3 + 2] = c[2];
+                    size[i] = s;
+                    alpha[i] = a;
+                },
+                update() {
+                    g.attributes.position.needsUpdate = true;
+                    g.attributes.aColor.needsUpdate = true;
+                    g.attributes.aSize.needsUpdate = true;
+                    g.attributes.aAlpha.needsUpdate = true;
+                },
+            };
+        }
+
+        function radialTexture(inner, outer) {
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = 256;
+            const g = cv.getContext('2d');
+            const grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+            grad.addColorStop(0, inner);
+            grad.addColorStop(1, outer);
+            g.fillStyle = grad;
+            g.fillRect(0, 0, 256, 256);
+            const tex = new THREE.CanvasTexture(cv);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Troisième diorama : un phare sur son rocher, en pleine tempête. Les vagues
+    // se brisent sur les rochers, le faisceau balaie la mer et la brume légère ;
+    // sous l'eau, un serpent de mer tourne autour du rocher et, tout au fond,
+    // une créature géante déploie ses tentacules (l'une d'elles remonte parfois).
+    // ---------------------------------------------------------------------
+    function buildLighthouse(THREE, stage) {
+        const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
+        const S = 10;
+        const HALF = S / 2;
+        const BASE = -3.3;
+        const ABYSS = -70;
+        const rand = mulberry32(11);
+        const rr = (a, b) => a + (b - a) * rand();
+        const color = (hex) => new THREE.Color(hex);
+        const V = (x, y, z) => new THREE.Vector3(x, y, z);
+        const flat = (hex, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, flatShading: true, roughness: 0.85 }, extra || {}));
+        const tmp = new THREE.Color();
+        const smooth = (u) => u * u * (3 - 2 * u);
+        const still = calm();
+        // Le rocher du phare
+        const I = V(-0.9, 0, -0.7);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.75 : 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x000000, 0);
+        renderer.domElement.className = 'diorama-canvas';
+        stage.appendChild(renderer.domElement);
+        const scene = new THREE.Scene();
+        // Un brouillard léger, couleur du ciel d'orage : il n'avale que le lointain
+        scene.fog = new THREE.Fog(0x6a4d3d, 20, 70);
+        const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 400);
+        const uTime = { value: 0 };
+        const uFlash = { value: 0 };
+
+        // --- Fin de journée d'orage : une lumière chaude qui perce derrière les nuages ---
+        const HEMI = 1.0;
+        const hemi = new THREE.HemisphereLight(0xa8917e, 0x141c1e, HEMI);
+        scene.add(hemi);
+        const key = new THREE.DirectionalLight(0xe3ad80, 1.15);
+        key.position.set(-7, 7, -6);
+        key.castShadow = true;
+        key.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
+        Object.assign(key.shadow.camera, { left: -8, right: 8, top: 9, bottom: -8, near: 1, far: 40 });
+        key.shadow.bias = -0.0006;
+        key.shadow.normalBias = 0.02;
+        scene.add(key);
+        const fill = new THREE.DirectionalLight(0x9fb2c0, 0.5);
+        fill.position.set(6, 4, 7);
+        scene.add(fill);
+        const flashLight = new THREE.DirectionalLight(0xdfe6ff, 0);
+        flashLight.position.set(-3, 10, -7);
+        scene.add(flashLight);
+
+        // --- La houle : plus forte que pour le bateau, aplatie juste au bord du bloc ---
+        const WAVES = [
+            [0.94, 0.34, 1.2, 1.25, 0.2],
+            [0.25, 0.97, 1.8, 1.55, 0.12],
+            [-0.6, 0.8, 2.8, 1.95, 0.07],
+            [0.83, -0.56, 4.6, 2.5, 0.035],
+            [-0.3, -0.95, 7.5, 3.1, 0.018],
+        ];
+        const EDGE = 0.6;
+        const wave = (x, z, t) => {
+            let h = 0;
+            for (const [dx, dz, k, w, a] of WAVES) h += a * (Math.exp(Math.sin((dx * x + dz * z) * k - w * t) - 1) - 0.43);
+            return h * smooth(clamp((HALF - Math.max(Math.abs(x), Math.abs(z))) / EDGE, 0, 1));
+        };
+        const edgeGLSL = `smoothstep(0.0, 1.0, clamp((${HALF.toFixed(2)} - max(abs(p.x), abs(p.y))) / ${EDGE.toFixed(2)}, 0.0, 1.0))`;
+        const WAVE_GLSL = `uniform float uTime;
+varying vec2 vXZ;
+float waveH(vec2 p) {
+    float h = 0.0;
+${WAVES.map(([dx, dz, k, w, a]) => `    h += ${a.toFixed(4)} * (exp(sin(dot(p, vec2(${dx.toFixed(3)}, ${dz.toFixed(3)})) * ${k.toFixed(3)} - ${w.toFixed(3)} * uTime) - 1.0) - 0.43);`).join('\n')}
+    return h * ${edgeGLSL};
+}
+vec3 waveN(vec2 p) {
+    vec2 g = vec2(0.0);
+    float th;
+${WAVES.map(([dx, dz, k, w, a]) => `    th = dot(p, vec2(${dx.toFixed(3)}, ${dz.toFixed(3)})) * ${k.toFixed(3)} - ${w.toFixed(3)} * uTime;
+    g += ${(a * k).toFixed(4)} * exp(sin(th) - 1.0) * cos(th) * vec2(${dx.toFixed(3)}, ${dz.toFixed(3)});`).join('\n')}
+    g *= ${edgeGLSL};
+    return normalize(vec3(-g.x, 1.0, -g.y));
+}
+`;
+
+        // --- La profondeur : une eau verte qui avale les couleurs en descendant ---
+        const FOG_GLSL = `uniform float uFlash;
+vec3 waterFog(vec3 col, float y) {
+    float d = max(0.0, -y);
+    float f = 1.0 - exp(-d * 0.15);
+    vec3 fogc = mix(vec3(0.07, 0.22, 0.19), vec3(0.008, 0.028, 0.035), clamp(d / 24.0, 0.0, 1.0)) * (1.0 + uFlash * 0.7);
+    return mix(col, fogc, f);
+}
+`;
+        const underwater = (mat) => {
+            mat.onBeforeCompile = (sh) => {
+                sh.uniforms.uFlash = uFlash;
+                sh.vertexShader = 'varying vec3 vWater;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+vec4 wW = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+wW = instanceMatrix * wW;
+#endif
+vWater = (modelMatrix * wW).xyz;`);
+                sh.fragmentShader = 'varying vec3 vWater;\n' + FOG_GLSL + sh.fragmentShader.replace('#include <dithering_fragment>', 'gl_FragColor.rgb = waterFog(gl_FragColor.rgb, vWater.y);\n#include <dithering_fragment>');
+            };
+            mat.customProgramCacheKey = () => 'underwater-lighthouse';
+            return mat;
+        };
+        // Ce qui n'existe que « vu à travers le bloc » : le puits sans fond et ce qui y vit
+        const gate = (mat, func) => {
+            mat.stencilWrite = true;
+            mat.stencilRef = 1;
+            mat.stencilFunc = func === undefined ? THREE.EqualStencilFunc : func;
+            mat.stencilFail = THREE.KeepStencilOp;
+            mat.stencilZFail = THREE.KeepStencilOp;
+            mat.stencilZPass = THREE.KeepStencilOp;
+            return mat;
+        };
+
+        // --- Les parois du puits : un dégradé vert, avec des reflets qui s'éteignent en descendant ---
+        const wellMat = (side, func) => {
+            const m = new THREE.ShaderMaterial({
+                uniforms: { uTime, uFlash },
+                vertexShader: `varying vec3 vW;
+varying vec3 vN;
+void main() {
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vW = w.xyz;
+    vN = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * viewMatrix * w;
+}`,
+                fragmentShader: `uniform float uTime;
+varying vec3 vW;
+varying vec3 vN;
+${FOG_GLSL}
+float caustic(vec2 p, float t) {
+    vec2 q = p;
+    float c = 0.0;
+    for (int n = 0; n < 3; n++) {
+        float fn = float(n);
+        q += 0.55 * vec2(sin(q.y * 1.35 + t + fn * 1.7), cos(q.x * 1.15 - t * 0.85 + fn * 2.3));
+        c += abs(sin(q.x * 1.9) + sin(q.y * 1.9));
+    }
+    return pow(clamp(1.0 - c / 3.0, 0.0, 1.0), 3.0);
+}
+void main() {
+    float d = max(0.0, -vW.y);
+    vec2 uv = abs(vN.y) > 0.5 ? vW.xz : vec2(abs(vN.x) > 0.5 ? vW.z : vW.x, vW.y);
+    float shade = 0.82 + 0.18 * dot(normalize(vN), normalize(vec3(-0.5, 0.0, 0.8)));
+    vec3 col = vec3(0.09, 0.25, 0.22) * shade;
+    col += vec3(0.5, 0.75, 0.62) * caustic(uv * 1.2, uTime * 0.6) * 0.3 * exp(-d * 0.45);
+    col *= 1.0 - 0.1 * smoothstep(0.9, 1.0, fract(vW.y * 0.5));
+    gl_FragColor = vec4(waterFog(col, vW.y), 1.0);
+}`,
+                side,
+            });
+            if (func !== undefined) gate(m, func);
+            return m;
+        };
+        const wall = (h, yc, mat, order) => {
+            [[0, HALF, 0], [HALF, 0, Math.PI / 2], [0, -HALF, Math.PI], [-HALF, 0, -Math.PI / 2]].forEach(([x, z, ry]) => {
+                const m = new THREE.Mesh(new THREE.PlaneGeometry(S, h).rotateY(ry), mat);
+                m.position.set(x, yc, z);
+                m.renderOrder = order;
+                scene.add(m);
+            });
+        };
+        wall(-BASE, BASE / 2, wellMat(THREE.BackSide), 0);
+        wall(BASE - ABYSS, (BASE + ABYSS) / 2, wellMat(THREE.BackSide, THREE.EqualStencilFunc), 2);
+        const abyssCap = new THREE.Mesh(new THREE.PlaneGeometry(S, S).rotateX(-Math.PI / 2), wellMat(THREE.FrontSide, THREE.EqualStencilFunc));
+        abyssCap.position.y = ABYSS;
+        abyssCap.renderOrder = 2;
+        scene.add(abyssCap);
+        // Le masque : marque les pixels où l'on regarde dans le bloc (par le dessus ou par les côtés)
+        const mask = new THREE.Mesh(new THREE.BoxGeometry(S, -BASE, S).translate(0, BASE / 2, 0), gate(new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }), THREE.AlwaysStencilFunc));
+        mask.material.stencilZPass = THREE.ReplaceStencilOp;
+        mask.renderOrder = 1;
+        scene.add(mask);
+
+        // --- Les vitres et les arêtes du bloc ---
+        const glassMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false });
+        [[0, HALF, 0], [HALF, 0, Math.PI / 2], [0, -HALF, Math.PI], [-HALF, 0, -Math.PI / 2]].forEach(([x, z, ry]) => {
+            const g = new THREE.PlaneGeometry(S, -BASE, 1, 1).rotateY(ry);
+            const col = [];
+            for (let i = 0; i < 4; i++) col.push(...(i < 2 ? [0.55, 0.85, 0.78, 0.12] : [0.04, 0.15, 0.14, 0.26]));
+            g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+            const m = new THREE.Mesh(g, glassMat);
+            m.position.set(x, BASE / 2, z);
+            m.renderOrder = 6;
+            scene.add(m);
+        });
+        const corners = [[-HALF, HALF], [HALF, HALF], [HALF, -HALF], [-HALF, -HALF]];
+        const topLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(corners.map(([x, z]) => V(x, 0.003, z))), new THREE.LineBasicMaterial({ color: 0xbfe2d8, transparent: true, opacity: 0.5 }));
+        topLine.renderOrder = 8;
+        scene.add(topLine);
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0xa9d2c8, transparent: true, opacity: 0.3 });
+        const line = (p1, p2) => {
+            const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1, p2]), edgeMat);
+            l.renderOrder = 8;
+            scene.add(l);
+            return l;
+        };
+        const vEdges = corners.map(([x, z]) => line(V(x, 0, z), V(x, BASE, z)));
+        const bEdges = corners.map(([x, z], i) => line(V(x, BASE, z), V(corners[(i + 1) % 4][0], BASE, corners[(i + 1) % 4][1])));
+        const wellPts = [];
+        const wellCol = [];
+        const fade = (y) => 0.38 * Math.exp(y * 0.085);
+        corners.forEach(([x, z]) => {
+            for (let y = 0; y > -40; y -= 1) {
+                wellPts.push(x, y, z, x, y - 1, z);
+                wellCol.push(0.66, 0.86, 0.8, fade(y), 0.66, 0.86, 0.8, fade(y - 1));
+            }
+        });
+        for (let y = -5.8; y > -40; y -= 2.5) {
+            corners.forEach(([x, z], i) => {
+                const [x2, z2] = corners[(i + 1) % 4];
+                wellPts.push(x, y, z, x2, y, z2);
+                wellCol.push(0.66, 0.86, 0.8, fade(y) * 0.45, 0.66, 0.86, 0.8, fade(y) * 0.45);
+            });
+        }
+        const wellGeo = new THREE.BufferGeometry();
+        wellGeo.setAttribute('position', new THREE.Float32BufferAttribute(wellPts, 3));
+        wellGeo.setAttribute('color', new THREE.Float32BufferAttribute(wellCol, 4));
+        const wellLines = new THREE.LineSegments(wellGeo, gate(new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false })));
+        wellLines.renderOrder = 3;
+        scene.add(wellLines);
+        const contact = new THREE.Mesh(new THREE.PlaneGeometry(S * 1.9, S * 1.9), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,0,0,0.45)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }));
+        contact.rotation.x = -Math.PI / 2;
+        contact.position.set(1, BASE - 0.02, -0.8);
+        scene.add(contact);
+
+        // --- La surface : vert sombre, écume sur les crêtes et autour des rochers ---
+        const FOAM_ROCKS = [[I.x, I.z, 1.55], [3.8, -3.7, 1.35], [2.7, -4.3, 1.1], [4.3, -2.5, 1.0]];
+        const M = phone ? 100 : 140;
+        const waterGeo = new THREE.PlaneGeometry(S, S, M, M);
+        waterGeo.rotateX(-Math.PI / 2);
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x2b6a5a, roughness: 0.14, metalness: 0.12, transparent: true, depthWrite: false });
+        waterMat.onBeforeCompile = (sh) => {
+            sh.uniforms.uTime = uTime;
+            sh.uniforms.uFlash = uFlash;
+            sh.vertexShader = WAVE_GLSL + sh.vertexShader
+                .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = waveN(position.xz);')
+                .replace('#include <begin_vertex>', '#include <begin_vertex>\nvXZ = transformed.xz;\ntransformed.y += waveH(transformed.xz);');
+            sh.fragmentShader = WAVE_GLSL + 'uniform float uFlash;\n' + sh.fragmentShader
+                .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize((viewMatrix * vec4(waveN(vXZ), 0.0)).xyz);')
+                .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+float hh = waveH(vXZ);
+float foam = smoothstep(0.1, 0.22, hh);
+// L'écume des vagues qui se brisent sur les rochers
+float rocks = 0.0;
+${FOAM_ROCKS.map(([x, z, r]) => `{ vec2 q = vXZ - vec2(${x.toFixed(2)}, ${z.toFixed(2)}); float d = length(q) - ${r.toFixed(2)};
+  rocks = max(rocks, smoothstep(0.7, 0.0, d) * (0.55 + 0.45 * sin(uTime * 2.4 + atan(q.y, q.x) * 6.0 - d * 11.0)) * (0.6 + 0.4 * sin(uTime * 1.3 + q.x * 4.1 - q.y * 3.3))); }`).join('\n')}
+foam = clamp(foam + rocks, 0.0, 1.0);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.9, 0.86), foam * 0.8);
+float fres = pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0);
+diffuseColor.a = clamp(0.32 + fres * 0.6 + foam * 0.55, 0.0, 0.96);
+totalEmissiveRadiance += vec3(0.16, 0.2, 0.18) * fres * 0.6 + vec3(0.55, 0.6, 0.7) * uFlash * fres * 0.4;`);
+        };
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.receiveShadow = true;
+        water.renderOrder = 7;
+        scene.add(water);
+
+        // --- Rochers : des blocs taillés à facettes, coincés dans le bloc ---
+        const ROCK = [0x6b6f75, 0x5d6268, 0x787c82, 0x55595f].map(color);
+        const WET = color(0x383c40);
+        const DEEPR = [0x3c4a46, 0x34413e].map(color);
+        const MOSSR = [0x4d5c43, 0x58684b].map(color);
+        const rockMat = underwater(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.92 }));
+        const deepRockMat = gate(underwater(new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 })));
+        deepRockMat.customProgramCacheKey = () => 'underwater-lighthouse-deep';
+        // Colore chaque face selon sa hauteur : mousse en haut, roche, roche mouillée, puis roche verdie sous l'eau
+        function paintRock(g, mossy) {
+            const p = g.attributes.position;
+            const c = new Float32Array(p.count * 3);
+            for (let f = 0; f < p.count; f += 3) {
+                const x = (p.getX(f) + p.getX(f + 1) + p.getX(f + 2)) / 3;
+                const y = (p.getY(f) + p.getY(f + 1) + p.getY(f + 2)) / 3;
+                const z = (p.getZ(f) + p.getZ(f + 1) + p.getZ(f + 2)) / 3;
+                const h = hash(x * 3.1 + y, z * 2.7 - y);
+                if (mossy && y > 0.3 && h < 0.7) tmp.copy(MOSSR[h < 0.35 ? 0 : 1]);
+                else if (y > 0.28) tmp.copy(ROCK[Math.floor(h * ROCK.length)]);
+                else if (y > -0.2) tmp.copy(WET).offsetHSL(0, 0, (h - 0.5) * 0.04);
+                else tmp.copy(DEEPR[h < 0.5 ? 0 : 1]);
+                for (let k = 0; k < 3; k++) tmp.toArray(c, (f + k) * 3);
+            }
+            g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+            g.computeVertexNormals();
+        }
+        // Un bloc de roche : une sphère à facettes, cabossée, étirée, puis rognée par les vitres du bloc
+        function rockGeo(r, detail, sx, sy, sz, seed) {
+            const g = new THREE.IcosahedronGeometry(r, detail);
+            const p = g.attributes.position;
+            for (let i = 0; i < p.count; i++) {
+                const x = p.getX(i);
+                const y = p.getY(i);
+                const z = p.getZ(i);
+                const n = hash(x * 3.7 + seed, z * 2.9 + y * 4.3 - seed) - 0.5;
+                const n2 = hash(y * 5.1 + seed * 2, x * 1.3 + z * 3.3) - 0.5;
+                const k = 1 + n * 0.4 + n2 * 0.2;
+                p.setXYZ(i, x * k * sx, y * k * sy, z * k * sz);
+            }
+            return g;
+        }
+        const rocks = [];
+        function addRock(g, x, y, z, ry, tilt, mossy) {
+            g.rotateX(tilt[0]);
+            g.rotateZ(tilt[1]);
+            g.rotateY(ry);
+            g.translate(x, y, z);
+            const p = g.attributes.position;
+            for (let i = 0; i < p.count; i++) {
+                p.setX(i, clamp(p.getX(i), -HALF + 0.02, HALF - 0.02));
+                p.setZ(i, clamp(p.getZ(i), -HALF + 0.02, HALF - 0.02));
+                p.setY(i, Math.max(p.getY(i), BASE + 0.01));
+            }
+            paintRock(g, mossy);
+            const m = new THREE.Mesh(g, rockMat);
+            m.castShadow = true;
+            m.receiveShadow = true;
+            scene.add(m);
+            rocks.push(m);
+            return m;
+        }
+        // Le rocher du phare : une grosse masse, deux épaules, et des aiguilles tout autour
+        addRock(rockGeo(1.25, 1, 1.15, 1.32, 1.05, 1), I.x, -0.35, I.z, 0.3, [0, 0], true);
+        addRock(rockGeo(0.85, 1, 1.05, 0.95, 1, 2), I.x + 0.95, -0.55, I.z + 0.65, 1.1, [0.1, -0.1], true);
+        addRock(rockGeo(0.75, 1, 1, 1.15, 0.9, 3), I.x - 1.0, -0.45, I.z + 0.5, 2.1, [-0.1, 0.12], true);
+        addRock(rockGeo(0.7, 1, 1.1, 1, 1, 4), I.x + 0.2, -0.6, I.z - 1.05, 0.7, [0.05, 0.05], true);
+        for (let k = 0; k < (phone ? 6 : 8); k++) {
+            const a = (k / 8) * Math.PI * 2 + rr(-0.25, 0.25);
+            const d = rr(1.25, 1.6);
+            addRock(rockGeo(rr(0.28, 0.4), 0, 0.7, rr(1.8, 2.6), 0.7, 10 + k), I.x + Math.cos(a) * d, rr(-0.55, -0.25), I.z + Math.sin(a) * d, rr(0, 6.28), [rr(-0.3, 0.3), rr(-0.3, 0.3)], false);
+        }
+        for (let k = 0; k < (phone ? 5 : 9); k++) {
+            const a = rr(0, 6.28);
+            const d = rr(1.7, 2.2);
+            addRock(rockGeo(rr(0.18, 0.32), 0, 1, 0.8, 1, 30 + k), I.x + Math.cos(a) * d, rr(-0.25, -0.05), I.z + Math.sin(a) * d, rr(0, 6.28), [0, 0], false);
+        }
+        // La côte, au fond : de gros rochers dont le haut est couvert de mousse
+        addRock(rockGeo(1.3, 1, 1.3, 0.75, 1.1, 50), 3.8, -0.42, -3.7, 0.4, [0, 0], true);
+        addRock(rockGeo(1.1, 1, 1.2, 0.7, 1.0, 51), 2.6, -0.5, -4.3, 1.3, [0, 0.05], true);
+        addRock(rockGeo(1.0, 1, 1.0, 0.8, 1.1, 52), 4.3, -0.55, -2.4, 2.2, [0.05, 0], true);
+        // Sous l'eau, le rocher descend en colonne jusqu'au fond du bloc… puis dans l'abîme
+        function pillarGeo(y0, y1, r0, r1, seed) {
+            const h = y1 - y0;
+            const g0 = new THREE.CylinderGeometry(r1, r0, h, 14, Math.max(2, Math.round(h / 0.45)), true);
+            g0.translate(0, (y0 + y1) / 2, 0);
+            const g = g0.toNonIndexed();
+            g0.dispose();
+            const p = g.attributes.position;
+            for (let i = 0; i < p.count; i++) {
+                const x = p.getX(i);
+                const y = p.getY(i);
+                const z = p.getZ(i);
+                const k = 1 + (hash(x * 2.3 + seed, z * 2.3 + y * 1.7) - 0.5) * 0.45;
+                p.setX(i, x * k);
+                p.setZ(i, z * k);
+            }
+            return g;
+        }
+        const pillar = pillarGeo(BASE, -0.4, 1.35, 1.15, 3);
+        paintRock(pillar, false);
+        const pillarMesh = new THREE.Mesh(pillar, rockMat);
+        pillarMesh.position.set(I.x, 0, I.z);
+        pillarMesh.receiveShadow = true;
+        scene.add(pillarMesh);
+        const deepPillar = pillarGeo(-30, BASE, 2.3, 1.35, 3);
+        paintRock(deepPillar, false);
+        const deepPillarMesh = new THREE.Mesh(deepPillar, deepRockMat);
+        deepPillarMesh.position.set(I.x, 0, I.z);
+        deepPillarMesh.renderOrder = 2;
+        scene.add(deepPillarMesh);
+        scene.updateMatrixWorld(true);
+        const probe = new THREE.Raycaster();
+        const groundAt = (x, z, list) => {
+            probe.set(V(x, 8, z), V(0, -1, 0));
+            const hit = probe.intersectObjects(list, false)[0];
+            return hit ? hit.point.y : -Infinity;
+        };
+
+        // --- Le phare ---
+        const light = new THREE.Group();
+        const TOP = groundAt(I.x, I.z, rocks);
+        light.position.set(I.x, TOP - 0.18, I.z);
+        scene.add(light);
+        const stone = flat(0x6d6660);
+        const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.64, 0.74, 0.42, 10), stone);
+        plinth.position.y = 0.21;
+        light.add(plinth);
+        // La tour : des bandes rouges et blanches, un peu irrégulières comme peintes à la main
+        const H = 3.0;
+        const towerGeo0 = new THREE.CylinderGeometry(0.34, 0.5, H, 12, 12);
+        towerGeo0.translate(0, 0.42 + H / 2, 0);
+        const towerGeo = towerGeo0.toNonIndexed();
+        towerGeo0.dispose();
+        const RED = color(0x8c2733);
+        const WHITE = color(0xd8cdc0);
+        const tpos = towerGeo.attributes.position;
+        const tcol = new Float32Array(tpos.count * 3);
+        for (let f = 0; f < tpos.count; f += 3) {
+            const y = (tpos.getY(f) + tpos.getY(f + 1) + tpos.getY(f + 2)) / 3 - 0.42;
+            const x = (tpos.getX(f) + tpos.getX(f + 1) + tpos.getX(f + 2)) / 3;
+            const z = (tpos.getZ(f) + tpos.getZ(f + 1) + tpos.getZ(f + 2)) / 3;
+            tmp.copy(Math.floor(y / 0.5) % 2 ? WHITE : RED).offsetHSL(0, 0, (hash(x * 9 + y, z * 9) - 0.5) * 0.06);
+            for (let k = 0; k < 3; k++) tmp.toArray(tcol, (f + k) * 3);
+        }
+        towerGeo.setAttribute('color', new THREE.BufferAttribute(tcol, 3));
+        towerGeo.computeVertexNormals();
+        const tower = new THREE.Mesh(towerGeo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8 }));
+        light.add(tower);
+        // Porte, fenêtres (une seule allumée)
+        const dark = flat(0x1b1a1c);
+        const glow = new THREE.MeshStandardMaterial({ color: 0xffcf8a, emissive: 0xffb257, emissiveIntensity: 1.6, flatShading: true });
+        const door = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.36, 0.06), dark);
+        door.position.set(0, 0.62, 0.49);
+        door.rotation.x = -0.05;
+        light.add(door);
+        [[1.25, 0.2, false], [2.05, 2.4, true], [2.85, 4.3, false]].forEach(([y, a, lit]) => {
+            const r = 0.5 - (y - 0.42) / H * 0.16 + 0.005;
+            const w = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.2, 0.04), lit ? glow : dark);
+            w.position.set(Math.sin(a) * r, y, Math.cos(a) * r);
+            w.rotation.y = a;
+            light.add(w);
+        });
+        // La galerie, sa rambarde, la lanterne vitrée et le toit rouge
+        const TOWER_TOP = 0.42 + H;
+        const corbel = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.36, 0.14, 12), stone);
+        corbel.position.y = TOWER_TOP + 0.05;
+        light.add(corbel);
+        const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.54, 0.06, 16), flat(0x3a3436));
+        deck.position.y = TOWER_TOP + 0.15;
+        light.add(deck);
+        const iron = flat(0x2a2628, { metalness: 0.4, roughness: 0.5 });
+        for (let k = 0; k < 16; k++) {
+            const a = (k / 16) * Math.PI * 2;
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 4), iron);
+            post.position.set(Math.cos(a) * 0.52, TOWER_TOP + 0.28, Math.sin(a) * 0.52);
+            light.add(post);
+        }
+        const rail = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.012, 4, 32), iron);
+        rail.rotation.x = Math.PI / 2;
+        rail.position.y = TOWER_TOP + 0.38;
+        light.add(rail);
+        const LANTERN = TOWER_TOP + 0.48;
+        const lanternBase = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.14, 12), flat(0x8c2733));
+        lanternBase.position.y = TOWER_TOP + 0.25;
+        light.add(lanternBase);
+        const lampMat = new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffdf9e, emissiveIntensity: 2.2, transparent: true, opacity: 0.92, roughness: 0.2 });
+        const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.48, 8, 1, true), lampMat);
+        lantern.position.y = LANTERN;
+        light.add(lantern);
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.5, 0.025), iron);
+            bar.position.set(Math.cos(a) * 0.285, LANTERN, Math.sin(a) * 0.285);
+            light.add(bar);
+        }
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.32, 8), flat(0xa33a2e, { roughness: 0.6 }));
+        roof.position.y = LANTERN + 0.4;
+        light.add(roof);
+        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), iron);
+        knob.position.y = LANTERN + 0.58;
+        light.add(knob);
+        const spike = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.3, 4), iron);
+        spike.position.y = LANTERN + 0.75;
+        light.add(spike);
+        light.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+        lantern.castShadow = false;
+        const lightMeshes = [];
+        light.traverse((m) => { if (m.isMesh) lightMeshes.push(m); });
+        // La lampe : une lueur chaude, un halo, et deux faisceaux opposés qui tournent
+        const lamp = new THREE.PointLight(0xffd9a0, 3, 9, 1.3);
+        lamp.position.y = LANTERN;
+        light.add(lamp);
+        const haloTex = radialTexture('rgba(255,225,170,0.95)', 'rgba(255,190,110,0)');
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+        halo.scale.setScalar(1.6);
+        halo.position.y = LANTERN;
+        halo.renderOrder = 10;
+        light.add(halo);
+        const uBeam = { value: 1 };
+        const beamMat = new THREE.ShaderMaterial({
+            uniforms: { uBeam },
+            vertexShader: `varying float vAlong;
+varying vec3 vN;
+varying vec3 vV;
+void main() {
+    vAlong = uv.y;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+}`,
+            fragmentShader: `uniform float uBeam;
+varying float vAlong;
+varying vec3 vN;
+varying vec3 vV;
+void main() {
+    float edge = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
+    gl_FragColor = vec4(1.0, 0.9, 0.7, pow(vAlong, 2.2) * edge * 0.24 * uBeam);
+}`,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+        });
+        const beams = new THREE.Group();
+        beams.position.y = LANTERN;
+        light.add(beams);
+        const BEAM_LEN = 15;
+        [1, -1].forEach((sd) => {
+            const g = new THREE.ConeGeometry(Math.tan(0.09), 1, 28, 1, true).translate(0, -0.5, 0).rotateZ(sd * Math.PI / 2).rotateZ(-sd * 0.05);
+            const b = new THREE.Mesh(g, beamMat);
+            b.scale.setScalar(BEAM_LEN);
+            b.renderOrder = 9;
+            beams.add(b);
+        });
+        // Le faisceau éclaire aussi ce qu'il touche
+        const spot = new THREE.SpotLight(0xffe4b8, 7, 18, 0.12, 0.6, 1);
+        scene.add(spot, spot.target);
+
+        // --- Des pins sombres sur la côte ---
+        const pineMat = flat(0x1d2b28, { roughness: 0.9 });
+        const pineMat2 = flat(0x233430, { roughness: 0.9 });
+        const pines = [];
+        [[3.3, -3.9], [4.1, -3.2], [2.6, -4.5], [3.7, -4.5], [4.5, -2.3], [2.2, -3.8], [4.6, -4.4]].slice(0, phone ? 5 : 7).forEach(([x, z], i) => {
+            const y = groundAt(x, z, rocks);
+            if (y < 0.15) return;
+            const g = new THREE.Group();
+            const s = rr(0.85, 1.35);
+            [[0.42, 0.75, 0.45], [0.33, 0.62, 0.85], [0.22, 0.5, 1.2]].forEach(([r, h, yy], k) => {
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), k % 2 ? pineMat2 : pineMat);
+                cone.position.y = yy;
+                g.add(cone);
+            });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.3, 5), flat(0x2a1f1a));
+            trunk.position.y = 0.12;
+            g.add(trunk);
+            g.position.set(x, y - 0.05, z);
+            g.scale.set(s, s * rr(1.0, 1.35), s);
+            g.rotation.y = rr(0, 6.28);
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            scene.add(g);
+            pines.push({ g, ph: rr(0, 6.28) });
+        });
+
+        // --- Le ciel d'orage : de gros nuages sombres et des éclairs, toujours derrière le diorama ---
+        const sky = new THREE.Group();
+        scene.add(sky);
+        const cloudMat = new THREE.MeshStandardMaterial({ color: 0x2c2220, emissive: 0x160e0b, flatShading: true, roughness: 1 });
+        const clouds = [];
+        for (let i = 0; i < (phone ? 6 : 9); i++) {
+            const g = new THREE.Group();
+            const n = 4 + Math.floor(rr(0, 4));
+            for (let k = 0; k < n; k++) {
+                const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(rr(0.9, 1.6), 1), cloudMat);
+                puff.position.set(rr(-1.8, 1.8), rr(-0.4, 0.5), rr(-0.8, 0.8));
+                puff.scale.set(1, rr(0.55, 0.8), 1);
+                g.add(puff);
+            }
+            g.position.set(rr(-12, 12), rr(6.5, 9.5), rr(-14, -8));
+            sky.add(g);
+            clouds.push({ g, x: g.position.x, sp: rr(0.08, 0.18) * (i % 2 ? 1 : -1), ph: rr(0, 6.28) });
+        }
+        const boltMat = new THREE.MeshBasicMaterial({ color: 0xeef2ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+        const bolt = new THREE.Mesh(new THREE.BufferGeometry(), boltMat);
+        bolt.renderOrder = 9;
+        sky.add(bolt);
+        const storm = { next: rr(3, 5), t0: -10, wave: rr(0.3, 0.8) };
+        function lightning() {
+            const pts = [];
+            let px = rr(-7, 7);
+            const z = rr(-10, -8.5);
+            for (let k = 0; k <= 21; k++) {
+                pts.push(V(px, 8.6 - k * 0.4, z));
+                px += rr(-0.4, 0.4);
+            }
+            const path = new THREE.CurvePath();
+            for (let k = 0; k < pts.length - 1; k++) path.add(new THREE.LineCurve3(pts[k], pts[k + 1]));
+            const branch = new THREE.CurvePath();
+            let bp = pts[10].clone();
+            for (let k = 0; k < 4; k++) {
+                const nx = bp.clone().add(V(rr(0.15, 0.4) * (px > 0 ? -1 : 1), -0.36, 0));
+                branch.add(new THREE.LineCurve3(bp, nx));
+                bp = nx;
+            }
+            bolt.geometry.dispose();
+            bolt.geometry = mergeGeos([new THREE.TubeGeometry(path, 64, 0.04, 4, false), new THREE.TubeGeometry(branch, 20, 0.022, 4, false)]);
+            storm.t0 = clock;
+        }
+
+        // --- La pluie, la brume légère au ras de l'eau ---
+        const RAIN = phone ? 280 : 560;
+        const rainPos = new Float32Array(RAIN * 6);
+        const rainGeo = new THREE.BufferGeometry();
+        rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xcbbfb4, transparent: true, opacity: 0.32, depthWrite: false }));
+        rain.frustumCulled = false;
+        rain.renderOrder = 9;
+        scene.add(rain);
+        const WIND = V(2.0, -9.5, 0.8);
+        const drops = Array.from({ length: RAIN }, () => ({ x: rr(-6.5, 5.5), y: rr(-0.2, 8), z: rr(-6, 5.5), s: rr(0.85, 1.15) }));
+        const mistTex = radialTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
+        const mists = [];
+        for (let i = 0; i < (phone ? 5 : 8); i++) {
+            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: 0xcdb8a6, transparent: true, opacity: 0.04, depthWrite: false, fog: false }));
+            const x = rr(-4, 4);
+            const z = rr(-4, 4);
+            sp.scale.set(rr(5, 8), rr(1.0, 1.6), 1);
+            sp.position.set(x, rr(0.35, 0.9), z);
+            sp.renderOrder = 9;
+            scene.add(sp);
+            mists.push({ sp, x, ph: rr(0, 6.28) });
+        }
+
+        // --- Les monstres ---
+        // Un serpent de mer qui tourne autour du rocher, sous la surface
+        const SEG = phone ? 26 : 34;
+        const serpentMat = underwater(flat(0xffffff, { roughness: 0.55, metalness: 0.15 }));
+        const serpentBody = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1).scale(1, 0.9, 1.5), serpentMat, SEG);
+        serpentBody.castShadow = true;
+        serpentBody.frustumCulled = false;
+        const SCALE = [0x3b7a68, 0x2f6a5a, 0x3b7a68, 0x9ab878];
+        for (let i = 0; i < SEG; i++) serpentBody.setColorAt(i, color(SCALE[i % 4]));
+        scene.add(serpentBody);
+        const finMesh = new THREE.InstancedMesh(new THREE.ConeGeometry(0.045, 0.2, 4).translate(0, 0.1, 0), underwater(flat(0xb7c98a)), SEG);
+        finMesh.frustumCulled = false;
+        scene.add(finMesh);
+        const head = new THREE.Group();
+        const headMat = underwater(flat(0x2d6a5b, { roughness: 0.5 }));
+        head.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1).scale(0.85, 0.7, 1.6).translate(0, 0.02, 0.12), headMat));
+        const jaw = new THREE.Group();
+        jaw.position.set(0, -0.05, 0.0);
+        jaw.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0).scale(0.8, 0.35, 1.8).translate(0, -0.03, 0.15), underwater(flat(0x9db27a))));
+        head.add(jaw);
+        const eyeGlow = new THREE.MeshBasicMaterial({ color: 0xd9ff70 });
+        [-1, 1].forEach((sd) => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeGlow);
+            eye.position.set(sd * 0.11, 0.08, 0.2);
+            head.add(eye);
+            const horn = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.3, 5).rotateX(-Math.PI / 2 - 0.5).translate(0, 0.05, -0.12), headMat);
+            horn.position.set(sd * 0.1, 0.12, 0);
+            head.add(horn);
+            const frill = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([V(0, 0, 0.05), V(sd * 0.32, 0.1, -0.12), V(0, 0.02, -0.2)]), underwater(flat(0x7f9c6a, { side: THREE.DoubleSide })));
+            frill.geometry.computeVertexNormals();
+            frill.position.set(sd * 0.12, 0, 0);
+            head.add(frill);
+        });
+        head.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+        scene.add(head);
+        const serpent = { s: 0, speed: 1, scare: 0 };
+        const serpentAt = (s, out) => {
+            const th = s * 0.33;
+            const R = 2.5 + 0.4 * Math.sin(s * 0.21);
+            out.set(I.x + Math.cos(th) * R, -2.0 + 0.35 * Math.sin(s * 0.55) + 0.2 * Math.sin(th * 3), I.z + Math.sin(th) * R);
+            return out;
+        };
+
+        // Tout au fond : une créature géante, ses yeux, et ses tentacules qui montent vers le rocher
+        const K = V(0.6, -11.5, 0.5);
+        const kMat = gate(underwater(flat(0x4c2236, { roughness: 0.6 })));
+        kMat.customProgramCacheKey = () => 'underwater-lighthouse-kraken';
+        const mantle = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2).scale(1.8, 2.5, 1.8), kMat);
+        mantle.position.copy(K);
+        mantle.renderOrder = 2;
+        scene.add(mantle);
+        const glowTex = radialTexture('rgba(255,215,140,1)', 'rgba(255,160,60,0)');
+        const glowSprite = (hex, size, deep) => {
+            const m = new THREE.SpriteMaterial({ map: glowTex, color: hex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
+            if (deep) gate(m);
+            const sp = new THREE.Sprite(m);
+            sp.scale.setScalar(size);
+            sp.renderOrder = 4;
+            scene.add(sp);
+            return sp;
+        };
+        const kEyes = [-1, 1].map(() => glowSprite(0xffb347, 1.4, true));
+        // Des taches lumineuses sur le corps de la créature
+        const kSpots = [];
+        for (let i = 0; i < (phone ? 8 : 14); i++) {
+            const a = rr(0, 6.28);
+            const h = rr(-0.7, 0.8);
+            const r = Math.sqrt(1 - h * h);
+            const sp = glowSprite(i % 3 ? 0x7fe8ff : 0xd58cff, rr(0.25, 0.45), true);
+            kSpots.push({ sp, x: Math.cos(a) * r * 1.85, y: h * 2.55, z: Math.sin(a) * r * 1.85, ph: rr(0, 6.28) });
+        }
+        const TENT = phone ? 6 : 8;
+        const TSEG = 18;
+        const tentGeo = new THREE.CylinderGeometry(1, 1, 1, 7, 1);
+        const tentMatDeep = gate(underwater(flat(0xffffff, { roughness: 0.6 })));
+        tentMatDeep.customProgramCacheKey = () => 'underwater-lighthouse-tent';
+        const tentDeep = new THREE.InstancedMesh(tentGeo, tentMatDeep, TENT * TSEG);
+        const tentHigh = new THREE.InstancedMesh(tentGeo, underwater(flat(0xffffff, { roughness: 0.6 })), TENT * TSEG);
+        tentDeep.renderOrder = 2;
+        [tentDeep, tentHigh].forEach((m) => {
+            m.frustumCulled = false;
+            m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(TENT * TSEG * 3), 3);
+            scene.add(m);
+        });
+        const TENT_BASE = color(0x4c2236);
+        const TENT_TIP = color(0xa04a64);
+        const tentacles = Array.from({ length: TENT }, (_, j) => ({ phi: (j / TENT) * Math.PI * 2 + 0.2, ph: rr(0, 6.28), rise: 0 }));
+        const kraken = { scare: 0, next: rr(6, 10), who: -1, riseT: 0 };
+
+        // Des poissons-lanternes dans le noir, sous le bloc
+        const anglers = [0, 1].map((i) => {
+            const g = new THREE.Group();
+            const m = gate(underwater(flat(0x2a2f37, { roughness: 0.7 })));
+            g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 1).scale(1, 0.85, 1.15), m));
+            const teeth = gate(new THREE.MeshBasicMaterial({ color: 0xd9d4c6 }));
+            for (let k = 0; k < 7; k++) {
+                const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.1, 4), teeth);
+                tooth.position.set(-0.18 + k * 0.06, -0.05, 0.36);
+                tooth.rotation.x = Math.PI;
+                g.add(tooth);
+            }
+            g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, 0.25, 0.1), V(0, 0.6, 0.35), V(0, 0.5, 0.65)]), gate(new THREE.LineBasicMaterial({ color: 0x6a6f78 }))));
+            g.traverse((o) => { o.renderOrder = 2; });
+            scene.add(g);
+            const lure = glowSprite(0x9fffe6, 0.55, true);
+            return { g, lure, a: i * 3, y: -6.5 - i * 2.2, r: 2.6 - i * 0.6, sp: (i ? -1 : 1) * 0.12 };
+        });
+        // Des paires d'yeux qui s'allument et s'éteignent tout au fond
+        const abyssEyes = [];
+        for (let i = 0; i < (phone ? 4 : 7); i++) {
+            const x = rr(-3.5, 3.5);
+            const z = rr(-3.5, 3.5);
+            const y = rr(-34, -18);
+            const hex = i % 2 ? 0xff6a4a : 0xbfff6a;
+            abyssEyes.push({ eyes: [-1, 1].map((sd) => { const e = glowSprite(hex, 0.7, true); e.position.set(x + sd * 0.35, y, z); return e; }), ph: rr(0, 6.28), sp: rr(0.15, 0.35) });
+        }
+
+        // Un petit banc de poissons qui fuit près de la surface
+        const fishGeo = mergeGeos([
+            new THREE.IcosahedronGeometry(0.06, 0).scale(0.55, 0.85, 1.8),
+            new THREE.ConeGeometry(0.045, 0.08, 4).rotateX(-Math.PI / 2).translate(0, 0, -0.14),
+        ]);
+        const NF = phone ? 12 : 18;
+        const school = new THREE.InstancedMesh(fishGeo, underwater(flat(0xffffff, { metalness: 0.3, roughness: 0.45 })), NF);
+        const schoolOff = [];
+        for (let i = 0; i < NF; i++) {
+            schoolOff.push({ p: V(rr(-0.6, 0.6), rr(-0.2, 0.2), rr(-0.6, 0.6)), ph: rr(0, 6.28) });
+            school.setColorAt(i, color([0xbfd0c6, 0x9fb6aa, 0xdfe7e0][i % 3]));
+        }
+        school.frustumCulled = false;
+        scene.add(school);
+        const schoolAt = (t) => [2.7 + Math.cos(t * 0.3) * 1.2, -0.95 + Math.sin(t * 0.5) * 0.15, 2.5 + Math.sin(t * 0.3) * 1.2];
+
+        // --- Particules ---
+        const pointScale = { value: 1 };
+        const snowIn = particles(phone ? 30 : 50, true, false, 4);
+        const snowDeep = particles(phone ? 140 : 240, true, true, 4);
+        const bubbles = particles(phone ? 14 : 22, false, false, 4);
+        const spray = particles(phone ? 90 : 160, false, false, 9);
+        snowIn.items.forEach((p) => Object.assign(p, { x: rr(-4.7, 4.7), y: rr(BASE + 0.2, -0.2), z: rr(-4.7, 4.7), ph: rr(0, 6.28) }));
+        snowDeep.items.forEach((p) => Object.assign(p, { x: rr(-4.8, 4.8), y: rr(-45, BASE - 0.3), z: rr(-4.8, 4.8), ph: rr(0, 6.28) }));
+        bubbles.items.forEach((p) => resetBubble(p, true));
+        spray.items.forEach((p) => { p.life = 1; });
+        function resetBubble(p, anywhere) {
+            const a = rr(0, 6.28);
+            p.x = I.x + Math.cos(a) * rr(1.3, 1.7);
+            p.z = I.z + Math.sin(a) * rr(1.3, 1.7);
+            p.y = anywhere ? rr(BASE + 0.2, -0.3) : BASE + 0.2;
+            p.sp = rr(0.25, 0.5);
+            p.ph = rr(0, 6.28);
+            p.size = rr(0.04, 0.08);
+        }
+        // Une vague se brise sur un rocher : une gerbe d'écume blanche
+        function sprayAt(x, z, n, power = 1) {
+            let k = 0;
+            for (const p of spray.items) {
+                if (k >= n) break;
+                if (p.life < 1) continue;
+                k++;
+                p.life = 0;
+                p.from = V(x, 0.05, z);
+                const out = V(x - I.x, 0, z - I.z).normalize();
+                p.vel = V(out.x * rr(0.2, 0.7) + rr(-0.3, 0.3), rr(1.0, 2.0), out.z * rr(0.2, 0.7) + rr(-0.3, 0.3)).multiplyScalar(power);
+                p.size = rr(0.05, 0.11);
+            }
+        }
+
+        const rings = [];
+        const ringGeo = new THREE.RingGeometry(0.9, 1, 40);
+        ringGeo.rotateX(-Math.PI / 2);
+        for (let i = 0; i < 12; i++) {
+            const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+            m.visible = false;
+            m.renderOrder = 8;
+            scene.add(m);
+            rings.push({ m, t: 1, max: 0.5, dur: 1, x: 0, z: 0 });
+        }
+        function ripple(x, z, max = 0.45, dur = 1.4, delay = 0) {
+            const r = rings.find(k => k.t >= 1) || rings[0];
+            Object.assign(r, { t: -delay / dur, max, dur, x, z });
+        }
+
+        // --- Caméra : au départ, au pied du phare, la tour se découpe sur le ciel d'orage ---
+        const FAR = V(0, -0.3, 0);
+        const NEAR = V(I.x, 2.2, I.z);
+        const target = FAR.clone();
+        const HOME_EL = 0.3;
+        let az = -0.55;
+        let el = HOME_EL;
+        let zoom = 0.5;
+        let fit = 26;
+        let lastInput = -10;
+        let touched = false;
+        const pointers = new Map();
+        let pinch = 0;
+        let downAt = null;
+        const canvas = renderer.domElement;
+        const spread = () => {
+            const [a, b] = [...pointers.values()];
+            return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        };
+        const onDown = (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 1) downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+            if (pointers.size === 2) pinch = spread();
+            lastInput = clock;
+            touched = true;
+        };
+        const onMove = (e) => {
+            const p = pointers.get(e.pointerId);
+            if (!p) return;
+            const dx = e.clientX - p.x;
+            const dy = e.clientY - p.y;
+            p.x = e.clientX;
+            p.y = e.clientY;
+            if (pointers.size === 1) {
+                az -= dx * 0.0065;
+                el = clamp(el + dy * 0.0045, 0.04, 1.3);
+            } else if (pointers.size === 2) {
+                const s = spread();
+                if (pinch) zoom = clamp(zoom * pinch / s, 0.18, 1.5);
+                pinch = s;
+            }
+            lastInput = clock;
+        };
+        const onUp = (e) => {
+            pointers.delete(e.pointerId);
+            pinch = 0;
+            if (downAt && pointers.size === 0) {
+                const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+                if (moved < 7 && performance.now() - downAt.t < 400) tap(e);
+            }
+            downAt = null;
+        };
+        const onWheel = (e) => {
+            e.preventDefault();
+            zoom = clamp(zoom * Math.exp(e.deltaY * 0.0012), 0.18, 1.5);
+            lastInput = clock;
+        };
+        canvas.addEventListener('pointerdown', onDown);
+        canvas.addEventListener('pointermove', onMove);
+        canvas.addEventListener('pointerup', onUp);
+        canvas.addEventListener('pointercancel', onUp);
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+
+        // Toucher le phare : il s'embrase. Un monstre : il prend peur. L'eau : des ronds. Le ciel : un éclair.
+        const raycaster = new THREE.Raycaster();
+        const ndc = new THREE.Vector2();
+        const monsterTargets = [serpentBody, mantle];
+        head.traverse((m) => { if (m.isMesh) monsterTargets.push(m); });
+        let flare = 0;
+        function tap(e) {
+            const r = canvas.getBoundingClientRect();
+            ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+            raycaster.setFromCamera(ndc, camera);
+            if (raycaster.intersectObjects(lightMeshes, false).length) {
+                flare = 1;
+                return;
+            }
+            if (raycaster.intersectObjects(monsterTargets.concat([tentHigh, tentDeep]), false).length) {
+                serpent.scare = 3;
+                kraken.scare = 4;
+                return;
+            }
+            const w = raycaster.intersectObject(mask)[0];
+            if (w && w.point.y < -0.05) return;
+            if (!w) {
+                if (!still && clock - storm.t0 > 1.2) {
+                    lightning();
+                    storm.next = clock + rr(6, 10);
+                }
+                return;
+            }
+            ripple(w.point.x, w.point.z, 0.5, 1.5);
+            ripple(w.point.x, w.point.z, 0.32, 1.3, 0.22);
+        }
+
+        function resize() {
+            const w = stage.clientWidth || 1;
+            const h = stage.clientHeight || 1;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+            fit = Math.max(16 / tanV / 2, (camera.aspect < 0.8 ? 15.5 : 16) / (tanV * camera.aspect) / 2);
+            if (!touched) zoom = camera.aspect < 0.8 ? 0.62 : 0.5;
+            camera.updateProjectionMatrix();
+            pointScale.value = camera.projectionMatrix.elements[5] * renderer.domElement.height / 2;
+        }
+        const ro = new ResizeObserver(resize);
+        ro.observe(stage);
+        resize();
+
+        // --- Boucle ---
+        const m4 = new THREE.Matrix4();
+        const q = new THREE.Quaternion();
+        const v3 = new THREE.Vector3();
+        const v4 = new THREE.Vector3();
+        const v5 = new THREE.Vector3();
+        const sc = new THREE.Vector3();
+        const up = new THREE.Vector3(0, 1, 0);
+        const beamDir = new THREE.Vector3();
+        const qf = new THREE.Quaternion();
+        let clock = 0;
+        let last = performance.now();
+        let raf = 0;
+        let alive = true;
+
+        function frame(now) {
+            if (!alive) return;
+            const real = Math.min(0.25, (now - last) / 1000);
+            const dt = Math.min(0.05, real);
+            last = now;
+            clock += dt;
+            const t = clock;
+            uTime.value = t;
+
+            // Au repos : tour lent autour du phare, en revenant doucement à la hauteur de départ
+            if (!still && !pointers.size) {
+                const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
+                az += 0.05 * dt * idle;
+                el += (HOME_EL - el) * Math.min(1, dt * 0.8) * idle;
+            }
+            target.lerpVectors(NEAR, FAR, smooth(clamp((zoom - 0.3) / 0.7, 0, 1)));
+            const dist = fit * zoom;
+            camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
+            camera.lookAt(target);
+            scene.fog.near = dist + 1;
+            scene.fog.far = dist + 48;
+            const cp = camera.position;
+            const facing = [cp.z > HALF, cp.x > HALF, cp.z < -HALF, cp.x < -HALF];
+            vEdges.forEach((l, i) => { l.visible = facing[(i + 3) % 4] || facing[i]; });
+            bEdges.forEach((l, i) => { l.visible = facing[i]; });
+
+            // Le phare : les faisceaux tournent ; toucher la tour les fait briller plus fort
+            flare = Math.max(0, flare - dt * 0.6);
+            beams.rotation.y = t * 0.75;
+            uBeam.value = 1 + flare * 1.6;
+            const flick = 0.92 + 0.05 * Math.sin(t * 11) + 0.03 * Math.sin(t * 23 + 1);
+            lamp.intensity = (3 + flare * 4) * flick;
+            lampMat.emissiveIntensity = (2.2 + flare * 2) * flick;
+            halo.scale.setScalar(1.6 + flare * 1.4 + Math.sin(t * 3) * 0.05);
+            light.updateMatrixWorld(true);
+            beams.getWorldPosition(v3);
+            beamDir.set(Math.cos(beams.rotation.y), -0.05, -Math.sin(beams.rotation.y)).normalize();
+            spot.position.copy(v3);
+            spot.target.position.copy(v3).addScaledVector(beamDir, 12);
+            spot.intensity = 7 * (1 + flare);
+
+            // Les pins plient sous le vent
+            pines.forEach((p) => { p.g.rotation.z = Math.sin(t * 1.6 + p.ph) * 0.05 + 0.03; });
+
+            // Le serpent de mer
+            serpent.scare = Math.max(0, serpent.scare - dt);
+            serpent.s += dt * (1 + serpent.scare * 0.9);
+            serpentAt(serpent.s, v3);
+            serpentAt(serpent.s + 0.05, v4);
+            head.position.copy(v3);
+            head.position.y -= serpent.scare > 0 ? Math.sin(Math.min(1, serpent.scare / 3) * Math.PI) * 0.6 : 0;
+            head.lookAt(v4.x, head.position.y + (v4.y - v3.y), v4.z);
+            jaw.rotation.x = 0.15 + Math.max(0, Math.sin(t * 0.9)) * 0.35 + (serpent.scare > 0 ? 0.3 : 0);
+            for (let i = 0; i < SEG; i++) {
+                const si = serpent.s - (i + 1) * 0.22;
+                serpentAt(si, v3);
+                serpentAt(si + 0.05, v4);
+                v5.subVectors(v4, v3).normalize();
+                const sway = Math.sin(t * 3 - i * 0.5) * 0.1;
+                v3.x += -v5.z * sway;
+                v3.z += v5.x * sway;
+                v3.y += Math.sin(t * 2 - i * 0.45) * 0.06 - (serpent.scare > 0 ? Math.sin(Math.min(1, serpent.scare / 3) * Math.PI) * 0.6 * Math.max(0, 1 - i / 10) : 0);
+                const r = 0.17 * (1 - (i / SEG) * 0.8) * (1 + 0.15 * Math.sin(i * 0.9));
+                v4.copy(v3).add(v5);
+                m4.lookAt(v4, v3, up);
+                q.setFromRotationMatrix(m4);
+                m4.compose(v3, q, sc.set(r, r, r));
+                serpentBody.setMatrixAt(i, m4);
+                v4.set(0, 1, 0).addScaledVector(v5, -0.7).normalize();
+                qf.setFromUnitVectors(up, v4);
+                m4.compose(v4.copy(v3).add(sc.set(0, r * 0.85, 0)), qf, sc.set(1, 1 - i / SEG * 0.6, 1));
+                finMesh.setMatrixAt(i, m4);
+            }
+            serpentBody.instanceMatrix.needsUpdate = true;
+            finMesh.instanceMatrix.needsUpdate = true;
+
+            // La créature du fond : elle respire, ses yeux clignent, ses tentacules ondulent ;
+            // de temps en temps l'une d'elles remonte le long du rocher, jusque dans le bloc
+            kraken.scare = Math.max(0, kraken.scare - dt);
+            mantle.scale.set(1, 1 + Math.sin(t * 0.5) * 0.04, 1);
+            mantle.rotation.y = Math.sin(t * 0.1) * 0.3;
+            const blink = Math.pow(Math.max(0, Math.sin(t * 0.37)), 40) > 0.5 ? 0.1 : 1;
+            kEyes.forEach((e, k) => {
+                const sd = k ? 1 : -1;
+                e.position.set(K.x + sd * 0.8 + Math.sin(mantle.rotation.y) * 0.2, K.y - 0.6, K.z + 1.95);
+                e.scale.set(1.1 + kraken.scare * 0.2, (1.1 + kraken.scare * 0.2) * blink, 1);
+                e.material.opacity = 0.75 + 0.25 * Math.sin(t * 1.3) + kraken.scare * 0.1;
+            });
+            kSpots.forEach((k2) => {
+                const c = Math.cos(mantle.rotation.y);
+                const s2 = Math.sin(mantle.rotation.y);
+                k2.sp.position.set(K.x + k2.x * c + k2.z * s2, K.y + k2.y * mantle.scale.y, K.z - k2.x * s2 + k2.z * c);
+                k2.sp.material.opacity = 0.45 + 0.4 * Math.sin(t * 0.9 + k2.ph) + kraken.scare * 0.15;
+            });
+            if (!still && t > kraken.next && kraken.who < 0 && kraken.scare <= 0) {
+                kraken.who = Math.floor(rr(0, TENT));
+                kraken.riseT = 0;
+            }
+            if (kraken.who >= 0) {
+                kraken.riseT += dt;
+                if (kraken.riseT > 11 || kraken.scare > 0) {
+                    kraken.who = -1;
+                    kraken.next = t + rr(10, 18);
+                }
+            }
+            let nDeep = 0;
+            let nHigh = 0;
+            tentacles.forEach((tc, j) => {
+                const wantRise = j === kraken.who ? smooth(clamp(kraken.riseT / 3.5, 0, 1)) * smooth(clamp((11 - kraken.riseT) / 3, 0, 1)) : 0;
+                tc.rise += (wantRise - tc.rise) * Math.min(1, dt * 2);
+                const retract = kraken.scare > 0 ? smooth(Math.min(1, kraken.scare / 2)) : 0;
+                const a = tc.phi + Math.sin(t * 0.18 + tc.ph) * 0.35;
+                // Point de départ (sous la créature), but (autour du rocher), et deux points de contrôle
+                const bx = K.x + Math.cos(tc.phi) * 1.3;
+                const bz = K.z + Math.sin(tc.phi) * 1.3;
+                const by = K.y - 1.0;
+                const R = lerp(2.6 + Math.sin(t * 0.3 + j) * 0.4, 1.75, tc.rise);
+                const tx = I.x + Math.cos(a) * R;
+                const tz = I.z + Math.sin(a) * R;
+                const ty = lerp(-5.2 + Math.sin(t * 0.33 + j * 1.3) * 1.2, -0.9, tc.rise) - retract * 5;
+                let px = bx;
+                let py = by;
+                let pz = bz;
+                for (let i = 1; i <= TSEG; i++) {
+                    const u = i / TSEG;
+                    const iu = 1 - u;
+                    // Courbe de Bézier : part vers l'extérieur, puis remonte vers le rocher
+                    const c1x = bx + Math.cos(tc.phi) * 3;
+                    const c1z = bz + Math.sin(tc.phi) * 3;
+                    const c1y = by + 2;
+                    const c2x = tx + Math.cos(a) * 1.5;
+                    const c2z = tz + Math.sin(a) * 1.5;
+                    const c2y = ty - 4;
+                    let x = iu * iu * iu * bx + 3 * iu * iu * u * c1x + 3 * iu * u * u * c2x + u * u * u * tx;
+                    let y = iu * iu * iu * by + 3 * iu * iu * u * c1y + 3 * iu * u * u * c2y + u * u * u * ty;
+                    let z = iu * iu * iu * bz + 3 * iu * iu * u * c1z + 3 * iu * u * u * c2z + u * u * u * tz;
+                    // Ondulation, et une boucle au bout
+                    const wv = Math.sin(u * Math.PI * 3 - t * 1.4 + tc.ph) * 0.45 * u;
+                    x += -Math.sin(a) * wv;
+                    z += Math.cos(a) * wv;
+                    const curl = Math.max(0, (u - 0.75) / 0.25);
+                    x += Math.cos(t * 1.2 + tc.ph + curl * 4) * curl * 0.35;
+                    z += Math.sin(t * 1.2 + tc.ph + curl * 4) * curl * 0.35;
+                    // Le bout ne sort jamais des vitres du bloc
+                    if (y > BASE - 0.2) {
+                        x = clamp(x, -HALF + 0.3, HALF - 0.3);
+                        z = clamp(z, -HALF + 0.3, HALF - 0.3);
+                    }
+                    v3.set(px, py, pz);
+                    v4.set(x, y, z);
+                    v5.subVectors(v4, v3);
+                    const len = v5.length();
+                    const rad = lerp(0.36, 0.035, u);
+                    q.setFromUnitVectors(up, v5.normalize());
+                    m4.compose(v3.add(v4).multiplyScalar(0.5), q, sc.set(rad, len * 1.08, rad));
+                    tmp.copy(TENT_BASE).lerp(TENT_TIP, u);
+                    if (v3.y < BASE) {
+                        tentDeep.setMatrixAt(nDeep, m4);
+                        tentDeep.setColorAt(nDeep++, tmp);
+                    } else {
+                        tentHigh.setMatrixAt(nHigh, m4);
+                        tentHigh.setColorAt(nHigh++, tmp);
+                    }
+                    px = x;
+                    py = y;
+                    pz = z;
+                }
+            });
+            tentDeep.count = nDeep;
+            tentHigh.count = nHigh;
+            [tentDeep, tentHigh].forEach((m) => {
+                m.instanceMatrix.needsUpdate = true;
+                m.instanceColor.needsUpdate = true;
+            });
+
+            anglers.forEach((an) => {
+                an.a += an.sp * dt;
+                an.g.position.set(Math.cos(an.a) * an.r, an.y + Math.sin(t * 0.4 + an.a) * 0.3, Math.sin(an.a) * an.r);
+                an.g.rotation.y = Math.atan2(-Math.sin(an.a) * Math.sign(an.sp), Math.cos(an.a) * Math.sign(an.sp));
+                an.g.updateMatrixWorld();
+                an.g.localToWorld(an.lure.position.set(0, 0.5, 0.68));
+                an.lure.material.opacity = 0.7 + 0.3 * Math.sin(t * 2.3 + an.a * 3);
+            });
+            abyssEyes.forEach((ae) => {
+                const open = Math.sin(t * ae.sp + ae.ph);
+                const k = smooth(clamp((open - 0.2) / 0.3, 0, 1));
+                ae.eyes.forEach((e) => {
+                    e.scale.set(0.7, 0.7 * Math.max(0.05, k), 1);
+                    e.material.opacity = k;
+                });
+            });
+
+            const [fx, fy, fz] = schoolAt(t);
+            const [fx2, , fz2] = schoolAt(t + 0.05);
+            const fh = Math.atan2(fx2 - fx, fz2 - fz);
+            schoolOff.forEach((o, i) => {
+                v3.set(fx + (o.p.x + Math.sin(t * 1.3 + o.ph) * 0.08) * 1.4, fy + o.p.y * 1.4, fz + (o.p.z + Math.cos(t * 1.1 + o.ph) * 0.08) * 1.4);
+                q.setFromAxisAngle(up, fh + Math.sin(t * 6 + o.ph) * 0.12);
+                m4.compose(v3, q, sc.setScalar(1.4));
+                school.setMatrixAt(i, m4);
+            });
+            school.instanceMatrix.needsUpdate = true;
+
+            // Orage : éclairs (jamais plus de deux flashs à la suite)
+            sky.rotation.y = az;
+            clouds.forEach((c) => {
+                c.g.position.x = c.x + Math.sin(t * c.sp * 0.4 + c.ph) * 1.8;
+            });
+            if (!still && t > storm.next) {
+                lightning();
+                storm.next = t + rr(7, 13);
+            }
+            const since = t - storm.t0;
+            let flash = 0;
+            if (since < 0.08) flash = 1;
+            else if (since < 0.17) flash = 0.2;
+            else if (since < 0.26) flash = 0.75;
+            else if (since < 1.2) flash = 0.75 * Math.exp(-(since - 0.26) * 7);
+            hemi.intensity = HEMI + flash * 1.6;
+            flashLight.intensity = flash * 2.2;
+            uFlash.value = flash;
+            boltMat.opacity = since < 0.08 ? 1 : since < 0.17 ? 0.35 : since < 0.3 ? 0.9 : 0;
+            stage.style.setProperty('--flash', (flash * 0.6).toFixed(3));
+
+            // Pluie
+            for (let i = 0; i < RAIN; i++) {
+                const d = drops[i];
+                d.x += WIND.x * d.s * dt;
+                d.y += WIND.y * d.s * dt;
+                d.z += WIND.z * d.s * dt;
+                const inside = Math.abs(d.x) < HALF && Math.abs(d.z) < HALF;
+                if (d.y < (inside ? 0.05 : BASE) || d.x > 6.5) {
+                    d.x = rr(-7, 5.5);
+                    d.y = rr(6.5, 8.5);
+                    d.z = rr(-6, 5.5);
+                }
+                rainPos.set([d.x, d.y, d.z, d.x - WIND.x * 0.03, d.y - WIND.y * 0.03, d.z - WIND.z * 0.03], i * 6);
+            }
+            rainGeo.attributes.position.needsUpdate = true;
+            mists.forEach((m) => {
+                m.sp.position.x = m.x + Math.sin(t * 0.1 + m.ph) * 0.8;
+                m.sp.material.opacity = 0.035 + 0.015 * Math.sin(t * 0.3 + m.ph);
+            });
+
+            // Les vagues se brisent sur les rochers
+            if (t > storm.wave) {
+                const onShore = rand() < 0.3;
+                const a = rr(0, 6.28);
+                if (onShore) {
+                    const [cx, cz, cr] = FOAM_ROCKS[1 + Math.floor(rr(0, 3))];
+                    sprayAt(clamp(cx + Math.cos(a) * cr, -4.9, 4.9), clamp(cz + Math.sin(a) * cr, -4.9, 4.9), 10, 0.8);
+                } else {
+                    sprayAt(I.x + Math.cos(a) * 1.5, I.z + Math.sin(a) * 1.5, 14, 1);
+                }
+                storm.wave = t + rr(0.25, 0.7);
+            }
+            spray.items.forEach((p, i) => {
+                if (p.life >= 1) {
+                    spray.set(i, 0, -50, 0, 0, [0, 0, 0], 0);
+                    return;
+                }
+                p.life += real / 1.1;
+                const k = Math.min(1, p.life);
+                v3.copy(p.from).addScaledVector(p.vel, k * 0.9);
+                v3.y -= k * k * 1.4;
+                v3.x += k * 0.4;
+                spray.set(i, v3.x, Math.max(v3.y, -0.1), v3.z, p.size * (1 + k), [0.9, 0.93, 0.9], (1 - k) * 0.9);
+            });
+            spray.update();
+
+            // Ronds dans l'eau
+            rings.forEach((r) => {
+                if (r.t >= 1) {
+                    r.m.visible = false;
+                    return;
+                }
+                r.t += dt / r.dur;
+                if (r.t < 0) return;
+                const k = Math.min(1, r.t);
+                r.m.visible = true;
+                r.m.position.set(r.x, wave(r.x, r.z, t) + 0.015, r.z);
+                r.m.scale.setScalar(0.04 + r.max * easeOut(k));
+                r.m.material.opacity = (1 - k) * 0.6;
+            });
+
+            // Particules : plancton (de plus en plus gros, pâle et flou en descendant), bulles
+            snowIn.items.forEach((p, i) => {
+                p.y -= dt * 0.03;
+                if (p.y < BASE + 0.1) p.y = -0.2;
+                snowIn.set(i, p.x + Math.sin(t * 0.4 + p.ph) * 0.08, p.y, p.z + Math.cos(t * 0.35 + p.ph) * 0.08, 0.035, [0.5, 0.95, 0.8], 0.3 + 0.25 * Math.sin(t * 1.3 + p.ph));
+            });
+            snowIn.update();
+            snowDeep.items.forEach((p, i) => {
+                p.y -= dt * 0.05;
+                if (p.y < -45) p.y = BASE - 0.3;
+                const d = -p.y;
+                snowDeep.set(i, p.x + Math.sin(t * 0.3 + p.ph) * 0.1, p.y, p.z + Math.cos(t * 0.25 + p.ph) * 0.1, 0.04 + d * 0.014, [0.4, 0.85, 0.75], (0.45 + 0.2 * Math.sin(t * 1.1 + p.ph)) * Math.exp(-d * 0.07));
+            });
+            snowDeep.update();
+            bubbles.items.forEach((p, i) => {
+                p.y += p.sp * dt;
+                if (p.y > -0.15) resetBubble(p, false);
+                bubbles.set(i, p.x + Math.sin(t * 3 + p.ph) * 0.02, p.y, p.z + Math.cos(t * 2.6 + p.ph) * 0.02, p.size, [0.75, 0.92, 0.88], 0.45);
+            });
+            bubbles.update();
+
+            renderer.render(scene, camera);
+            raf = requestAnimationFrame(frame);
+        }
+        raf = requestAnimationFrame(frame);
+
+        return {
+            dispose() {
+                alive = false;
+                cancelAnimationFrame(raf);
+                ro.disconnect();
+                stage.style.removeProperty('--flash');
+                canvas.removeEventListener('wheel', onWheel);
+                scene.traverse((o) => {
+                    if (o.geometry) o.geometry.dispose();
+                    if (o.material) {
+                        [].concat(o.material).forEach((m) => {
+                            Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose(); });
+                            m.dispose();
+                        });
+                    }
+                });
+                renderer.dispose();
+                canvas.remove();
+            },
+        };
+
+        // ---------------- Outils ----------------
         function mergeGeos(list) {
             const pos = [];
             list.forEach((g) => {
