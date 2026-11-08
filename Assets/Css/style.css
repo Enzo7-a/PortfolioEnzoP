@@ -2369,15 +2369,6 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="room"] .diorama-sky--room { opacity: 1; }
 
-/* Le train : un ciel de pluie gris-vert, doux et lumineux */
-.diorama-sky--train {
-    opacity: 0;
-    background:
-        radial-gradient(70% 45% at 50% 30%, rgba(236, 240, 236, 0.6), transparent),
-        linear-gradient(180deg, #9aa7a3 0%, #b4beb8 45%, #c6cdc6 70%, #a3ad9f 100%);
-}
-
-.diorama-overlay[data-scene="train"] .diorama-sky--train { opacity: 1; }
 
 .diorama-canvas {
     position: absolute;
