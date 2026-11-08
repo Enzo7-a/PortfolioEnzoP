@@ -17,6 +17,8 @@
     const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" fill="currentColor"/></svg>';
     const ICON_NEXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5v13l9-6.5Z" fill="currentColor"/><path d="M18 5.5v13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
+    const ICON_SOUND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4Z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18.2 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
     const CHEV_L = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5.5-6.5 6.5 6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const CHEV_R = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 5.5 6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -41,6 +43,9 @@
         studyNext: 'Next track',
         studyError: 'The music could not load.',
         studyMissing: 'Playlist not configured yet.',
+        sound: 'Ambience',
+        soundHelp: 'A calming background sound for each diorama',
+        soundVolume: 'Ambience volume',
         shuffle: 'Shuffle',
         shuffleHelp: 'Change diorama with every new song',
         forestTitle: 'The living forest.',
@@ -76,6 +81,9 @@
         studyNext: 'Morceau suivant',
         studyError: 'La musique n\'a pas pu se charger.',
         studyMissing: 'Playlist pas encore configurée.',
+        sound: 'Ambiance',
+        soundHelp: 'Un bruit de fond apaisant, propre à chaque diorama',
+        soundVolume: 'Volume de l\'ambiance',
         shuffle: 'Aléatoire',
         shuffleHelp: 'Change de diorama à chaque nouvelle musique',
         forestTitle: 'La forêt vivante.',
@@ -162,6 +170,12 @@
                 <button type="button" class="diorama-btn diorama-nav diorama-next" aria-label="${t.next}">${CHEV_R}</button>
                 <p class="diorama-caption"><em></em><span></span></p>
                 <div class="diorama-dock">
+                    <div class="diorama-sound">
+                        <input type="range" class="diorama-vol" min="0" max="1" step="0.01" aria-label="${t.soundVolume}">
+                        <button type="button" class="diorama-chip diorama-sound-toggle" aria-pressed="false" title="${t.soundHelp}">
+                            <span class="diorama-chip-icon">${ICON_SOUND}</span><span class="diorama-chip-text">${t.sound}</span>
+                        </button>
+                    </div>
                     <button type="button" class="diorama-chip diorama-shuffle" aria-pressed="false" title="${t.shuffleHelp}">
                         <span class="diorama-chip-icon">${ICON_SHUFFLE}</span><span class="diorama-chip-text">${t.shuffle}</span>
                     </button>
@@ -189,10 +203,14 @@
         const skipBtn = o.querySelector('.diorama-skip');
         const aiBtn = o.querySelector('.diorama-ai-toggle');
         const shuffleBtn = o.querySelector('.diorama-shuffle');
-        const buttons = [studyBtn, ppBtn, skipBtn, prevBtn, nextBtn, shuffleBtn, aiBtn, closeBtn];
+        const soundBtn = o.querySelector('.diorama-sound-toggle');
+        const volInput = o.querySelector('.diorama-vol');
+        const buttons = [studyBtn, ppBtn, skipBtn, prevBtn, nextBtn, soundBtn, volInput, shuffleBtn, aiBtn, closeBtn];
         // Aléatoire : à chaque nouvelle musique, on change de diorama
         let shuffle = false;
         const study = studyMode(o, t, {
+            // Quand la musique joue, l'ambiance se fait plus discrète
+            onPlaying: (v) => ambience.duck(v),
             onTrack: () => {
                 if (!shuffle || SCENES.length < 2) return;
                 let i = Math.floor(Math.random() * (SCENES.length - 1));
@@ -213,8 +231,9 @@
             current = (i + SCENES.length) % SCENES.length;
             const mine = ++token;
             o.dataset.scene = SCENES[current].id;
+            ambience.scene(SCENES[current].id);
             // Interface claire sur les scènes sombres, sombre sur les scènes en plein jour
-            o.classList.toggle('is-night', SCENES[current].id !== 'desert');
+            o.classList.toggle('is-night', !['desert', 'classroom'].includes(SCENES[current].id));
             caption();
             if (scene3d) {
                 o.classList.remove('is-ready');
@@ -251,6 +270,7 @@
             root.classList.remove('diorama-open');
             o.classList.remove('is-open');
             study.stop();
+            ambience.stop();
             if (scene3d) {
                 scene3d.dispose();
                 scene3d = null;
@@ -275,11 +295,30 @@
             // Sans musique, l'aléatoire ne servirait à rien : on la lance
             if (shuffle && !study.isOn()) study.toggle();
         });
+        const store = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } };
+        const recall = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+        const savedVol = parseFloat(recall('diorama-volume'));
+        volInput.value = String(Number.isFinite(savedVol) ? savedVol : 0.7);
+        ambience.volume(parseFloat(volInput.value));
+        const setSound = (v) => {
+            const okSound = v ? ambience.enable() : (ambience.disable(), false);
+            soundBtn.setAttribute('aria-pressed', String(!!okSound));
+            soundBtn.classList.toggle('is-on', !!okSound);
+            o.classList.toggle('is-sound', !!okSound);
+            store('diorama-sound', okSound ? '1' : '0');
+        };
+        soundBtn.addEventListener('click', () => setSound(!ambience.isOn()));
+        volInput.addEventListener('input', () => {
+            ambience.volume(parseFloat(volInput.value));
+            store('diorama-volume', volInput.value);
+        });
         ppBtn.addEventListener('click', () => study.playPause());
         skipBtn.addEventListener('click', () => study.next());
         document.addEventListener('keydown', onKey);
         closeBtn.focus({ preventScroll: true });
         show(current);
+        // Le son revient tout seul si on l'avait laissé allumé (l'ouverture est elle-même un clic)
+        if (recall('diorama-sound') === '1') setSound(true);
 
         try {
             THREE = await import(THREE_URL);
@@ -289,6 +328,319 @@
         }
         if (overlay === o) show(current);
     }
+
+    // ---------------------------------------------------------------------
+    // Sons d'ambiance : un « bruit de fond » apaisant par diorama, dans l'esprit
+    // des Sons en arrière-plan d'Apple (bruit doux, pluie, océan, nuit, vent).
+    // Tout est fabriqué en direct avec Web Audio à partir de bruits colorés
+    // (blanc, rose, brun) filtrés et modulés lentement : aucun fichier à charger.
+    // Le tonnerre arrive avec les éclairs, et l'ambiance baisse quand la musique joue.
+    // ---------------------------------------------------------------------
+    const ambience = (() => {
+        let ctx = null;
+        let master = null;
+        let current = null;
+        let sceneId = null;
+        let on = false;
+        let volume = 0.7;
+        let duck = false;
+        const buffers = {};
+        const LOOP_FADE = 4096;
+
+        // Six secondes de bruit, en stéréo (deux canaux différents pour l'ampleur), qui bouclent sans clic
+        function noise(kind) {
+            if (buffers[kind]) return buffers[kind];
+            const sr = ctx.sampleRate;
+            const len = sr * 6;
+            const b = ctx.createBuffer(2, len, sr);
+            for (let ch = 0; ch < 2; ch++) {
+                const d = b.getChannelData(ch);
+                let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, last = 0;
+                for (let i = 0; i < len; i++) {
+                    const w = Math.random() * 2 - 1;
+                    if (kind === 'white') d[i] = w * 0.5;
+                    else if (kind === 'pink') {
+                        // Bruit rose (filtre de Paul Kellet) : plus doux que le blanc
+                        b0 = 0.99886 * b0 + w * 0.0555179;
+                        b1 = 0.99332 * b1 + w * 0.0750759;
+                        b2 = 0.969 * b2 + w * 0.153852;
+                        b3 = 0.8665 * b3 + w * 0.3104856;
+                        b4 = 0.55 * b4 + w * 0.5329522;
+                        b5 = -0.7616 * b5 - w * 0.016898;
+                        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+                        b6 = w * 0.115926;
+                    } else {
+                        // Bruit brun : grave et sourd, comme un grondement lointain
+                        last = (last + 0.02 * w) / 1.02;
+                        d[i] = last * 3.5;
+                    }
+                }
+                // La fin se fond dans le début : on boucle de LOOP_FADE à la fin, sans couture
+                for (let i = 0; i < LOOP_FADE; i++) {
+                    const k = i / LOOP_FADE;
+                    d[len - LOOP_FADE + i] = d[len - LOOP_FADE + i] * (1 - k) + d[i] * k;
+                }
+            }
+            buffers[kind] = b;
+            return b;
+        }
+
+        // --- Petites briques ---
+        function bus(nodes) {
+            const g = ctx.createGain();
+            g.gain.value = 0;
+            g.connect(master);
+            return { out: g, nodes, timers: [] };
+        }
+        function src(scene, kind) {
+            const s = ctx.createBufferSource();
+            s.buffer = noise(kind);
+            s.loop = true;
+            s.loopStart = LOOP_FADE / ctx.sampleRate;
+            s.loopEnd = s.buffer.duration;
+            s.start(0, s.loopStart + Math.random() * (s.buffer.duration - s.loopStart - 0.1));
+            scene.nodes.push(s);
+            return s;
+        }
+        function filter(type, freq, q = 0.7) {
+            const f = ctx.createBiquadFilter();
+            f.type = type;
+            f.frequency.value = freq;
+            f.Q.value = q;
+            return f;
+        }
+        function amp(v) {
+            const g = ctx.createGain();
+            g.gain.value = v;
+            return g;
+        }
+        // Une modulation très lente (une respiration) sur un paramètre : valeur de base ± profondeur
+        function lfo(scene, param, base, depth, hz, phase = 0) {
+            param.value = base;
+            const o = ctx.createOscillator();
+            o.frequency.value = hz;
+            const g = amp(depth);
+            o.connect(g).connect(param);
+            o.start(ctx.currentTime + (phase / (Math.PI * 2)) / hz);
+            scene.nodes.push(o);
+        }
+        function chain(...list) {
+            for (let i = 0; i < list.length - 1; i++) list[i].connect(list[i + 1]);
+            return list[list.length - 1];
+        }
+        // Une nappe de bruit filtré, éventuellement modulée en volume et en couleur
+        function bed(scene, { kind, type = 'lowpass', freq, q = 0.7, hp = 0, gain, swell = 0, swellHz = 0.07, sweep = 0, sweepHz = 0.05, phase = 0 }) {
+            const nodes = [src(scene, kind)];
+            if (hp) nodes.push(filter('highpass', hp, 0.5));
+            const f = filter(type, freq, q);
+            nodes.push(f);
+            const g = amp(gain);
+            nodes.push(g);
+            chain(...nodes).connect(scene.out);
+            if (swell) lfo(scene, g.gain, gain, swell, swellHz, phase);
+            if (sweep) lfo(scene, f.frequency, freq, sweep, sweepHz, phase + 1);
+            return { f, g };
+        }
+        // Des gouttes : de très courts « tics » de bruit, chacun à sa propre hauteur
+        function drops(scene, { rate, lo, hi, gain, q = 4, decay = 0.03 }) {
+            const white = noise('white');
+            const tick = () => {
+                if (!ctx || ctx.state !== 'running') return;
+                const n = Math.random() < rate * 0.04 ? 1 + (Math.random() < rate * 0.01 ? 1 : 0) : 0;
+                for (let k = 0; k < n; k++) {
+                    const t0 = ctx.currentTime + Math.random() * 0.04;
+                    const s = ctx.createBufferSource();
+                    s.buffer = white;
+                    const f = filter('bandpass', lo * Math.pow(hi / lo, Math.random()), q);
+                    const g = amp(0);
+                    const v = gain * (0.35 + Math.random() * 0.65);
+                    g.gain.setValueAtTime(0, t0);
+                    g.gain.linearRampToValueAtTime(v, t0 + 0.002);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay * (0.6 + Math.random()));
+                    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+                    if (pan) pan.pan.value = Math.random() * 1.6 - 0.8;
+                    chain(s, f, g, ...(pan ? [pan] : [])).connect(scene.out);
+                    s.start(t0, Math.random() * 5);
+                    s.stop(t0 + decay * 2 + 0.05);
+                }
+            };
+            scene.timers.push(setInterval(tick, 40));
+        }
+
+        // --- Les six ambiances ---
+        const RECIPES = {
+            // Pluie fine sur les feuilles : un bruit rose clair, des gouttes, un vent doux dans les arbres
+            forest(s) {
+                bed(s, { kind: 'pink', hp: 450, freq: 7500, gain: 0.42, swell: 0.06, swellHz: 0.05 });
+                bed(s, { kind: 'brown', freq: 320, gain: 0.32, swell: 0.08, swellHz: 0.03 });
+                bed(s, { kind: 'pink', type: 'bandpass', freq: 520, q: 0.8, gain: 0.14, swell: 0.08, swellHz: 0.06, sweep: 160, sweepHz: 0.04 });
+                drops(s, { rate: 16, lo: 1800, hi: 6500, gain: 0.05 });
+            },
+            // L'océan : la houle qui monte et redescend, l'écume, un peu de pluie
+            boat(s) {
+                bed(s, { kind: 'brown', freq: 600, gain: 0.5, swell: 0.3, swellHz: 0.085, sweep: 350, sweepHz: 0.085 });
+                bed(s, { kind: 'pink', hp: 300, freq: 2400, gain: 0.16, swell: 0.12, swellHz: 0.085, phase: 0.9 });
+                bed(s, { kind: 'pink', hp: 1400, freq: 9000, gain: 0.1, swell: 0.03, swellHz: 0.04 });
+                drops(s, { rate: 7, lo: 2500, hi: 7000, gain: 0.03 });
+            },
+            // La nuit d'orage : un fond sombre, les vagues qui viennent sur les rochers, la pluie et le vent
+            lighthouse(s) {
+                bed(s, { kind: 'brown', freq: 240, gain: 0.36, swell: 0.07, swellHz: 0.03 });
+                bed(s, { kind: 'pink', type: 'bandpass', freq: 750, q: 0.6, gain: 0.2, swell: 0.18, swellHz: 0.065, sweep: 300, sweepHz: 0.065 });
+                bed(s, { kind: 'pink', hp: 900, freq: 6500, gain: 0.2, swell: 0.05, swellHz: 0.05 });
+                bed(s, { kind: 'white', type: 'bandpass', freq: 420, q: 4, gain: 0.05, swell: 0.04, swellHz: 0.09, sweep: 140, sweepHz: 0.07 });
+                drops(s, { rate: 9, lo: 2000, hi: 6000, gain: 0.03 });
+            },
+            // La tempête de sable : un vent qui souffle par rafales, le sable qui siffle, un grondement sourd
+            desert(s) {
+                bed(s, { kind: 'pink', type: 'bandpass', freq: 480, q: 1.1, gain: 0.58, swell: 0.24, swellHz: 0.11, sweep: 230, sweepHz: 0.07 });
+                bed(s, { kind: 'white', hp: 2800, freq: 9000, gain: 0.07, swell: 0.045, swellHz: 0.11, phase: 0.4 });
+                bed(s, { kind: 'brown', freq: 160, gain: 0.32, swell: 0.1, swellHz: 0.05 });
+                drops(s, { rate: 22, lo: 4000, hi: 9000, gain: 0.012, decay: 0.015 });
+            },
+            // Le blizzard : le vent qui hurle et siffle, étouffé par la neige, et un grondement grave
+            snow(s) {
+                bed(s, { kind: 'pink', type: 'bandpass', freq: 340, q: 1, gain: 0.52, swell: 0.22, swellHz: 0.09, sweep: 120, sweepHz: 0.06 });
+                bed(s, { kind: 'white', type: 'bandpass', freq: 880, q: 7, gain: 0.07, swell: 0.06, swellHz: 0.05, sweep: 320, sweepHz: 0.045, phase: 2 });
+                bed(s, { kind: 'brown', freq: 190, gain: 0.4, swell: 0.08, swellHz: 0.04 });
+                bed(s, { kind: 'white', hp: 3500, freq: 8000, gain: 0.025, swell: 0.015, swellHz: 0.09 });
+            },
+            // La classe : la pluie contre les vitres (étouffée par la fenêtre), les gouttes, et la petite horloge
+            classroom(s) {
+                bed(s, { kind: 'pink', hp: 500, freq: 3200, gain: 0.52, swell: 0.06, swellHz: 0.04 });
+                bed(s, { kind: 'brown', freq: 380, gain: 0.2 });
+                drops(s, { rate: 12, lo: 1400, hi: 4200, gain: 0.045, q: 6, decay: 0.04 });
+                // Le tic-tac, à la seconde près, très discret
+                const white = noise('white');
+                const tickTock = () => {
+                    if (!ctx || ctx.state !== 'running') return;
+                    const now = Date.now();
+                    const t0 = ctx.currentTime + (1000 - (now % 1000)) / 1000;
+                    const s2 = ctx.createBufferSource();
+                    s2.buffer = white;
+                    const f = filter('bandpass', Math.floor(now / 1000) % 2 ? 2600 : 2100, 9);
+                    const g = amp(0);
+                    g.gain.setValueAtTime(0, t0);
+                    g.gain.linearRampToValueAtTime(0.11, t0 + 0.001);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.035);
+                    chain(s2, f, g).connect(s.out);
+                    s2.start(t0, Math.random() * 5);
+                    s2.stop(t0 + 0.08);
+                };
+                s.timers.push(setInterval(tickTock, 1000));
+            },
+        };
+
+        function level() {
+            return on ? volume * (duck ? 0.45 : 1) : 0;
+        }
+        function ramp(param, v, time) {
+            const now = ctx.currentTime;
+            param.cancelScheduledValues(now);
+            param.setValueAtTime(param.value, now);
+            param.linearRampToValueAtTime(v, now + time);
+        }
+        function teardown(scene, after) {
+            setTimeout(() => {
+                scene.timers.forEach(clearInterval);
+                scene.nodes.forEach((n) => { try { n.stop(); } catch (e) { /* déjà arrêté */ } });
+                scene.out.disconnect();
+            }, after * 1000);
+        }
+        function startScene(id) {
+            if (!ctx || !RECIPES[id]) return;
+            if (current) {
+                ramp(current.out.gain, 0, 1.6);
+                current.timers.forEach(clearInterval);
+                teardown(current, 1.8);
+                current = null;
+            }
+            const s = bus([]);
+            RECIPES[id](s);
+            ramp(s.out.gain, 1, 2.2);
+            current = s;
+        }
+
+        return {
+            // Doit être appelé pendant un clic (le navigateur n'autorise le son qu'après un geste)
+            enable() {
+                if (!ctx) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return false;
+                    ctx = new AC();
+                    const comp = ctx.createDynamicsCompressor();
+                    comp.threshold.value = -16;
+                    comp.ratio.value = 3;
+                    master = amp(0);
+                    master.connect(comp).connect(ctx.destination);
+                }
+                if (ctx.state === 'suspended') ctx.resume();
+                on = true;
+                if (!current && sceneId) startScene(sceneId);
+                ramp(master.gain, level(), 1.2);
+                return true;
+            },
+            disable() {
+                on = false;
+                if (!ctx) return;
+                ramp(master.gain, 0, 0.8);
+            },
+            isOn: () => on,
+            scene(id) {
+                if (id === sceneId) return;
+                sceneId = id;
+                if (on) startScene(id);
+                else if (current) {
+                    teardown(current, 0);
+                    current = null;
+                }
+            },
+            volume(v) {
+                volume = v;
+                if (ctx) ramp(master.gain, level(), 0.2);
+            },
+            duck(v) {
+                duck = v;
+                if (ctx) ramp(master.gain, level(), 1.5);
+            },
+            // Un roulement de tonnerre lointain, qui suit l'éclair de quelques secondes
+            thunder(delay = 1.5) {
+                if (!on || !ctx || !current) return;
+                const t0 = ctx.currentTime + delay;
+                const s = ctx.createBufferSource();
+                s.buffer = noise('brown');
+                const f = filter('lowpass', 140, 0.8);
+                f.frequency.setValueAtTime(260, t0);
+                f.frequency.exponentialRampToValueAtTime(90, t0 + 5);
+                const g = amp(0);
+                g.gain.setValueAtTime(0, t0);
+                g.gain.linearRampToValueAtTime(0.75, t0 + 0.6);
+                g.gain.linearRampToValueAtTime(0.45, t0 + 1.4);
+                g.gain.linearRampToValueAtTime(0.6, t0 + 1.9);
+                g.gain.exponentialRampToValueAtTime(0.001, t0 + 6);
+                chain(s, f, g).connect(current.out);
+                s.start(t0, Math.random() * 4);
+                s.stop(t0 + 6.2);
+            },
+            // À la fermeture : tout s'arrête et le contexte audio est libéré
+            stop() {
+                on = false;
+                sceneId = null;
+                if (!ctx) return;
+                const c = ctx;
+                const cur = current;
+                current = null;
+                ramp(master.gain, 0, 0.4);
+                setTimeout(() => {
+                    if (cur) teardown(cur, 0);
+                    c.close();
+                }, 500);
+                ctx = null;
+                master = null;
+                Object.keys(buffers).forEach((k) => delete buffers[k]);
+            },
+        };
+    })();
 
     // ---------------------------------------------------------------------
     // Mode révision : lance la playlist YouTube en aléatoire, lecteur caché,
@@ -332,6 +684,7 @@
         const setPlaying = (v) => {
             playing = v;
             o.classList.toggle('is-playing', v);
+            if (hooks.onPlaying) hooks.onPlaying(v);
             pp.innerHTML = v ? ICON_PAUSE : ICON_PLAY;
             pp.setAttribute('aria-label', v ? t.studyPause : t.studyPlay);
         };
@@ -1986,6 +2339,7 @@ void main() {
             // Éclair lointain : deux lueurs rapides qui éclairent la scène et le fond
             if (!still && t > storm.next) {
                 storm.flash = 1;
+                ambience.thunder(rr(1.5, 3.5));
                 storm.next = t + rr(32, 55);
             }
             storm.flash = Math.max(0, storm.flash - dt * 0.7);
@@ -2899,6 +3253,7 @@ totalEmissiveRadiance += vec3(0.14, 0.22, 0.28) * fres * 0.6 + vec3(0.5, 0.6, 0.
         sky.add(bolt);
         const storm = { next: rr(2.5, 4.5), t0: -10, spray: rr(1, 2) };
         function lightning() {
+            ambience.thunder(rr(1, 3));
             const pts = [];
             let px = rr(-6, 6);
             const z = rr(-9, -8);
@@ -4023,6 +4378,7 @@ void main() {
         sky.add(bolt);
         const storm = { next: rr(3, 5), t0: -10, wave: rr(0.3, 0.8) };
         function lightning() {
+            ambience.thunder(rr(1, 3));
             const pts = [];
             let px = rr(-7, 7);
             const z = rr(-10, -8.5);
@@ -6925,7 +7281,7 @@ void main() {
     }
 
     // ---------------------------------------------------------------------
-    // Sixième diorama : la petite salle de classe, un soir de pluie. Dehors il
+    // Sixième diorama : la petite salle de classe, un jour de pluie. Dehors il
     // pleut doucement contre les vitres ; dedans, quatre élèves révisent sous
     // leur lampe de bureau, et la prof, ravie, se promène devant le tableau.
     // Les murs côté caméra s'effacent, comme dans une maison de poupée.
@@ -6958,10 +7314,10 @@ void main() {
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 300);
 
-        // --- Un soir de pluie : un jour gris et bleuté par les fenêtres, et les lampes qui réchauffent tout ---
-        const hemi = new THREE.HemisphereLight(0xe8d2bc, 0x54443a, 0.62);
+        // --- Un jour de pluie : une lumière grise et douce par les fenêtres, les lampes allumées pour le confort ---
+        const hemi = new THREE.HemisphereLight(0xeef0f2, 0x6e5e50, 1.1);
         scene.add(hemi);
-        const sun = new THREE.DirectionalLight(0x9fb4d6, 0.7);
+        const sun = new THREE.DirectionalLight(0xd6e2f0, 1.35);
         sun.position.set(-11, 7.5, 3.2);
         sun.target.position.set(0, 0, 0);
         sun.castShadow = true;
@@ -6970,7 +7326,7 @@ void main() {
         sun.shadow.bias = -0.0006;
         sun.shadow.normalBias = 0.02;
         scene.add(sun, sun.target);
-        const fill = new THREE.DirectionalLight(0xffcf9a, 0.35);
+        const fill = new THREE.DirectionalLight(0xf2e6d8, 0.45);
         fill.position.set(6, 6, 7);
         scene.add(fill);
 
@@ -7233,7 +7589,7 @@ void main() {
         onWall(front, wallClock, 2.05, 2.1, 0.02);
 
         // Les fenêtres : cadres, croisillons, vitres, rebords avec des plantes
-        const glassMat = new THREE.MeshStandardMaterial({ color: 0x8ea4c4, emissive: 0x3c4c66, emissiveIntensity: 0.6, transparent: true, opacity: 0.32, roughness: 0.05, metalness: 0.1, depthWrite: false });
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0xc8d6e6, emissive: 0x8a9cb4, emissiveIntensity: 0.55, transparent: true, opacity: 0.32, roughness: 0.05, metalness: 0.1, depthWrite: false });
         const frameMat = flat(0xf7f3ea, { roughness: 0.6 });
         WIN.forEach((h, wi) => {
             const wg = new THREE.Group();
@@ -7502,7 +7858,7 @@ void main() {
             const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), bulbMat);
             bulb.position.set(-0.04, 0.225, 0.04);
             lg.add(bulb);
-            const pl = new THREE.PointLight(0xffb866, 1.7, 2.4, 1.4);
+            const pl = new THREE.PointLight(0xffc27a, 1.0, 2.0, 1.4);
             pl.position.set(-0.04, 0.18, 0.06);
             lg.add(pl);
             lamps.push({ pl, ph: rr(0, 6.28) });
@@ -7813,7 +8169,7 @@ void main() {
         const rainPos = new Float32Array(RAIN * 6);
         const rainGeo = new THREE.BufferGeometry();
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-        const rainLines = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xc4d2e6, transparent: true, opacity: 0.4, depthWrite: false }));
+        const rainLines = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0x8f9eb4, transparent: true, opacity: 0.5, depthWrite: false }));
         rainLines.frustumCulled = false;
         rainLines.renderOrder = 7;
         scene.add(rainLines);
@@ -8145,7 +8501,7 @@ void main() {
             });
             beads.update();
             // Les lampes : une lumière chaude qui respire à peine
-            lamps.forEach((l) => { l.pl.intensity = 1.7 + Math.sin(t * 0.8 + l.ph) * 0.05; });
+            lamps.forEach((l) => { l.pl.intensity = 1.0 + Math.sin(t * 0.8 + l.ph) * 0.03; });
 
             renderer.render(scene, camera);
             raf = requestAnimationFrame(frame);
