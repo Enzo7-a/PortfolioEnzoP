@@ -2315,6 +2315,24 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="desert"] .diorama-sky--desert { opacity: 1; }
 
+/* La neige : l'heure bleue en montagne, quelques étoiles, la lune derrière les nuages, l'horizon lavande */
+.diorama-sky--snow {
+    opacity: 0;
+    background:
+        radial-gradient(circle 30px at 78% 15%, rgba(250, 248, 238, 0.95), rgba(250, 248, 238, 0.35) 45%, transparent 70%),
+        radial-gradient(circle 170px at 78% 15%, rgba(200, 212, 240, 0.28), transparent),
+        radial-gradient(1px 1px at 12% 9%, rgba(255, 255, 255, 0.85), transparent),
+        radial-gradient(1px 1px at 31% 18%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1.5px 1.5px at 47% 7%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 63% 24%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 89% 30%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1.5px 1.5px at 22% 28%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(100% 45% at 50% 78%, rgba(196, 178, 214, 0.5), transparent),
+        linear-gradient(180deg, #121c3a 0%, #24345e 32%, #4c5d8c 56%, #8c8fb6 74%, #b7abc6 86%, #6f7ba0 100%);
+}
+
+.diorama-overlay[data-scene="snow"] .diorama-sky--snow { opacity: 1; }
+
 .diorama-canvas {
     position: absolute;
     inset: 0;
