@@ -2292,14 +2292,14 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="forest"] .diorama-sky--day { opacity: 1; }
 
-/* Le phare : un ciel d'orage brun-orangé, très sombre en haut, avec la lueur des éclairs */
+/* Le phare : pleine nuit, une brume grise vers l'horizon, et la lueur des éclairs */
 .diorama-sky--storm {
     opacity: 0;
     background:
-        radial-gradient(70% 38% at 62% 58%, rgba(170, 118, 82, 0.55), transparent),
-        radial-gradient(120% 60% at 30% 0%, rgba(20, 14, 13, 0.95), transparent 70%),
-        linear-gradient(180deg, #241a19 0%, #4a3429 38%, #7a5640 62%, #3a2b26 82%, #1a1514 100%);
-    filter: brightness(calc(1 + var(--flash, 0) * 0.9));
+        radial-gradient(80% 30% at 50% 60%, rgba(120, 132, 140, 0.16), transparent),
+        radial-gradient(110% 70% at 50% 0%, rgba(3, 4, 6, 0.9), transparent 70%),
+        linear-gradient(180deg, #07090b 0%, #0e1215 40%, #1a1f23 60%, #0d1013 82%, #060708 100%);
+    filter: brightness(calc(1 + var(--flash, 0) * 1.2));
 }
 
 .diorama-overlay[data-scene="lighthouse"] .diorama-sky--storm { opacity: 1; }

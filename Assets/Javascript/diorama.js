@@ -3444,8 +3444,8 @@ void main() {
     }
 
     // ---------------------------------------------------------------------
-    // Troisième diorama : un phare sur son rocher, en pleine tempête. Les vagues
-    // se brisent sur les rochers, le faisceau balaie la mer et la brume légère ;
+    // Troisième diorama : un phare sur son rocher, une nuit de tempête. Les vagues
+    // se brisent sur les rochers, le faisceau perce la brume qui traîne sur l'eau ;
     // sous l'eau, un serpent de mer tourne autour du rocher et, tout au fond,
     // une créature géante déploie ses tentacules (l'une d'elles remonte parfois).
     // ---------------------------------------------------------------------
@@ -3474,17 +3474,17 @@ void main() {
         renderer.domElement.className = 'diorama-canvas';
         stage.appendChild(renderer.domElement);
         const scene = new THREE.Scene();
-        // Un brouillard léger, couleur du ciel d'orage : il n'avale que le lointain
-        scene.fog = new THREE.Fog(0x6a4d3d, 20, 70);
+        // La nuit grise : le lointain se perd dans le noir (le dessous de l'eau, lui, garde sa propre teinte)
+        scene.fog = new THREE.Fog(0x161b1f, 20, 50);
         const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 400);
         const uTime = { value: 0 };
         const uFlash = { value: 0 };
 
-        // --- Fin de journée d'orage : une lumière chaude qui perce derrière les nuages ---
-        const HEMI = 1.0;
-        const hemi = new THREE.HemisphereLight(0xa8917e, 0x141c1e, HEMI);
+        // --- Pleine nuit : une lueur froide et faible, c'est le phare qui éclaire ---
+        const HEMI = 0.6;
+        const hemi = new THREE.HemisphereLight(0x6f8090, 0x0a0d10, HEMI);
         scene.add(hemi);
-        const key = new THREE.DirectionalLight(0xe3ad80, 1.15);
+        const key = new THREE.DirectionalLight(0x9fb2c8, 0.5);
         key.position.set(-7, 7, -6);
         key.castShadow = true;
         key.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
@@ -3492,7 +3492,7 @@ void main() {
         key.shadow.bias = -0.0006;
         key.shadow.normalBias = 0.02;
         scene.add(key);
-        const fill = new THREE.DirectionalLight(0x9fb2c0, 0.5);
+        const fill = new THREE.DirectionalLight(0x8a9cae, 0.25);
         fill.position.set(6, 4, 7);
         scene.add(fill);
         const flashLight = new THREE.DirectionalLight(0xdfe6ff, 0);
@@ -3552,6 +3552,8 @@ vWater = (modelMatrix * wW).xyz;`);
                 sh.fragmentShader = 'varying vec3 vWater;\n' + FOG_GLSL + sh.fragmentShader.replace('#include <dithering_fragment>', 'gl_FragColor.rgb = waterFog(gl_FragColor.rgb, vWater.y);\n#include <dithering_fragment>');
             };
             mat.customProgramCacheKey = () => 'underwater-lighthouse';
+            // La brume de la nuit reste au-dessus de l'eau : sous la surface, on voit toujours les monstres
+            mat.fog = false;
             return mat;
         };
         // Ce qui n'existe que « vu à travers le bloc » : le puits sans fond et ce qui y vit
@@ -3682,7 +3684,7 @@ void main() {
         const M = phone ? 100 : 140;
         const waterGeo = new THREE.PlaneGeometry(S, S, M, M);
         waterGeo.rotateX(-Math.PI / 2);
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x2b6a5a, roughness: 0.14, metalness: 0.12, transparent: true, depthWrite: false });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x245a50, roughness: 0.14, metalness: 0.12, transparent: true, depthWrite: false, fog: false });
         waterMat.onBeforeCompile = (sh) => {
             sh.uniforms.uTime = uTime;
             sh.uniforms.uFlash = uFlash;
@@ -3918,12 +3920,12 @@ totalEmissiveRadiance += vec3(0.16, 0.2, 0.18) * fres * 0.6 + vec3(0.55, 0.6, 0.
         const lightMeshes = [];
         light.traverse((m) => { if (m.isMesh) lightMeshes.push(m); });
         // La lampe : une lueur chaude, un halo, et deux faisceaux opposés qui tournent
-        const lamp = new THREE.PointLight(0xffd9a0, 3, 9, 1.3);
+        const lamp = new THREE.PointLight(0xffd9a0, 4, 11, 1.2);
         lamp.position.y = LANTERN;
         light.add(lamp);
         const haloTex = radialTexture('rgba(255,225,170,0.95)', 'rgba(255,190,110,0)');
         const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
-        halo.scale.setScalar(1.6);
+        halo.scale.setScalar(2.2);
         halo.position.y = LANTERN;
         halo.renderOrder = 10;
         light.add(halo);
@@ -3946,7 +3948,7 @@ varying vec3 vN;
 varying vec3 vV;
 void main() {
     float edge = pow(abs(dot(normalize(vN), normalize(vV))), 1.6);
-    gl_FragColor = vec4(1.0, 0.9, 0.7, pow(vAlong, 2.2) * edge * 0.24 * uBeam);
+    gl_FragColor = vec4(1.0, 0.9, 0.7, pow(vAlong, 1.8) * edge * 0.32 * uBeam);
 }`,
             transparent: true,
             depthWrite: false,
@@ -3993,24 +3995,9 @@ void main() {
             pines.push({ g, ph: rr(0, 6.28) });
         });
 
-        // --- Le ciel d'orage : de gros nuages sombres et des éclairs, toujours derrière le diorama ---
+        // --- Des éclairs, loin derrière le diorama ---
         const sky = new THREE.Group();
         scene.add(sky);
-        const cloudMat = new THREE.MeshStandardMaterial({ color: 0x2c2220, emissive: 0x160e0b, flatShading: true, roughness: 1 });
-        const clouds = [];
-        for (let i = 0; i < (phone ? 6 : 9); i++) {
-            const g = new THREE.Group();
-            const n = 4 + Math.floor(rr(0, 4));
-            for (let k = 0; k < n; k++) {
-                const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(rr(0.9, 1.6), 1), cloudMat);
-                puff.position.set(rr(-1.8, 1.8), rr(-0.4, 0.5), rr(-0.8, 0.8));
-                puff.scale.set(1, rr(0.55, 0.8), 1);
-                g.add(puff);
-            }
-            g.position.set(rr(-12, 12), rr(6.5, 9.5), rr(-14, -8));
-            sky.add(g);
-            clouds.push({ g, x: g.position.x, sp: rr(0.08, 0.18) * (i % 2 ? 1 : -1), ph: rr(0, 6.28) });
-        }
         const boltMat = new THREE.MeshBasicMaterial({ color: 0xeef2ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
         const bolt = new THREE.Mesh(new THREE.BufferGeometry(), boltMat);
         bolt.renderOrder = 9;
@@ -4043,24 +4030,79 @@ void main() {
         const rainPos = new Float32Array(RAIN * 6);
         const rainGeo = new THREE.BufferGeometry();
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xcbbfb4, transparent: true, opacity: 0.32, depthWrite: false }));
+        const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xa9b5bf, transparent: true, opacity: 0.3, depthWrite: false }));
         rain.frustumCulled = false;
         rain.renderOrder = 9;
         scene.add(rain);
         const WIND = V(2.0, -9.5, 0.8);
         const drops = Array.from({ length: RAIN }, () => ({ x: rr(-6.5, 5.5), y: rr(-0.2, 8), z: rr(-6, 5.5), s: rr(0.85, 1.15) }));
-        const mistTex = radialTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
-        const mists = [];
-        for (let i = 0; i < (phone ? 5 : 8); i++) {
-            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: 0xcdb8a6, transparent: true, opacity: 0.04, depthWrite: false, fog: false }));
-            const x = rr(-4, 4);
-            const z = rr(-4, 4);
-            sp.scale.set(rr(5, 8), rr(1.0, 1.6), 1);
-            sp.position.set(x, rr(0.35, 0.9), z);
-            sp.renderOrder = 9;
-            scene.add(sp);
-            mists.push({ sp, x, ph: rr(0, 6.28) });
-        }
+        // --- La brume : des nappes grises qui traînent sur l'eau autour du phare ---
+        // Assez légère pour voir sous l'eau ; le faisceau l'éclaire quand il passe, la lanterne aussi.
+        const uBeamA = { value: 0 };
+        const uGlow = { value: 1 };
+        const uLamp = { value: V(I.x, 0, I.z) };
+        const mistMat = (alpha, seed, speed) => new THREE.ShaderMaterial({
+            uniforms: { uTime, uFlash, uBeamA, uGlow, uLamp, uAlpha: { value: alpha }, uSeed: { value: seed }, uSpeed: { value: speed } },
+            vertexShader: `varying vec3 vW;
+void main() {
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vW = w.xyz;
+    gl_Position = projectionMatrix * viewMatrix * w;
+}`,
+            fragmentShader: `uniform float uTime;
+uniform float uFlash;
+uniform float uBeamA;
+uniform float uGlow;
+uniform vec3 uLamp;
+uniform float uAlpha;
+uniform float uSeed;
+uniform float uSpeed;
+varying vec3 vW;
+float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), u.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p = p * 2.03 + 7.1; a *= 0.5; }
+    return v;
+}
+void main() {
+    vec2 drift = vec2(uTime * 0.07, uTime * 0.025) * uSpeed;
+    float n = fbm(vW.xz * 0.32 + drift + uSeed);
+    float dens = smoothstep(0.3, 0.78, n);
+    // Plus dense près du rocher, s'efface doucement au-delà du bloc
+    vec2 d = vW.xz - uLamp.xz;
+    float r = length(d);
+    float edge = 1.0 - smoothstep(4.5, 8.0, length(vW.xz));
+    float nearRock = 0.75 + 0.5 * exp(-r * 0.35);
+    // Le faisceau (deux côtés opposés) et le halo de la lanterne
+    float ang = atan(-d.y, d.x);
+    float d1 = abs(mod(ang - uBeamA + 3.14159, 6.28318) - 3.14159);
+    float d2 = abs(mod(ang - uBeamA, 6.28318) - 3.14159);
+    float lit = (exp(-d1 * d1 * 60.0) + exp(-d2 * d2 * 60.0)) * exp(-r * 0.1) * smoothstep(0.4, 1.4, r);
+    float glow = exp(-r * 0.75) * 0.7 * uGlow;
+    float light = clamp(lit * 1.3 + glow, 0.0, 1.4);
+    vec3 col = mix(vec3(0.36, 0.4, 0.44), vec3(1.0, 0.86, 0.62), clamp(light, 0.0, 1.0));
+    col *= 1.0 + uFlash * 0.9;
+    float a = dens * uAlpha * edge * nearRock * (1.0 + light * 1.1);
+    gl_FragColor = vec4(col, clamp(a, 0.0, 0.55));
+}`,
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+        });
+        const mistLayers = [[0.25, 0.2, 1.3, 1.0], [0.65, 0.15, 7.7, 0.8], [1.15, 0.11, 3.9, 1.2], [1.8, 0.07, 11.3, 0.7]].slice(0, phone ? 3 : 4).map(([y, alpha, seed, speed]) => {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(17, 17).rotateX(-Math.PI / 2), mistMat(alpha, seed, speed));
+            m.position.y = y;
+            m.renderOrder = 9;
+            scene.add(m);
+            return m;
+        });
 
         // --- Les monstres ---
         // Un serpent de mer qui tourne autour du rocher, sous la surface
@@ -4389,8 +4431,8 @@ void main() {
             const dist = fit * zoom;
             camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
             camera.lookAt(target);
-            scene.fog.near = dist + 1;
-            scene.fog.far = dist + 48;
+            scene.fog.near = dist - 1;
+            scene.fog.far = dist + 32;
             const cp = camera.position;
             const facing = [cp.z > HALF, cp.x > HALF, cp.z < -HALF, cp.x < -HALF];
             vEdges.forEach((l, i) => { l.visible = facing[(i + 3) % 4] || facing[i]; });
@@ -4399,11 +4441,13 @@ void main() {
             // Le phare : les faisceaux tournent ; toucher la tour les fait briller plus fort
             flare = Math.max(0, flare - dt * 0.6);
             beams.rotation.y = t * 0.75;
+            uBeamA.value = beams.rotation.y;
+            uGlow.value = 1 + flare;
             uBeam.value = 1 + flare * 1.6;
             const flick = 0.92 + 0.05 * Math.sin(t * 11) + 0.03 * Math.sin(t * 23 + 1);
-            lamp.intensity = (3 + flare * 4) * flick;
+            lamp.intensity = (4 + flare * 4) * flick;
             lampMat.emissiveIntensity = (2.2 + flare * 2) * flick;
-            halo.scale.setScalar(1.6 + flare * 1.4 + Math.sin(t * 3) * 0.05);
+            halo.scale.setScalar(2.2 + flare * 1.4 + Math.sin(t * 3) * 0.05);
             light.updateMatrixWorld(true);
             beams.getWorldPosition(v3);
             beamDir.set(Math.cos(beams.rotation.y), -0.05, -Math.sin(beams.rotation.y)).normalize();
@@ -4575,9 +4619,6 @@ void main() {
 
             // Orage : éclairs (jamais plus de deux flashs à la suite)
             sky.rotation.y = az;
-            clouds.forEach((c) => {
-                c.g.position.x = c.x + Math.sin(t * c.sp * 0.4 + c.ph) * 1.8;
-            });
             if (!still && t > storm.next) {
                 lightning();
                 storm.next = t + rr(7, 13);
@@ -4609,10 +4650,6 @@ void main() {
                 rainPos.set([d.x, d.y, d.z, d.x - WIND.x * 0.03, d.y - WIND.y * 0.03, d.z - WIND.z * 0.03], i * 6);
             }
             rainGeo.attributes.position.needsUpdate = true;
-            mists.forEach((m) => {
-                m.sp.position.x = m.x + Math.sin(t * 0.1 + m.ph) * 0.8;
-                m.sp.material.opacity = 0.035 + 0.015 * Math.sin(t * 0.3 + m.ph);
-            });
 
             // Les vagues se brisent sur les rochers
             if (t > storm.wave) {
