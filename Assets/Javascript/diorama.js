@@ -62,6 +62,8 @@
         classroomTitle: 'Revision time.',
         classroomHelp: touch() ? 'Drag to turn · pinch to zoom · tap a student, the teacher or the board' : 'Drag to turn · scroll to zoom · click a student, the teacher or the board',
         snowHelp: touch() ? 'Drag to turn · pinch to zoom · tap the chalet or the fir trees' : 'Drag to turn · scroll to zoom · click the chalet or the fir trees',
+        tramTitle: 'The summer tram.',
+        tramHelp: touch() ? 'Drag to turn · pinch to zoom · tap the tram, the traveller, the trees or the hydrangeas' : 'Drag to turn · scroll to zoom · click the tram, the traveller, the trees or the hydrangeas',
     } : {
         open: 'Afficher les dioramas',
         dialog: 'Dioramas',
@@ -102,6 +104,8 @@
         classroomTitle: 'L\'heure des révisions.',
         classroomHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche un élève, la prof ou le tableau' : 'Glisse pour tourner · molette pour zoomer · clique sur un élève, la prof ou le tableau',
         snowHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le chalet ou les sapins' : 'Glisse pour tourner · molette pour zoomer · clique sur le chalet ou les sapins',
+        tramTitle: 'Le tram de l\'été.',
+        tramHelp: touch() ? 'Glisse pour tourner · pince pour zoomer · touche le tram, la voyageuse, les arbres ou les hortensias' : 'Glisse pour tourner · molette pour zoomer · clique sur le tram, la voyageuse, les arbres ou les hortensias',
     });
 
     // Vitesse de la rotation automatique au repos : lente, la même pour tous les dioramas
@@ -116,6 +120,7 @@
         { id: 'snow', build: (THREE, stage) => buildSnow(THREE, stage) },
         { id: 'classroom', build: (THREE, stage) => buildClassroom(THREE, stage) },
         { id: 'room', build: (THREE, stage) => buildRoom(THREE, stage) },
+        { id: 'tram', build: (THREE, stage) => buildTram(THREE, stage) },
     ];
 
     let egg;
@@ -154,6 +159,7 @@
                     <div class="diorama-sky diorama-sky--snow"></div>
                     <div class="diorama-sky diorama-sky--classroom"></div>
                     <div class="diorama-sky diorama-sky--room"></div>
+                    <div class="diorama-sky diorama-sky--tram"></div>
                     <p class="diorama-loading">${t.loading}</p>
                 </div>
                 <div class="diorama-side">
@@ -239,7 +245,7 @@
             o.dataset.scene = SCENES[current].id;
             ambience.scene(SCENES[current].id);
             // Interface claire sur les scènes sombres, sombre sur les scènes en plein jour
-            o.classList.toggle('is-night', !['desert', 'classroom'].includes(SCENES[current].id));
+            o.classList.toggle('is-night', !['desert', 'classroom', 'tram'].includes(SCENES[current].id));
             caption();
             if (scene3d) {
                 o.classList.remove('is-ready');
@@ -351,7 +357,7 @@
         let volume = 0.7;
         let duck = false;
         const buffers = {};
-        // Les réglages que la scène pilote en direct (le disque qui tourne)
+        // Les réglages que la scène pilote en direct (le disque qui tourne, le tram qui roule)
         const live = {};
         const LOOP_FADE = 4096;
 
@@ -554,6 +560,77 @@
                 };
                 s.timers.push(setInterval(tickTock, 1000));
             },
+            // L'été : le vent dans les feuillages, le chœur des cigales, quelques oiseaux, et le tram quand il roule
+            tram(s) {
+                bed(s, { kind: 'pink', type: 'bandpass', freq: 650, q: 0.6, gain: 0.3, swell: 0.12, swellHz: 0.05, sweep: 200, sweepHz: 0.04 });
+                bed(s, { kind: 'pink', hp: 2200, freq: 8000, gain: 0.06, swell: 0.04, swellHz: 0.07, phase: 1 });
+                bed(s, { kind: 'brown', freq: 220, gain: 0.16 });
+                // Les cigales : un grésillement aigu en deux voix, qui enfle et retombe lentement
+                [[4700, 37, 0, -0.5], [5900, 43, 2.2, 0.5]].forEach(([f0, buzz, ph, side]) => {
+                    const am = amp(0.5);
+                    lfo(s, am.gain, 0.5, 0.5, buzz);
+                    const sw = amp(0.05);
+                    lfo(s, sw.gain, 0.05, 0.035, 0.045, ph);
+                    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+                    if (pan) pan.pan.value = side;
+                    chain(src(s, 'white'), filter('bandpass', f0, 5), am, sw, ...(pan ? [pan] : [])).connect(s.out);
+                });
+                // Les oiseaux : de temps en temps, deux ou trois petits gazouillis
+                const bird = () => {
+                    if (!ctx || ctx.state !== 'running') return;
+                    const n = 2 + Math.floor(Math.random() * 3);
+                    const base = 2600 + Math.random() * 1400;
+                    const side = Math.random() * 1.4 - 0.7;
+                    for (let k = 0; k < n; k++) {
+                        const t0 = ctx.currentTime + 0.05 + k * (0.14 + Math.random() * 0.08);
+                        const o = ctx.createOscillator();
+                        o.frequency.setValueAtTime(base * (1 + Math.random() * 0.1), t0);
+                        o.frequency.exponentialRampToValueAtTime(base * (1.25 + Math.random() * 0.3), t0 + 0.07);
+                        o.frequency.exponentialRampToValueAtTime(base * 0.9, t0 + 0.11);
+                        const g = amp(0);
+                        g.gain.setValueAtTime(0, t0);
+                        g.gain.linearRampToValueAtTime(0.03, t0 + 0.012);
+                        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+                        const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+                        if (pan) pan.pan.value = side;
+                        chain(o, g, ...(pan ? [pan] : [])).connect(s.out);
+                        o.start(t0);
+                        o.stop(t0 + 0.14);
+                    }
+                };
+                s.timers.push(setInterval(() => { if (Math.random() < 0.06) bird(); }, 500));
+                // Le tram : le roulement, et le tadam des roues à chaque joint de rail
+                const tr = param(s, 'tram', 0);
+                bed(s, { kind: 'brown', freq: 170, gain: 0.9, dest: tr });
+                bed(s, { kind: 'pink', type: 'bandpass', freq: 720, q: 0.9, gain: 0.2, swell: 0.04, swellHz: 0.6, dest: tr });
+                const brown = noise('brown');
+                let next = 0;
+                const clack = () => {
+                    if (!ctx || ctx.state !== 'running') return;
+                    const lvl = live.tram || 0;
+                    if (lvl < 0.05) {
+                        next = 0;
+                        return;
+                    }
+                    if (!next || next < ctx.currentTime) next = ctx.currentTime + 0.1;
+                    while (next < ctx.currentTime + 0.2) {
+                        [0, 0.11, 0.62, 0.73].forEach((o) => {
+                            const t0 = next + o;
+                            const b = ctx.createBufferSource();
+                            b.buffer = brown;
+                            const g = amp(0);
+                            g.gain.setValueAtTime(0, t0);
+                            g.gain.linearRampToValueAtTime(0.85 * lvl, t0 + 0.004);
+                            g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+                            chain(b, filter('lowpass', 1100, 1.2), g).connect(s.out);
+                            b.start(t0, Math.random() * 5);
+                            b.stop(t0 + 0.12);
+                        });
+                        next += 1.4 - 0.5 * lvl;
+                    }
+                };
+                s.timers.push(setInterval(clack, 60));
+            },
         };
 
         function level() {
@@ -634,6 +711,24 @@
                 live[name] = v;
                 const g = current && current.params[name];
                 if (g && ctx) g.gain.setTargetAtTime(v, ctx.currentTime, time / 3);
+            },
+            // La cloche du tram, deux coups clairs avant de partir
+            bell() {
+                if (!on || !ctx || !current) return;
+                [0, 0.32].forEach((d) => {
+                    const t0 = ctx.currentTime + 0.05 + d;
+                    [[1568, 0.09, 1.4], [3920, 0.035, 0.6], [5810, 0.018, 0.3]].forEach(([hz, v, len]) => {
+                        const o = ctx.createOscillator();
+                        o.frequency.value = hz;
+                        const g = amp(0);
+                        g.gain.setValueAtTime(0, t0);
+                        g.gain.linearRampToValueAtTime(v, t0 + 0.004);
+                        g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+                        o.connect(g).connect(current.out);
+                        o.start(t0);
+                        o.stop(t0 + len + 0.05);
+                    });
+                });
             },
             // Un roulement de tonnerre lointain, qui suit l'éclair de quelques secondes
             thunder(delay = 1.5) {
@@ -10079,6 +10174,2194 @@ void main() {
                 },
             };
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // Le tram d'été : un vieux tramway crème et vert arrêté au pied d'une
+    // colline couverte de forêt, en plein soleil. Les feuillages sont peints
+    // « à la touche » : des milliers de petites touches de feuilles qui font
+    // toujours face à la caméra et s'éclairent comme des boules, à la manière
+    // des films d'animation. Des rayons de lumière, des feuilles qui volent,
+    // une voyageuse sur la butte, des hortensias, et sous le panneau « 20 »
+    // une petite plaque noire qui donne l'heure.
+    // ---------------------------------------------------------------------
+    function buildTram(THREE, stage) {
+        const phone = Math.min(window.innerWidth, window.innerHeight) < 600 || touch();
+        const still = calm();
+        const rand = mulberry32(305);
+        const rr = (a, b) => a + (b - a) * rand();
+        const V = (x, y, z) => new THREE.Vector3(x, y, z);
+        const smooth = (u) => u * u * (3 - 2 * u);
+        const sstep = (a, b, x) => smooth(clamp((x - a) / (b - a), 0, 1));
+        const pick = (list) => list[Math.floor(rand() * list.length)];
+        const HX = 8.2;
+        // Le socle est plus long vers l'avant : une prairie au premier plan, comme sur le fond d'écran
+        const ZB = -6.2;
+        const ZF = 8.6;
+        const BOTTOM = -0.75;
+        const BED_Y = 0.1;
+        const RAIL_Y = 0.17;
+        const WIRE_Y = 3.75;
+        const DENSE = phone ? 0.55 : 1;
+
+        // --- Rendu ---
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.75 : 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setClearColor(0x000000, 0);
+        // Le diorama est tranché net sur ses bords : le tram qui s'en va, les fils, les feuillages s'arrêtent à la coupe
+        renderer.clippingPlanes = [
+            new THREE.Plane(V(-1, 0, 0), HX + 0.005),
+            new THREE.Plane(V(1, 0, 0), HX + 0.005),
+            new THREE.Plane(V(0, 0, -1), ZF + 0.005),
+            new THREE.Plane(V(0, 0, 1), -ZB + 0.005),
+        ];
+        renderer.domElement.className = 'diorama-canvas';
+        stage.appendChild(renderer.domElement);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
+        const pointScale = { value: 1 };
+
+        // --- Lumière d'été : un soleil chaud en haut à gauche, des ombres bleu-vert comme en peinture ---
+        const ramp = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0, 120, 196, 236, 255]), 8, 1, THREE.RedFormat);
+        ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
+        ramp.generateMipmaps = false;
+        ramp.needsUpdate = true;
+        const toon = (hex, extra) => new THREE.MeshToonMaterial(Object.assign({ color: hex, gradientMap: ramp }, extra || {}));
+        const hemi = new THREE.HemisphereLight(0xb4e8f2, 0x5a8a38, 2.1);
+        scene.add(hemi);
+        const SUN = V(-0.52, 0.78, 0.36).normalize();
+        const sun = new THREE.DirectionalLight(0xffecb4, 2.8);
+        sun.position.copy(SUN).multiplyScalar(18);
+        sun.castShadow = true;
+        const shadowSize = phone ? 1024 : 2048;
+        sun.shadow.mapSize.set(shadowSize, shadowSize);
+        Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 2, far: 42 });
+        sun.shadow.bias = -0.0005;
+        sun.shadow.normalBias = 0.025;
+        scene.add(sun);
+
+        // --- Le relief : une colline très boisée derrière, une butte d'herbe devant, la voie au milieu ---
+        function vnoise(x, z) {
+            const xi = Math.floor(x);
+            const zi = Math.floor(z);
+            const u = smooth(x - xi);
+            const v = smooth(z - zi);
+            return lerp(lerp(hash(xi, zi), hash(xi + 1, zi), u), lerp(hash(xi, zi + 1), hash(xi + 1, zi + 1), u), v) * 2 - 1;
+        }
+        const fbm = (x, z) => vnoise(x, z) * 0.6 + vnoise(x * 2.1 + 7, z * 2.1 + 3) * 0.3 + vnoise(x * 4.3 + 1, z * 4.3 + 9) * 0.1;
+
+        // La voie : elle sort du bois à droite et file vers nous, en diagonale, à travers les herbes hautes
+        const track = new THREE.CatmullRomCurve3([
+            V(7.7, 0, -6.6), V(7.0, 0, -3.3), V(6.2, 0, -1.1), V(5.15, 0, 0.5), V(3.9, 0, 2.4), V(2.7, 0, 4.2), V(1.6, 0, 5.9), V(0.6, 0, 7.6),
+        ], false, 'centripetal');
+        const TRACK_LEN = track.getLength();
+        const T0 = track.getPointAt(0);
+        const T1 = track.getPointAt(1);
+        const TN = 480;
+        const TS = track.getSpacedPoints(TN);
+        function nearest(x, z) {
+            let best = Infinity;
+            let bi = 0;
+            for (let i = 0; i <= TN; i++) {
+                const dx = TS[i].x - x;
+                const dz = TS[i].z - z;
+                const d = dx * dx + dz * dz;
+                if (d < best) {
+                    best = d;
+                    bi = i;
+                }
+            }
+            return { d: Math.sqrt(best), s: (bi / TN) * TRACK_LEN };
+        }
+        // La distance à la voie, précalculée sur une grille fine
+        const GS = 0.1;
+        const GW = Math.round((HX * 2) / GS) + 3;
+        const GD = Math.round((ZF - ZB) / GS) + 3;
+        const distGrid = new Float32Array(GW * GD);
+        for (let j = 0; j < GD; j++) {
+            for (let i = 0; i < GW; i++) distGrid[j * GW + i] = nearest(-HX - GS + i * GS, ZB - GS + j * GS).d;
+        }
+        function trackDist(x, z) {
+            const fx = clamp((x + HX + GS) / GS, 0, GW - 1.001);
+            const fz = clamp((z - ZB + GS) / GS, 0, GD - 1.001);
+            const i = Math.floor(fx);
+            const j = Math.floor(fz);
+            const u = fx - i;
+            const v = fz - j;
+            return lerp(lerp(distGrid[j * GW + i], distGrid[j * GW + i + 1], u), lerp(distGrid[(j + 1) * GW + i], distGrid[(j + 1) * GW + i + 1], u), v);
+        }
+        const tmpP = V(0, 0, 0);
+        const tmpT = V(0, 0, 0);
+        function pointAtS(s, out) {
+            if (s <= 0) return track.getTangentAt(0, out).multiplyScalar(s).add(T0);
+            if (s >= TRACK_LEN) return track.getTangentAt(1, out).multiplyScalar(s - TRACK_LEN).add(T1);
+            return track.getPointAt(s / TRACK_LEN, out);
+        }
+        const tangentAtS = (s, out) => track.getTangentAt(clamp(s / TRACK_LEN, 0, 1), out);
+
+        const footZ = (x) => -2.75 - 0.06 * x + 0.3 * vnoise(x * 0.6, 11);
+        function hillH(x, z) {
+            const u = (footZ(x) - z) / 2.3;
+            if (u <= 0) return 0;
+            const rise = smooth(Math.min(1, u));
+            const crest = 6.3 + 0.9 * fbm(x * 0.35 + 2, 5);
+            let h = crest * rise * (1 - 0.2 * sstep(1, 2.4, u));
+            // La falaise du fond, à gauche
+            h += 2.2 * Math.exp(-((x + 5.0) ** 2) / 3.4 - ((z + 5.3) ** 2) / 1.6) * rise;
+            return h + 0.25 * fbm(x * 1.1, z * 1.1) * rise;
+        }
+        function groundH(x, z) {
+            let h = 0.34 + 0.14 * fbm(x * 0.3 + 4, z * 0.3);
+            // La butte de la voyageuse, et le talus des hortensias
+            h += 0.1 * Math.exp(-((x + 2.6) ** 2) / 3.0 - ((z - 0.35) ** 2) / 1.6);
+            h += 0.3 * Math.exp(-((x + 4.9) ** 2) / 2.6 - ((z - 1.6) ** 2) / 2.6);
+            // Un petit talus sur le devant : l'herbe cache la tranche
+            h += 0.22 * sstep(ZF - 2.2, ZF - 0.3, z);
+            h += hillH(x, z);
+            return lerp(BED_Y - 0.03, h, sstep(0.66, 1.9, trackDist(x, z)));
+        }
+
+        // ---------------- Textures peintes ----------------
+        function canvasTex(w, h, draw, repeat) {
+            const cv = document.createElement('canvas');
+            cv.width = w;
+            cv.height = h;
+            draw(cv.getContext('2d'), w, h);
+            const tex = new THREE.CanvasTexture(cv);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 8;
+            if (repeat) tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+        // Un léger grain de peinture par-dessus
+        function speckle(g, w, h, k, seed = 3) {
+            const rnd = mulberry32(seed);
+            for (let i = 0; i < w * h * 0.004; i++) {
+                const v = rnd() < 0.5 ? 0 : 255;
+                g.fillStyle = `rgba(${v},${v},${v},${k * rnd()})`;
+                g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3);
+            }
+        }
+        // Les touches de feuillage : quatre variantes dans une même image
+        function leafAtlas(round) {
+            return canvasTex(512, 512, (g) => {
+                for (let q = 0; q < 4; q++) {
+                    const rnd = mulberry32(17 + q * 31 + (round ? 101 : 0));
+                    g.save();
+                    g.translate((q % 2) * 256 + 128, Math.floor(q / 2) * 256 + 128);
+                    const n = round ? 26 : 38;
+                    for (let i = 0; i < n; i++) {
+                        const a = rnd() * Math.PI * 2;
+                        const d = Math.sqrt(rnd()) * 82;
+                        const x = Math.cos(a) * d;
+                        const y = Math.sin(a) * d;
+                        const len = (round ? 50 : 38) * (0.7 + rnd() * 0.6);
+                        const wid = len * (round ? 0.6 : 0.42);
+                        const v = 205 + rnd() * 50;
+                        // Les feuilles du bas de chaque touche un peu plus sombres : du volume dans la touche
+                        const vv = Math.round(v * (1 - 0.2 * clamp((y + 82) / 164, 0, 1)));
+                        g.fillStyle = `rgb(${vv},${vv},${vv})`;
+                        g.save();
+                        g.translate(x, y);
+                        g.rotate(a + (rnd() - 0.5) * 1.4);
+                        g.beginPath();
+                        g.moveTo(-len / 2, 0);
+                        g.quadraticCurveTo(0, -wid, len / 2, 0);
+                        g.quadraticCurveTo(0, wid, -len / 2, 0);
+                        g.fill();
+                        g.restore();
+                    }
+                    g.restore();
+                }
+            });
+        }
+        // Les fleurs d'hortensia : de petites fleurs à quatre pétales serrées en boule
+        function floretAtlas() {
+            return canvasTex(512, 512, (g) => {
+                for (let q = 0; q < 4; q++) {
+                    const rnd = mulberry32(61 + q * 13);
+                    g.save();
+                    g.translate((q % 2) * 256 + 128, Math.floor(q / 2) * 256 + 128);
+                    for (let i = 0; i < 16; i++) {
+                        const a = rnd() * Math.PI * 2;
+                        const d = Math.sqrt(rnd()) * 78;
+                        g.save();
+                        g.translate(Math.cos(a) * d, Math.sin(a) * d);
+                        g.rotate(rnd() * Math.PI);
+                        const r = 17 + rnd() * 9;
+                        const v = 215 + rnd() * 40;
+                        for (let p = 0; p < 4; p++) {
+                            g.rotate(Math.PI / 2);
+                            g.fillStyle = `rgb(${v | 0},${v | 0},${v | 0})`;
+                            g.beginPath();
+                            g.ellipse(r * 0.55, 0, r * 0.6, r * 0.42, 0, 0, Math.PI * 2);
+                            g.fill();
+                        }
+                        g.fillStyle = 'rgb(255,255,255)';
+                        g.beginPath();
+                        g.arc(0, 0, r * 0.18, 0, Math.PI * 2);
+                        g.fill();
+                        g.restore();
+                    }
+                    g.restore();
+                }
+            });
+        }
+        // Les petites fleurs jaunes et blanches dans l'herbe
+        function blossomAtlas() {
+            return canvasTex(256, 256, (g) => {
+                for (let q = 0; q < 4; q++) {
+                    const rnd = mulberry32(5 + q * 7);
+                    g.save();
+                    g.translate((q % 2) * 128 + 64, Math.floor(q / 2) * 128 + 64);
+                    const n = 1 + Math.floor(rnd() * 3);
+                    for (let i = 0; i < n; i++) {
+                        g.save();
+                        g.translate((rnd() - 0.5) * 50, (rnd() - 0.5) * 50);
+                        const r = 14 + rnd() * 8;
+                        g.fillStyle = '#fff';
+                        for (let p = 0; p < 5; p++) {
+                            g.rotate((Math.PI * 2) / 5);
+                            g.beginPath();
+                            g.ellipse(r * 0.6, 0, r * 0.55, r * 0.36, 0, 0, Math.PI * 2);
+                            g.fill();
+                        }
+                        g.fillStyle = '#e0c060';
+                        g.beginPath();
+                        g.arc(0, 0, r * 0.25, 0, Math.PI * 2);
+                        g.fill();
+                        g.restore();
+                    }
+                    g.restore();
+                }
+            });
+        }
+        function oneLeafTex() {
+            return canvasTex(128, 96, (g) => {
+                g.fillStyle = '#fff';
+                g.beginPath();
+                g.moveTo(8, 48);
+                g.quadraticCurveTo(64, -4, 120, 48);
+                g.quadraticCurveTo(64, 100, 8, 48);
+                g.fill();
+                g.strokeStyle = 'rgba(160,180,140,0.7)';
+                g.lineWidth = 3;
+                g.beginPath();
+                g.moveTo(14, 48);
+                g.lineTo(112, 48);
+                g.stroke();
+            });
+        }
+        function wingTex() {
+            return canvasTex(128, 128, (g) => {
+                g.fillStyle = '#fff';
+                g.beginPath();
+                g.moveTo(4, 64);
+                g.bezierCurveTo(30, -10, 128, 0, 120, 52);
+                g.bezierCurveTo(118, 70, 70, 74, 60, 70);
+                g.bezierCurveTo(96, 92, 90, 128, 52, 120);
+                g.bezierCurveTo(28, 116, 10, 90, 4, 64);
+                g.fill();
+                g.fillStyle = 'rgba(120,120,120,0.55)';
+                g.beginPath();
+                g.arc(104, 30, 9, 0, Math.PI * 2);
+                g.fill();
+            });
+        }
+        // Des taches de soleil : les ombres des arbres laissent passer la lumière par endroits
+        function dappleTex() {
+            const tex = canvasTex(256, 256, (g) => {
+                g.fillStyle = '#fff';
+                g.fillRect(0, 0, 256, 256);
+                g.globalCompositeOperation = 'destination-out';
+                const rnd = mulberry32(44);
+                for (let i = 0; i < 90; i++) {
+                    g.beginPath();
+                    g.ellipse(rnd() * 256, rnd() * 256, 5 + rnd() * 14, 4 + rnd() * 10, rnd() * 3, 0, Math.PI * 2);
+                    g.fill();
+                }
+            }, true);
+            return tex;
+        }
+        function brushTex() {
+            return canvasTex(512, 512, (g) => {
+                g.fillStyle = '#fff';
+                g.fillRect(0, 0, 512, 512);
+                const rnd = mulberry32(8);
+                for (let i = 0; i < 900; i++) {
+                    const v = 205 + rnd() * 50;
+                    g.strokeStyle = `rgba(${v | 0},${(v + 4) | 0},${(v - 12) | 0},0.5)`;
+                    g.lineWidth = 3 + rnd() * 7;
+                    g.lineCap = 'round';
+                    const x = rnd() * 512;
+                    const y = rnd() * 512;
+                    const a = -0.4 + rnd() * 0.8;
+                    const l = 10 + rnd() * 30;
+                    g.beginPath();
+                    g.moveTo(x, y);
+                    g.quadraticCurveTo(x + Math.cos(a) * l * 0.5, y + Math.sin(a) * l * 0.5 - 4, x + Math.cos(a) * l, y + Math.sin(a) * l);
+                    g.stroke();
+                }
+            }, true);
+        }
+        // La tranche du diorama : la terre en couches, des cailloux, des racines
+        function soilTex() {
+            return canvasTex(256, 1024, (g, w, h) => {
+                const rnd = mulberry32(21);
+                const bands = [[0, '#3f4a24'], [0.018, '#5a4029'], [0.07, '#76533a'], [0.2, '#8b6845'], [0.36, '#7b6656'], [0.55, '#6c6058'], [0.75, '#5d5752'], [1, '#4f4a46']];
+                for (let i = 0; i < bands.length - 1; i++) {
+                    g.fillStyle = bands[i][1];
+                    const y0 = bands[i][0] * h;
+                    const y1 = bands[i + 1][0] * h;
+                    g.beginPath();
+                    g.moveTo(0, y0);
+                    for (let x = 0; x <= w; x += 16) g.lineTo(x, y0 + (i ? Math.sin(x * 0.05 + i * 2) * 6 : 0));
+                    g.lineTo(w, y1 + 8);
+                    g.lineTo(0, y1 + 8);
+                    g.fill();
+                }
+                for (let i = 0; i < 160; i++) {
+                    const y = (0.05 + rnd() * 0.95) * h;
+                    const v = 100 + rnd() * 70;
+                    g.fillStyle = `rgba(${v | 0},${(v * 0.92) | 0},${(v * 0.85) | 0},0.85)`;
+                    g.beginPath();
+                    g.ellipse(rnd() * w, y, 2 + rnd() * 7, 2 + rnd() * 4, rnd() * 3, 0, Math.PI * 2);
+                    g.fill();
+                }
+                g.strokeStyle = 'rgba(60,40,26,0.6)';
+                for (let i = 0; i < 14; i++) {
+                    g.lineWidth = 1 + rnd() * 2;
+                    let x = rnd() * w;
+                    let y = 10;
+                    g.beginPath();
+                    g.moveTo(x, y);
+                    for (let k = 0; k < 6; k++) {
+                        x += (rnd() - 0.5) * 20;
+                        y += 8 + rnd() * 14;
+                        g.lineTo(x, y);
+                    }
+                    g.stroke();
+                }
+                speckle(g, w, h, 0.18);
+            }, true);
+        }
+        function ballastTex() {
+            return canvasTex(256, 256, (g) => {
+                g.fillStyle = '#8b8678';
+                g.fillRect(0, 0, 256, 256);
+                const rnd = mulberry32(12);
+                for (let i = 0; i < 1400; i++) {
+                    const v = 95 + rnd() * 90;
+                    g.fillStyle = `rgb(${v | 0},${(v * 0.97) | 0},${(v * 0.9) | 0})`;
+                    g.beginPath();
+                    g.ellipse(rnd() * 256, rnd() * 256, 2 + rnd() * 4, 1.5 + rnd() * 3, rnd() * 3, 0, Math.PI * 2);
+                    g.fill();
+                }
+            }, true);
+        }
+
+        // ---------------- Le sol ----------------
+        const ground = new THREE.PlaneGeometry(HX * 2, ZF - ZB, phone ? 104 : 156, phone ? 104 : 168);
+        ground.rotateX(-Math.PI / 2);
+        ground.translate(0, 0, (ZF + ZB) / 2);
+        const gp = ground.attributes.position;
+        for (let i = 0; i < gp.count; i++) gp.setY(i, groundH(gp.getX(i), gp.getZ(i)));
+        ground.computeVertexNormals();
+        const gn = ground.attributes.normal;
+        const gcol = new Float32Array(gp.count * 3);
+        const cA = new THREE.Color();
+        const cB = new THREE.Color();
+        for (let i = 0; i < gp.count; i++) {
+            const x = gp.getX(i);
+            const z = gp.getZ(i);
+            const hh = hillH(x, z);
+            cA.set(0x63a33a).lerp(cB.set(0xa3c94b), clamp(0.5 + fbm(x * 0.5, z * 0.5), 0, 1));
+            cA.lerp(cB.set(0x24583a), clamp(hh / 1.2, 0, 1) * 0.92);
+            const cliff = sstep(-2.2, -3.8, x) * sstep(-3.6, -4.8, z);
+            cA.lerp(cB.set(0x93a8a4), sstep(0.72, 0.42, gn.getY(i)) * 0.85 * cliff);
+            cA.lerp(cB.set(0x7d735a), sstep(1.0, 0.66, trackDist(x, z)));
+            gcol.set([cA.r, cA.g, cA.b], i * 3);
+        }
+        ground.setAttribute('color', new THREE.BufferAttribute(gcol, 3));
+        const groundBrush = brushTex();
+        groundBrush.repeat.set(5, 4);
+        const groundMesh = new THREE.Mesh(ground, toon(0xffffff, { vertexColors: true, map: groundBrush }));
+        groundMesh.receiveShadow = true;
+        scene.add(groundMesh);
+
+        // La tranche, tout autour
+        const soil = soilTex();
+        const soilMat = toon(0xffffff, { map: soil });
+        function sideWall(ax, az, bx, bz) {
+            const n = 140;
+            const pos = [];
+            const uv = [];
+            const idx = [];
+            const len = Math.hypot(bx - ax, bz - az);
+            for (let i = 0; i <= n; i++) {
+                const k = i / n;
+                const x = lerp(ax, bx, k);
+                const z = lerp(az, bz, k);
+                const top = groundH(x, z);
+                pos.push(x, top, z, x, BOTTOM, z);
+                uv.push((k * len) / 4, 1, (k * len) / 4, 1 - (top - BOTTOM) / 8);
+            }
+            for (let i = 0; i < n; i++) {
+                const a = i * 2;
+                idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+            geo.setIndex(idx);
+            geo.computeVertexNormals();
+            const m = new THREE.Mesh(geo, soilMat);
+            m.receiveShadow = true;
+            scene.add(m);
+        }
+        sideWall(-HX, ZF, HX, ZF);
+        sideWall(HX, ZF, HX, ZB);
+        sideWall(HX, ZB, -HX, ZB);
+        sideWall(-HX, ZB, -HX, ZF);
+        const under = new THREE.Mesh(new THREE.PlaneGeometry(HX * 2, ZF - ZB), toon(0x3e3a36));
+        under.position.z = (ZF + ZB) / 2;
+        under.rotation.x = Math.PI / 2;
+        under.position.y = BOTTOM;
+        scene.add(under);
+
+        // ---------------- La voie ----------------
+        function sweep(profile, mat, n = 320) {
+            const P = profile.length;
+            const pos = new Float32Array((n + 1) * P * 3);
+            const uv = new Float32Array((n + 1) * P * 2);
+            const idx = [];
+            const s0 = -1.5;
+            const s1 = TRACK_LEN + 1.5;
+            for (let i = 0; i <= n; i++) {
+                const s = lerp(s0, s1, i / n);
+                const p = pointAtS(s, tmpP);
+                const t = tangentAtS(s, tmpT);
+                for (let j = 0; j < P; j++) {
+                    const [o, y] = profile[j];
+                    const k = i * P + j;
+                    pos[k * 3] = p.x - t.z * o;
+                    pos[k * 3 + 1] = y;
+                    pos[k * 3 + 2] = p.z + t.x * o;
+                    uv[k * 2] = j / (P - 1);
+                    uv[k * 2 + 1] = s * 0.6;
+                }
+            }
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < P - 1; j++) {
+                    const a = i * P + j;
+                    const b = a + P;
+                    idx.push(a, a + 1, b, a + 1, b + 1, b);
+                }
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+            geo.setIndex(idx);
+            geo.computeVertexNormals();
+            const m = new THREE.Mesh(geo, mat);
+            m.receiveShadow = true;
+            scene.add(m);
+            return m;
+        }
+        const ballastMap = ballastTex();
+        ballastMap.repeat.set(2, 1);
+        sweep([[-0.95, BED_Y - 0.12], [-0.66, BED_Y], [0.66, BED_Y], [0.95, BED_Y - 0.12]], toon(0xffffff, { map: ballastMap }));
+        const railMat = toon(0x9da3a2);
+        [-0.37, 0.37].forEach((o) => {
+            sweep([[o - 0.03, BED_Y + 0.02], [o - 0.022, RAIL_Y], [o + 0.022, RAIL_Y], [o + 0.03, BED_Y + 0.02]], railMat, 260).castShadow = true;
+        });
+        const sleeperCount = Math.floor((TRACK_LEN + 2) / 0.34);
+        const sleepers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.05, 1.0), toon(0x5c4a38), sleeperCount);
+        const m4 = new THREE.Matrix4();
+        const q4 = new THREE.Quaternion();
+        const UP = V(0, 1, 0);
+        for (let i = 0; i < sleeperCount; i++) {
+            const s = -1 + i * 0.34;
+            const p = pointAtS(s, tmpP);
+            const t = tangentAtS(s, tmpT);
+            q4.setFromAxisAngle(UP, Math.atan2(-t.z, t.x));
+            m4.compose(V(p.x, BED_Y + 0.02, p.z), q4, V(1, 1, 1));
+            sleepers.setMatrixAt(i, m4);
+        }
+        sleepers.receiveShadow = true;
+        scene.add(sleepers);
+
+        // ---------------- Les feuillages peints ----------------
+        // Chaque « touche » est une petite carte qui regarde toujours la caméra ; sa lumière vient de la
+        // normale de la boule de feuillage à laquelle elle appartient. Le vent les fait doucement onduler.
+        const fluffU = { uTime: { value: 0 }, uRight: { value: V(1, 0, 0) }, uUp: { value: V(0, 1, 0) }, uWind: { value: 1 } };
+        function fluffMat(map, extra) {
+            const m = new THREE.MeshToonMaterial(Object.assign({ map, gradientMap: ramp, alphaTest: 0.45 }, extra || {}));
+            m.onBeforeCompile = (sh) => {
+                Object.assign(sh.uniforms, fluffU);
+                sh.vertexShader = sh.vertexShader
+                    .replace('#include <common>', '#include <common>\nattribute vec3 aNrm;\nattribute vec4 aCard;\nuniform float uTime;\nuniform vec3 uRight;\nuniform vec3 uUp;\nuniform float uWind;')
+                    .replace('#include <uv_vertex>', '#include <uv_vertex>\nvMapUv = vMapUv * 0.5 + vec2(mod(aCard.w, 2.0), floor(aCard.w * 0.5)) * 0.5;')
+                    .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = aNrm;')
+                    .replace('#include <begin_vertex>', `float cr = cos(aCard.x);
+float sr = sin(aCard.x);
+vec2 q = vec2(position.x * cr - position.y * sr, position.x * sr + position.y * cr);
+float sc = length(instanceMatrix[0].xyz);
+vec3 ip = instanceMatrix[3].xyz;
+float sw = sin(uTime * 1.25 + ip.x * 0.55 + ip.z * 0.4 + aCard.z) + 0.45 * sin(uTime * 2.6 + aCard.z * 3.0 + ip.y);
+vec3 transformed = uRight * q.x + uUp * q.y + vec3(0.7, 0.12, 0.35) * sw * aCard.y * uWind / sc;`);
+            };
+            return m;
+        }
+        const leafMap = leafAtlas(false);
+        const bushMap = leafAtlas(true);
+        const floretMap = floretAtlas();
+        const blossomMap = blossomAtlas();
+        const lists = { forest: [], bush: [], floret: [], blossom: [] };
+        // Une boule de feuillage : des touches sur une ellipsoïde, plus serrées vers l'extérieur
+        function blob(list, c, r, o) {
+            const n = Math.max(6, Math.round((o.n || clamp(r * r * 70, 22, 150)) * (o.keep ?? DENSE)));
+            const sy = o.sy || 1;
+            for (let i = 0; i < n; i++) {
+                let dx;
+                let dy;
+                let dz;
+                let l;
+                do {
+                    dx = rand() * 2 - 1;
+                    dy = rand() * 2 - 1;
+                    dz = rand() * 2 - 1;
+                    l = dx * dx + dy * dy + dz * dz;
+                } while (l > 1 || l < 0.04 || dy / Math.sqrt(l) < (o.floor ?? -0.5));
+                l = Math.sqrt(l);
+                dx /= l;
+                dy /= l;
+                dz /= l;
+                const depth = 0.62 + 0.38 * Math.cbrt(rand());
+                const col = o.col.clone().offsetHSL(rr(-0.015, 0.015), rr(-0.04, 0.04), rr(-0.035, 0.035)).multiplyScalar(0.72 + 0.28 * depth);
+                list.push({
+                    p: V(c.x + dx * r * depth, c.y + dy * r * sy * depth, c.z + dz * r * depth),
+                    n: V(dx, dy * 0.85 + 0.22, dz).normalize(),
+                    size: r * (o.size || 0.62) * rr(0.75, 1.2),
+                    roll: rr(0, 6.283),
+                    sway: (o.sway ?? 0.018) * (0.4 + 0.6 * (dy * 0.5 + 0.5)),
+                    phase: rr(0, 6.283),
+                    tile: Math.floor(rand() * 4),
+                    col,
+                });
+            }
+        }
+        function bake(list, map, extra) {
+            const geo = new THREE.PlaneGeometry(1, 1);
+            const n = list.length;
+            const nrm = new Float32Array(n * 3);
+            const card = new Float32Array(n * 4);
+            const mesh = new THREE.InstancedMesh(geo, fluffMat(map, extra), n);
+            list.forEach((c, i) => {
+                m4.makeScale(c.size, c.size, c.size).setPosition(c.p);
+                mesh.setMatrixAt(i, m4);
+                mesh.setColorAt(i, c.col);
+                nrm[i * 3] = c.n.x;
+                nrm[i * 3 + 1] = c.n.y;
+                nrm[i * 3 + 2] = c.n.z;
+                card[i * 4] = c.roll;
+                card[i * 4 + 1] = c.sway;
+                card[i * 4 + 2] = c.phase;
+                card[i * 4 + 3] = c.tile;
+            });
+            geo.setAttribute('aNrm', new THREE.InstancedBufferAttribute(nrm, 3));
+            geo.setAttribute('aCard', new THREE.InstancedBufferAttribute(card, 4));
+            mesh.receiveShadow = true;
+            mesh.frustumCulled = false;
+            scene.add(mesh);
+            return mesh;
+        }
+        // Les ombres des arbres : des boules invisibles qui laissent passer des taches de soleil
+        const sphereGeo = new THREE.SphereGeometry(1, 16, 12);
+        const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+        const dapple = dappleTex();
+        dapple.repeat.set(2, 2);
+        const proxyDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: dapple, alphaTest: 0.5 });
+        const treeProxies = [];
+        function proxy(c, r, sy = 1, cast = true) {
+            const m = new THREE.Mesh(sphereGeo, proxyMat);
+            m.position.copy(c);
+            m.scale.set(r * 0.86, r * sy * 0.86, r * 0.86);
+            m.castShadow = cast;
+            m.customDepthMaterial = proxyDepth;
+            m.renderOrder = -1;
+            scene.add(m);
+            return m;
+        }
+        const C = (hex) => new THREE.Color(hex);
+        const FOREST = [0x55a33e, 0x62b244, 0x46944a, 0x74bc42, 0x3c8a50, 0x8ac849, 0x4f9c4a];
+        const DARKFOREST = [0x2d6247, 0x356c43, 0x2a5a48];
+        const BRIGHT = [0x8fc23c, 0x9dcc45, 0x7ab83e, 0xa9d14d];
+
+        // Un point posé sur le sol, décollé le long de la pente (pour que les boules ne s'enfoncent pas dans la colline)
+        function onSlope(x, z, lift) {
+            const e = 0.15;
+            const nx = groundH(x - e, z) - groundH(x + e, z);
+            const nz = groundH(x, z - e) - groundH(x, z + e);
+            const n = V(nx, 2 * e, nz).normalize();
+            return V(x, groundH(x, z), z).addScaledVector(n, lift);
+        }
+        // La colline : des boules serrées du pied jusqu'à la crête
+        for (let gx = -HX + 0.25; gx < HX + 0.2; gx += 0.82) {
+            for (let gz = ZB + 0.25; gz < 1.2; gz += 0.78) {
+                const x = clamp(gx + rr(-0.32, 0.32), -HX + 0.2, HX - 0.2);
+                const z = clamp(gz + rr(-0.3, 0.3), ZB + 0.2, ZF);
+                const hh = hillH(x, z);
+                if (hh < 0.3 || trackDist(x, z) < 1.25) continue;
+                const r = rr(0.68, 1.05) + Math.min(0.25, hh * 0.03);
+                const c = onSlope(x, z, r * 0.55);
+                blob(lists.forest, c, r, { col: C(pick(FOREST)), sway: 0.02 });
+                treeProxies.push(proxy(c, r));
+            }
+        }
+        for (let i = 0; i < 70; i++) {
+            const x = rr(-HX + 0.2, HX - 0.2);
+            const z = rr(ZB + 0.2, 0.5);
+            const hh = hillH(x, z);
+            if (hh < 0.6 || trackDist(x, z) < 1.3) continue;
+            const r = rr(0.45, 0.7);
+            const c = onSlope(x, z, r * 0.7);
+            blob(lists.forest, c, r, { col: C(pick(FOREST.concat(BRIGHT))), sway: 0.02 });
+            proxy(c, r);
+        }
+        // Une rangée de buissons au pied de la colline, pour la transition avec l'herbe
+        for (let x = -HX + 0.3; x < HX; x += rr(0.55, 0.85)) {
+            const z = footZ(x) + rr(0.05, 0.45);
+            if (z < ZB + 0.2 || trackDist(x, z) < 1.1) continue;
+            const r = rr(0.42, 0.62);
+            const c = V(x, groundH(x, z) + r * 0.4, z);
+            blob(lists.forest, c, r, { col: C(pick(FOREST.concat(BRIGHT))), sway: 0.025 });
+            proxy(c, r);
+        }
+        // Des cyprès sombres et élancés sur la crête et la falaise
+        const spires = [];
+        for (let i = 0; i < 26; i++) {
+            const x = rr(-HX + 0.3, HX - 0.3);
+            const z = rr(footZ(x) - 3.4, footZ(x) - 2.0);
+            if (z < ZB + 0.25) continue;
+            spires.push([x, z]);
+        }
+        [[-4.6, -3.2], [-5.2, -3.9], [-4.1, -4.3], [-3.6, -3.5], [-5.6, -2.9]].forEach((p) => spires.push(p));
+        spires.forEach(([x, z]) => {
+            const r = rr(0.24, 0.36);
+            const sy = rr(2.6, 3.6);
+            const c = V(x, groundH(x, z) + r * sy * 0.82, z);
+            blob(lists.forest, c, r, { col: C(pick(DARKFOREST)), sy, n: 46, size: 0.7, sway: 0.012 });
+            proxy(c, r, sy);
+        });
+        // Les rochers bleutés de la falaise
+        const rockMat = toon(0xa6b6b4);
+        for (let i = 0; i < 9; i++) {
+            const x = rr(-6.8, -3.8);
+            const z = rr(-6.0, -4.6);
+            const r = rr(0.3, 0.6);
+            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), rockMat);
+            rock.position.set(x, groundH(x, z) + r * 0.25, z);
+            rock.rotation.set(rr(0, 3), rr(0, 3), rr(0, 3));
+            rock.scale.set(1, rr(0.6, 1.1), rr(0.7, 1.2));
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            scene.add(rock);
+        }
+
+        // Deux grands arbres : un qui se penche au-dessus de la voie, à droite, un derrière la butte
+        const barkMat = toon(0x5d4b3c);
+        function limb(a, b, r1, r2, mat) {
+            const dir = new THREE.Vector3().subVectors(b, a);
+            const len = dir.length();
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 8), mat);
+            m.position.copy(a).addScaledVector(dir, 0.5);
+            m.quaternion.setFromUnitVectors(UP, dir.normalize());
+            m.castShadow = true;
+            m.receiveShadow = true;
+            scene.add(m);
+            return m;
+        }
+        function bigTree(x, z, lean, crowns) {
+            const base = V(x, groundH(x, z) - 0.1, z);
+            const top = base.clone().add(lean);
+            limb(base, top, 0.2, 0.13, barkMat);
+            crowns.forEach(([dx, dy, dz, r]) => {
+                const c = V(top.x + dx, top.y + dy, top.z + dz);
+                limb(top, c.clone().addScaledVector(V(dx, dy, dz).normalize(), -r * 0.6), 0.1, 0.05, barkMat);
+                blob(lists.forest, c, r, { col: C(pick(FOREST)), sway: 0.03 });
+                treeProxies.push(proxy(c, r));
+            });
+        }
+        bigTree(5.5, -3.7, V(-0.3, 3.5, 0.2), [[0, 0.8, 0, 1.3], [-1.1, 0.3, 0.5, 1.05], [0.5, 0.4, 0.8, 1.0], [-0.4, 1.5, -0.4, 0.95]]);
+        bigTree(8.0, -1.4, V(-0.25, 4.0, -0.3), [[0, 0.8, 0, 1.3], [-0.9, 0.2, 0.4, 1.0], [-0.3, 1.6, -0.6, 1.0]]);
+        bigTree(5.7, -6.0, V(0.3, 4.4, 0.2), [[0, 0.8, 0, 1.25], [0.9, 0.3, 0.4, 1.0], [-0.6, 1.4, 0.3, 0.95]]);
+        bigTree(-6.5, -3.7, V(0.3, 3.0, 0.1), [[0, 0.6, 0, 1.15], [0.9, 0.2, 0.4, 0.9], [-0.5, 1.1, -0.3, 0.95]]);
+
+        // Les buissons clairs, jaune-vert, au milieu et devant le tram
+        // Quelques massifs sur les bords de la prairie, hors du cadrage de face
+        [[6.5, 6.2, 0.55], [7.4, 4.6, 0.5], [5.3, 7.9, 0.5], [7.6, 7.6, 0.45], [-7.4, 6.6, 0.5], [6.9, 2.9, 0.42]].forEach(([x, z, r]) => {
+            const c = V(x, groundH(x, z) + r * 0.45, z);
+            blob(lists.bush, c, r, { col: C(pick(BRIGHT.concat(FOREST))), sway: 0.03, size: 0.7, floor: -0.35 });
+            proxy(c, r);
+        });
+        const shrubs = [[-0.55, -1.15, 0.62], [-1.45, -0.7, 0.4], [1.3, -1.1, 0.48], [2.5, -1.7, 0.5], [3.6, -1.6, 0.5], [5.4, -2.0, 0.48], [4.6, 5.6, 0.45], [6.3, 3.6, 0.5], [6.6, 1.6, 0.5], [1.0, 1.4, 0.42], [0.3, 0.3, 0.38]];
+        shrubs.forEach(([x, z, r]) => {
+            const c = V(x, groundH(x, z) + r * 0.45, z);
+            blob(lists.bush, c, r, { col: C(pick(BRIGHT)), sway: 0.03, size: 0.7, floor: -0.35 });
+            proxy(c, r);
+        });
+
+        // Le gros buisson clair du milieu, haut comme un petit arbre, devant les poteaux
+        [[-1.15, 0.55, 0.85, 0.72], [-1.0, 1.45, 0.8, 0.6], [-1.25, 2.2, 0.9, 0.46], [-0.4, 0.45, 1.3, 0.5]].forEach(([x, y, z, r]) => {
+            const c = V(x, groundH(x, z) + y, z);
+            blob(lists.bush, c, r, { col: C(pick(BRIGHT)), sway: 0.035, size: 0.72, floor: -0.6 });
+            proxy(c, r);
+        });
+        [[0.4, 4.1, 0.6], [1.3, 4.9, 0.5], [-0.6, 3.3, 0.48], [1.1, 2.6, 0.42]].forEach(([x, z, r]) => {
+            if (trackDist(x, z) < 1.1) return;
+            const c = V(x, groundH(x, z) + r * 0.4, z);
+            blob(lists.bush, c, r, { col: C(pick(BRIGHT)), sway: 0.03, size: 0.72, floor: -0.35 });
+            proxy(c, r);
+        });
+
+        // Les hortensias bleus, en bas à gauche
+        const hydraProxies = [];
+        const HYDRA = [0x4b72d8, 0x5f86e8, 0x7b72d8, 0x8ea8ee, 0x6a7fe0, 0xa9b9f2];
+        [[-4.3, 1.85, 0.6], [-5.0, 0.95, 0.52], [-3.8, 2.75, 0.5], [-5.35, 2.45, 0.5], [-3.35, 1.7, 0.4], [-4.6, 3.45, 0.46], [-6.0, 1.65, 0.48], [-6.2, 3.0, 0.5], [-6.6, 5.4, 0.5], [-5.5, 6.9, 0.46], [-7.3, 7.9, 0.45], [-7.4, 0.5, 0.45]].forEach(([x, z, r]) => {
+            const c = V(x, groundH(x, z) + r * 0.4, z);
+            blob(lists.bush, c, r, { col: C(0x3d7a3a), size: 0.75, sway: 0.02, floor: -0.3 });
+            const heads = 6 + Math.floor(rand() * 4);
+            for (let k = 0; k < heads; k++) {
+                const a = rr(-0.6, Math.PI + 0.6) + Math.PI / 2;
+                const up = rr(0.1, 0.85);
+                const hr = rr(0.17, 0.25);
+                const hc = V(c.x + Math.cos(a) * r * 0.85 * Math.sqrt(1 - up * up), c.y + up * r * 0.85, c.z + Math.sin(a) * r * 0.85 * Math.sqrt(1 - up * up));
+                blob(lists.floret, hc, hr, { col: C(pick(HYDRA)), n: 30, size: 0.8, sway: 0.012, keep: 1 });
+            }
+            hydraProxies.push(proxy(c, r * 1.1, 1, false));
+        });
+
+        // ---------------- L'herbe haute ----------------
+        function bladeGeometry() {
+            const seg = 4;
+            const pos = [];
+            const col = [];
+            const nrm = [];
+            const idx = [];
+            for (let i = 0; i <= seg; i++) {
+                const y = i / seg;
+                const w = 0.5 * (1 - Math.pow(y, 1.6));
+                const z = 0.3 * y * y;
+                const c = 0.4 + 0.6 * Math.pow(y, 0.8);
+                pos.push(-w, y, z, w, y, z);
+                col.push(c, c, c, c, c, c);
+                nrm.push(0, 1, 0, 0, 1, 0);
+            }
+            for (let i = 0; i < seg; i++) {
+                const a = i * 2;
+                idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+            g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+            g.setIndex(idx);
+            return g;
+        }
+        const grassMat = toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide });
+        grassMat.onBeforeCompile = (sh) => {
+            sh.uniforms.uTime = fluffU.uTime;
+            sh.uniforms.uWind = fluffU.uWind;
+            sh.vertexShader = sh.vertexShader
+                .replace('#include <common>', '#include <common>\nattribute vec4 aBlade;\nuniform float uTime;\nuniform float uWind;')
+                .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = transpose(mat3(instanceMatrix)) * vec3(0.0, 1.0, 0.0);')
+                .replace('#include <begin_vertex>', `vec3 transformed = vec3(position.x * aBlade.y, position.y * aBlade.x, position.z * aBlade.x);
+vec3 ip = instanceMatrix[3].xyz;
+float hh = position.y;
+float wv = sin(uTime * 1.6 + ip.x * 0.9 + ip.z * 0.7 + aBlade.z) * 0.55 + sin(uTime * 2.9 + ip.x * 2.1 + aBlade.z * 1.7) * 0.22 + 0.35;
+vec3 wd = vec3(0.85, 0.0, 0.35) * wv * uWind * hh * hh * aBlade.x * 0.32 * aBlade.w;
+transformed += transpose(mat3(instanceMatrix)) * wd;
+transformed.y -= length(wd) * 0.35 * hh;`);
+            sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize(vNormal);');
+        };
+        const blades = [];
+        const bladeCount = phone ? 16000 : 38000;
+        let tries = 0;
+        while (blades.length < bladeCount && tries < bladeCount * 4) {
+            tries++;
+            const x = rr(-HX + 0.03, HX - 0.03);
+            const z = rr(ZB + 0.03, ZF - 0.03);
+            const d = trackDist(x, z);
+            const hh = hillH(x, z);
+            if (hh > 1.1) continue;
+            // Devant le tram, l'herbe a envahi la voie
+            const overgrown = sstep(3.75, 4.25, z);
+            if ((d < 0.5 && rand() > overgrown) || (d < 0.6 && rand() > 0.45 + overgrown)) continue;
+            const nearTrack = sstep(2.6, 0.8, d);
+            // Autour de la voyageuse, l'herbe est plus courte : on la voit en entier
+            const knoll = sstep(1.1, 0.3, Math.hypot(x + 2.6, z - 0.35));
+            const front = sstep(1.5, 4.5, z) * 0.75 + sstep(ZF - 1.4, ZF - 0.2, z) * 0.25;
+            const tall = Math.max(nearTrack, front, sstep(0.6, 0, Math.abs(x + 3.2) - 1.6) * 0.5) * (1 - 0.8 * knoll);
+            if (rand() > 0.45 + 0.55 * tall) continue;
+            const h = lerp(rr(0.2, 0.36), rr(0.7, 1.2), tall) * (d < 0.62 ? 0.75 : 1);
+            blades.push([x, groundH(x, z) - 0.02, z, h, rr(0.028, 0.05), rr(0, 6.283), rr(0.6, 1.2), rr(0, 6.283), fbm(x * 0.45 + 9, z * 0.45)]);
+        }
+        const grass = new THREE.InstancedMesh(bladeGeometry(), grassMat, blades.length);
+        const bladeAttr = new Float32Array(blades.length * 4);
+        const GRASS_A = C(0x5e9e36);
+        const GRASS_B = C(0xb2d24e);
+        blades.forEach(([x, y, z, h, w, rot, stiff, ph, tone], i) => {
+            q4.setFromAxisAngle(UP, rot);
+            m4.compose(V(x, y, z), q4, V(1, 1, 1));
+            grass.setMatrixAt(i, m4);
+            cA.copy(GRASS_A).lerp(GRASS_B, clamp(0.5 + tone * 0.9 + rr(-0.15, 0.15), 0, 1));
+            grass.setColorAt(i, cA);
+            bladeAttr.set([h, w, ph, stiff], i * 4);
+        });
+        grass.geometry.setAttribute('aBlade', new THREE.InstancedBufferAttribute(bladeAttr, 4));
+        grass.receiveShadow = true;
+        grass.frustumCulled = false;
+        scene.add(grass);
+
+        // Les petites fleurs jaunes et blanches, au ras des herbes hautes
+        const BLOSSOM = [0xf2d64a, 0xf6e27a, 0xf2d64a, 0xffffff, 0xfff4c0];
+        const nBlossom = Math.round(1500 * DENSE);
+        for (let i = 0, k = 0; i < nBlossom && k < nBlossom * 6; k++) {
+            const x = rr(-HX + 0.1, HX - 0.1);
+            const z = rr(-1.5, ZF - 0.05);
+            const d = trackDist(x, z);
+            if (d < 0.8 || hillH(x, z) > 0.4) continue;
+            i++;
+            lists.blossom.push({
+                p: V(x, groundH(x, z) + rr(0.12, 0.55) * (d < 2.4 ? 1 : 0.6), z),
+                n: V(0, 1, 0),
+                size: rr(0.05, 0.09),
+                roll: rr(0, 6.283),
+                sway: 0.02,
+                phase: rr(0, 6.283),
+                tile: Math.floor(rand() * 4),
+                col: C(pick(BLOSSOM)),
+            });
+        }
+
+        // ---------------- Les poteaux, les fils, les panneaux ----------------
+        const poleMat = toon(0x8e9792);
+        const bandMat = toon(0x5d6562);
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0x27302c });
+        function pole(x, z, h, r = 0.075) {
+            const y0 = groundH(x, z) - 0.2;
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r, h + 0.2, 12), poleMat);
+            m.position.set(x, y0 + (h + 0.2) / 2, z);
+            m.castShadow = true;
+            m.receiveShadow = true;
+            scene.add(m);
+            [0.32, 0.55, 0.86].forEach((k) => {
+                const b = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.12, r * 1.12, 0.06, 12), bandMat);
+                b.position.set(x, y0 + 0.2 + h * k, z);
+                b.castShadow = true;
+                scene.add(b);
+            });
+            return y0 + 0.2 + h;
+        }
+        function wire(points, r = 0.011) {
+            const curve = new THREE.CatmullRomCurve3(points);
+            const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(8, points.length * 3), r, 5, false), wireMat);
+            m.castShadow = true;
+            scene.add(m);
+            return m;
+        }
+        function rod(a, b, r, mat = bandMat, cast = true) {
+            const m = limb(a, b, r, r, mat);
+            m.castShadow = cast;
+            return m;
+        }
+        // Le poteau principal (au milieu) et celui du fond, à droite : leurs potences tiennent le fil au-dessus de la voie
+        const MAIN = V(-0.55, 0, -2.05);
+        MAIN.y = pole(MAIN.x, MAIN.z, 5.9);
+        // Le poteau de caténaire, derrière le tram : sa potence tient le fil au-dessus de la voie
+        [V(4.55, 0, -0.9)].forEach((P) => {
+            P.y = pole(P.x, P.z, 4.35);
+            const near = nearest(P.x, P.z);
+            const tp = pointAtS(near.s, V());
+            const armY = WIRE_Y + 0.4;
+            const from = V(P.x, armY, P.z);
+            const dir = V(tp.x - P.x, 0, tp.z - P.z);
+            const len = dir.length();
+            dir.normalize();
+            const end = V(tp.x + dir.x * 0.25, armY, tp.z + dir.z * 0.25);
+            rod(from, end, 0.018);
+            rod(V(P.x, armY - 0.5, P.z), V(P.x + dir.x * len * 0.55, armY, P.z + dir.z * len * 0.55), 0.012);
+            // Le bras d'appui du fil de contact, et l'isolateur
+            rod(V(P.x + dir.x * 0.08, WIRE_Y + 0.08, P.z + dir.z * 0.08), V(tp.x, WIRE_Y + 0.02, tp.z), 0.012);
+            const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 8), toon(0x7a4f3a));
+            ins.position.set(tp.x, armY - 0.08, tp.z);
+            scene.add(ins);
+        });
+        // Le fil de contact, tout simple, suit la voie
+        const contact = [];
+        for (let s = -1; s <= TRACK_LEN + 1; s += 0.25) {
+            const p = pointAtS(s, V());
+            contact.push(V(p.x, WIRE_Y, p.z));
+        }
+        wire(contact, 0.012);
+        // La ligne électrique tout en haut : elle descend de la colline, passe sur le grand poteau et file à droite
+        const crossY = MAIN.y - 0.12;
+        rod(V(MAIN.x - 0.5, crossY, MAIN.z), V(MAIN.x + 0.5, crossY, MAIN.z), 0.03, poleMat);
+        [-0.42, 0.42].forEach((o, k) => {
+            const a = V(MAIN.x + o, crossY + 0.08, MAIN.z);
+            const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.12, 8), toon(0xe6e2d6));
+            ins.position.copy(a).add(V(0, -0.02, 0));
+            scene.add(ins);
+            const left = V(-HX - 0.3, groundH(-HX + 0.4, -2.6 + k * 0.5) + 1.2, -2.6 + k * 0.5);
+            const right = V(HX + 0.3, crossY - 0.6, 0.6 + k * 0.4);
+            const sag = (p, q, d) => {
+                const pts = [];
+                for (let i = 0; i <= 16; i++) {
+                    const u = i / 16;
+                    pts.push(V(lerp(p.x, q.x, u), lerp(p.y, q.y, u) - d * Math.sin(u * Math.PI), lerp(p.z, q.z, u)));
+                }
+                return pts;
+            };
+            wire(sag(left, a, 0.28), 0.013);
+            wire(sag(a, right, 0.38), 0.013);
+        });
+
+        // Les panneaux : « demi-tour interdit » avec sa flèche, et « 20 » avec la petite plaque qui donne l'heure
+        const thinPole = V(-1.55, 0, -1.8);
+        const thinTop = pole(thinPole.x, thinPole.z, 3.3, 0.05);
+        const armEnd = V(-0.15, 4.32, -1.84);
+        rod(V(thinPole.x, thinTop - 0.05, thinPole.z), armEnd, 0.028, poleMat);
+        const pipeMat = toon(0xb9cf6a);
+        function signTex(kind) {
+            return canvasTex(512, 512, (g) => {
+                const c = 256;
+                g.fillStyle = '#f5f3ec';
+                g.beginPath();
+                g.arc(c, c, 254, 0, Math.PI * 2);
+                g.fill();
+                const sh = g.createRadialGradient(c - 70, c - 90, 30, c, c, 254);
+                sh.addColorStop(0, 'rgba(255,255,255,0)');
+                sh.addColorStop(1, 'rgba(140,165,190,0.3)');
+                g.fillStyle = sh;
+                g.fill();
+                g.strokeStyle = '#e2622e';
+                g.lineWidth = 50;
+                g.beginPath();
+                g.arc(c, c, 204, 0, Math.PI * 2);
+                g.stroke();
+                g.lineCap = 'round';
+                g.lineJoin = 'round';
+                if (kind === 'uturn') {
+                    g.strokeStyle = '#3c7fd8';
+                    g.lineWidth = 40;
+                    g.beginPath();
+                    g.moveTo(320, 370);
+                    g.lineTo(320, 222);
+                    g.arc(256, 222, 64, 0, Math.PI, true);
+                    g.lineTo(192, 292);
+                    g.stroke();
+                    g.fillStyle = '#3c7fd8';
+                    g.beginPath();
+                    g.moveTo(146, 282);
+                    g.lineTo(238, 282);
+                    g.lineTo(192, 350);
+                    g.closePath();
+                    g.fill();
+                    g.strokeStyle = '#e2622e';
+                    g.lineWidth = 44;
+                    g.beginPath();
+                    g.moveTo(c + 142, c - 142);
+                    g.lineTo(c - 142, c + 142);
+                    g.stroke();
+                } else {
+                    g.fillStyle = '#4a86d6';
+                    g.font = 'bold 240px "Arial Rounded MT Bold", "Helvetica Neue", Arial, sans-serif';
+                    g.textAlign = 'center';
+                    g.textBaseline = 'middle';
+                    g.fillText('20', c, c + 16);
+                }
+                speckle(g, 512, 512, 0.06);
+            });
+        }
+        const signBack = toon(0x9aa3a6);
+        function roundSign(pos, kind) {
+            const g = new THREE.Group();
+            g.position.copy(pos);
+            const face = new THREE.Mesh(new THREE.CircleGeometry(0.42, 40), toon(0xffffff, { map: signTex(kind) }));
+            face.position.z = 0.012;
+            const back = new THREE.Mesh(new THREE.CircleGeometry(0.42, 40), signBack);
+            back.rotation.y = Math.PI;
+            back.position.z = -0.012;
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.024, 40, 1, true), signBack);
+            rim.rotation.x = Math.PI / 2;
+            g.add(face, back, rim);
+            g.lookAt(pos.clone().add(V(-0.28, 0, 1)));
+            g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+            scene.add(g);
+            return g;
+        }
+        function plate(pos, w, h, map, mat) {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02), [signBack, signBack, signBack, signBack, mat || toon(0xffffff, { map }), signBack]);
+            m.position.copy(pos);
+            m.lookAt(pos.clone().add(V(-0.28, 0, 1)));
+            m.castShadow = true;
+            scene.add(m);
+            return m;
+        }
+        const SIGN1 = V(0.05, 4.3, -1.8);
+        const SIGN2 = V(1.05, 4.82, -1.9);
+        roundSign(SIGN1, 'uturn');
+        roundSign(SIGN2, '20');
+        rod(SIGN1.clone().add(V(0, 0, -0.04)), SIGN2.clone().add(V(0, 0, -0.04)), 0.022, pipeMat);
+        rod(SIGN2.clone().add(V(0.04, 0, -0.06)), V(MAIN.x + 0.06, SIGN2.y, MAIN.z + 0.03), 0.02, pipeMat);
+        const arrowMap = canvasTex(256, 96, (g) => {
+            g.fillStyle = '#f5f3ec';
+            g.fillRect(0, 0, 256, 96);
+            g.fillStyle = '#e2622e';
+            g.fillRect(70, 40, 160, 16);
+            g.beginPath();
+            g.moveTo(26, 48);
+            g.lineTo(84, 18);
+            g.lineTo(84, 78);
+            g.closePath();
+            g.fill();
+            speckle(g, 256, 96, 0.06);
+        });
+        plate(SIGN1.clone().add(V(0.02, -0.58, 0)), 0.6, 0.22, arrowMap);
+        // La plaque noire de l'heure : elle affiche l'heure qu'il est vraiment, au format 12 heures
+        const clockCv = document.createElement('canvas');
+        clockCv.width = 256;
+        clockCv.height = 96;
+        const clockTex = new THREE.CanvasTexture(clockCv);
+        clockTex.colorSpace = THREE.SRGBColorSpace;
+        clockTex.anisotropy = 8;
+        let shownMinute = -1;
+        function drawClock() {
+            const d = new Date();
+            const minute = d.getHours() * 60 + d.getMinutes();
+            if (minute === shownMinute) return;
+            shownMinute = minute;
+            const g = clockCv.getContext('2d');
+            g.fillStyle = '#3b3e41';
+            g.fillRect(0, 0, 256, 96);
+            g.strokeStyle = 'rgba(255,255,255,0.12)';
+            g.lineWidth = 4;
+            g.strokeRect(2, 2, 252, 92);
+            const txt = String(d.getHours() % 12 || 12).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            g.fillStyle = '#c6efe8';
+            g.font = '500 60px Consolas, "Roboto Mono", "SFMono-Regular", Menlo, monospace';
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.fillText(txt, 128, 52);
+            clockTex.needsUpdate = true;
+        }
+        drawClock();
+        plate(SIGN2.clone().add(V(0.03, -0.62, 0)), 0.66, 0.24, null, new THREE.MeshBasicMaterial({ map: clockTex }));
+
+        // ---------------- Le tram ----------------
+        const tram = new THREE.Group();
+        scene.add(tram);
+        const car = new THREE.Group();
+        tram.add(car);
+        const L = 4.8;
+        const HW = 0.78;
+        const FW = 0.42;
+        const CH = 0.2;
+        const FLOOR = 0.42;
+        const BELT = 1.1;
+        const EAVE = 2.04;
+        const BOGIE = 3.1;
+        const cream = toon(0xf0e7c8);
+        const green = toon(0x4c9a3c);
+        const frameMat = toon(0x4b3226);
+        const darkMat = toon(0x2e3331);
+        const plan = [[L / 2, -FW], [L / 2, FW], [L / 2 - CH, HW], [-L / 2 + CH, HW], [-L / 2, FW], [-L / 2, -FW], [-L / 2 + CH, -HW], [L / 2 - CH, -HW]];
+        // Le toit : bombé, qui retombe en dôme à chaque bout
+        function roofY(x, z) {
+            const ex = clamp((L / 2 - Math.abs(x)) / CH, 0, 1);
+            const hw = FW + (HW - FW) * ex + 0.014;
+            const endK = smooth(clamp((L / 2 - Math.abs(x)) / 0.62, 0, 1));
+            const v = clamp(z / hw, -1, 1);
+            return EAVE + 0.03 + Math.pow(1 - v * v, 0.42) * 0.3 * (0.28 + 0.72 * endK);
+        }
+        // La caisse basse, verte
+        const lowShape = new THREE.Shape(plan.map(([x, z]) => new THREE.Vector2(x, -z)));
+        const lowGeo = new THREE.ExtrudeGeometry(lowShape, { depth: BELT - FLOOR - 0.04, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2, curveSegments: 1 });
+        lowGeo.rotateX(-Math.PI / 2);
+        lowGeo.translate(0, FLOOR + 0.02, 0);
+        car.add(new THREE.Mesh(lowGeo, green));
+        // Le haut, crème, avec ses fenêtres : chaque face est un panneau percé
+        const glassMap = canvasTex(64, 128, (g, w, h) => {
+            const gr = g.createLinearGradient(0, 0, 0, h);
+            gr.addColorStop(0, '#e2f4ef');
+            gr.addColorStop(0.45, '#9cc9bf');
+            gr.addColorStop(1, '#5d8f84');
+            g.fillStyle = gr;
+            g.fillRect(0, 0, w, h);
+            g.fillStyle = 'rgba(255,255,255,0.35)';
+            g.beginPath();
+            g.moveTo(10, 0);
+            g.lineTo(28, 0);
+            g.lineTo(4, h * 0.6);
+            g.lineTo(-14, h * 0.6);
+            g.fill();
+        });
+        const glassMat = new THREE.MeshBasicMaterial({ map: glassMap, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide });
+        const pathRect = (path, x0, y0, x1, y1, r) => {
+            r = Math.min(r, (x1 - x0) / 2, (y1 - y0) / 2);
+            path.moveTo(x0 + r, y0);
+            path.lineTo(x1 - r, y0);
+            path.quadraticCurveTo(x1, y0, x1, y0 + r);
+            path.lineTo(x1, y1 - r);
+            path.quadraticCurveTo(x1, y1, x1 - r, y1);
+            path.lineTo(x0 + r, y1);
+            path.quadraticCurveTo(x0, y1, x0, y1 - r);
+            path.lineTo(x0, y0 + r);
+            path.quadraticCurveTo(x0, y0, x0 + r, y0);
+            return path;
+        };
+        function facet(A, B, holes, topFn) {
+            let a = A;
+            let b = B;
+            const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            let ux = (b[0] - a[0]) / len;
+            let uz = (b[1] - a[1]) / len;
+            const mx = (a[0] + b[0]) / 2;
+            const mz = (a[1] + b[1]) / 2;
+            let flip = false;
+            if (-uz * mx + ux * mz < 0) {
+                [a, b] = [b, a];
+                ux = -ux;
+                uz = -uz;
+                flip = true;
+            }
+            const hs = holes.map((h) => (flip ? Object.assign({}, h, { u0: len - h.u1, u1: len - h.u0 }) : h));
+            const y0 = BELT;
+            const sh = new THREE.Shape();
+            sh.moveTo(0, 0);
+            sh.lineTo(len, 0);
+            for (let i = 8; i >= 0; i--) {
+                const u = (len * i) / 8;
+                sh.lineTo(u, topFn(a[0] + ux * u, a[1] + uz * u) - y0);
+            }
+            sh.closePath();
+            hs.forEach((h) => sh.holes.push(pathRect(new THREE.Path(), h.u0, h.v0 - y0, h.u1, h.v1 - y0, h.r ?? 0.045)));
+            const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.035, bevelEnabled: false, curveSegments: 4 });
+            geo.translate(0, 0, -0.035);
+            const m = new THREE.Mesh(geo, cream);
+            m.matrix.makeBasis(V(ux, 0, uz), V(0, 1, 0), V(-uz, 0, ux)).setPosition(a[0], y0, a[1]);
+            m.matrixAutoUpdate = false;
+            car.add(m);
+            hs.forEach((h) => {
+                const r = h.r ?? 0.045;
+                const gl = new THREE.Mesh(new THREE.PlaneGeometry(h.u1 - h.u0, h.v1 - h.v0), glassMat);
+                gl.position.set((h.u0 + h.u1) / 2, (h.v0 + h.v1) / 2 - y0, -0.018);
+                gl.userData.glass = true;
+                m.add(gl);
+                const fs = pathRect(new THREE.Shape(), h.u0 - 0.024, h.v0 - y0 - 0.024, h.u1 + 0.024, h.v1 - y0 + 0.024, r + 0.022);
+                fs.holes.push(pathRect(new THREE.Path(), h.u0, h.v0 - y0, h.u1, h.v1 - y0, r));
+                m.add(new THREE.Mesh(new THREE.ExtrudeGeometry(fs, { depth: 0.014, bevelEnabled: false, curveSegments: 4 }), frameMat));
+                if (h.bar) {
+                    const bar = new THREE.Mesh(new THREE.BoxGeometry(h.u1 - h.u0, 0.032, 0.03), frameMat);
+                    bar.position.set((h.u0 + h.u1) / 2, h.bar - y0, -0.008);
+                    m.add(bar);
+                }
+            });
+            return { m, len, flip };
+        }
+        const endTop = (x, z) => roofY(x, z) - 0.006;
+        const sideTop = () => EAVE + 0.02;
+        const FRONT_WIN = { u0: 0.06, u1: FW * 2 - 0.06, v0: 1.18, v1: 1.84, bar: 1.43 };
+        const CHAMFER = Math.hypot(CH, HW - FW);
+        const CHAMF_WIN = { u0: 0.06, u1: CHAMFER - 0.06, v0: 1.18, v1: 1.84, bar: 1.5 };
+        facet(plan[0], plan[1], [FRONT_WIN], endTop);
+        facet(plan[1], plan[2], [CHAMF_WIN], endTop);
+        facet(plan[4], plan[5], [FRONT_WIN], endTop);
+        facet(plan[3], plan[4], [CHAMF_WIN], endTop);
+        facet(plan[5], plan[6], [CHAMF_WIN], endTop);
+        facet(plan[7], plan[0], [CHAMF_WIN], endTop);
+        const SIDE = L - 2 * CH;
+        const sideHoles = [
+            { u0: 0.2, u1: 0.42, v0: 1.18, v1: 1.88, r: 0.03 },
+            { u0: 0.5, u1: 0.72, v0: 1.18, v1: 1.88, r: 0.03 },
+            { u0: 3.74, u1: 3.96, v0: 1.18, v1: 1.88, r: 0.03 },
+            { u0: 4.04, u1: 4.26, v0: 1.18, v1: 1.88, r: 0.03 },
+        ];
+        for (let i = 0; i < 4; i++) sideHoles.push({ u0: 0.98 + i * 0.68, u1: 1.5 + i * 0.68, v0: 1.22, v1: 1.8, r: 0.035 });
+        const sides = [facet(plan[2], plan[3], sideHoles, sideTop), facet(plan[7], plan[6], sideHoles, sideTop)];
+        // Les montants d'angle
+        plan.forEach(([x, z]) => {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, EAVE - BELT + 0.06, 8), cream);
+            post.position.set(x, (BELT + EAVE) / 2 + 0.03, z);
+            car.add(post);
+        });
+        // Les portes : un contour fin, de la caisse verte jusqu'au haut
+        const lineMat = toon(0x2f4a2a);
+        sides.forEach(({ m, len, flip }) => {
+            const at = (u) => (flip ? len - u : u);
+            [[0.14, 0.78], [3.68, 4.32]].forEach(([d0, d1]) => {
+                const u0 = at(d0);
+                const u1 = at(d1);
+                const mid = (u0 + u1) / 2;
+                [u0, mid, u1].forEach((u) => {
+                    const s = new THREE.Mesh(new THREE.BoxGeometry(0.014, 1.94 - FLOOR - 0.06, 0.01), lineMat);
+                    s.position.set(u, (FLOOR + 0.06 + 1.94) / 2 - BELT, 0.026);
+                    m.add(s);
+                });
+                const t = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(u1 - u0), 0.014, 0.01), lineMat);
+                t.position.set(mid, 1.94 - BELT, 0.026);
+                m.add(t);
+            });
+            // Le numéro de ligne, bleu marine, dans la première fenêtre
+            const board = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.15), new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => {
+                g.fillStyle = '#1d2f63';
+                g.fillRect(0, 0, 128, 128);
+                g.strokeStyle = '#d8dde8';
+                g.lineWidth = 6;
+                g.strokeRect(8, 8, 112, 112);
+                g.fillStyle = '#f2f2ec';
+                g.font = 'bold 84px Arial, sans-serif';
+                g.textAlign = 'center';
+                g.textBaseline = 'middle';
+                g.fillText('1', 64, 70);
+            }) }));
+            board.position.set(at(1.38), 1.36 - BELT, -0.028);
+            m.add(board);
+        });
+        // Le toit et son plafond
+        const roofMap = canvasTex(512, 256, (g, w, h) => {
+            g.fillStyle = '#cfc5c8';
+            g.fillRect(0, 0, w, h);
+            for (let i = 0; i <= 14; i++) {
+                const y = (i * h) / 14;
+                g.fillStyle = 'rgba(120,104,112,0.45)';
+                g.fillRect(0, y - 2, w, 3);
+                g.fillStyle = 'rgba(255,255,255,0.35)';
+                g.fillRect(0, y + 1, w, 2);
+            }
+            speckle(g, w, h, 0.12);
+        });
+        const roofGeo = (() => {
+            const NU = 64;
+            const NV = 20;
+            const pos = [];
+            const uv = [];
+            const idx = [];
+            const rows = NV + 3;
+            for (let i = 0; i <= NU; i++) {
+                const x = -L / 2 - 0.012 + ((L + 0.024) * i) / NU;
+                const ex = clamp((L / 2 - Math.abs(x)) / CH, 0, 1);
+                const hw = FW + (HW - FW) * ex + 0.014;
+                pos.push(x, EAVE - 0.05, -hw);
+                uv.push(i / NU, 0);
+                for (let j = 0; j <= NV; j++) {
+                    const z = (-1 + (2 * j) / NV) * hw;
+                    pos.push(x, roofY(x, z), z);
+                    uv.push(i / NU, (j + 1) / (NV + 2));
+                }
+                pos.push(x, EAVE - 0.05, hw);
+                uv.push(i / NU, 1);
+            }
+            for (let i = 0; i < NU; i++) {
+                for (let j = 0; j < rows - 1; j++) {
+                    const a = i * rows + j;
+                    const b = a + rows;
+                    idx.push(a, a + 1, b, a + 1, b + 1, b);
+                }
+            }
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+            g.setIndex(idx);
+            g.computeVertexNormals();
+            return g;
+        })();
+        car.add(new THREE.Mesh(roofGeo, toon(0xffffff, { map: roofMap, side: THREE.DoubleSide })));
+        // Les aérateurs du toit
+        [-1.25, 1.35].forEach((x) => {
+            const v = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.3, 4, 10), toon(0xbdb4b8));
+            v.rotation.z = Math.PI / 2;
+            v.position.set(x, roofY(x, 0) + 0.03, 0);
+            v.scale.set(1, 1, 1.4);
+            car.add(v);
+        });
+        // L'intérieur qu'on devine par les vitres : banquettes vertes, barres, plafonniers
+        const seatMat = toon(0x3f7d4a);
+        [-1, 1].forEach((sd) => {
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.16, 0.16), seatMat);
+            seat.position.set(-0.1, BELT + 0.08, sd * (HW - 0.12));
+            car.add(seat);
+        });
+        [-1.6, -0.5, 0.6, 1.6].forEach((x) => {
+            const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, EAVE - BELT, 6), toon(0xd8dcdc));
+            bar.position.set(x, (BELT + EAVE) / 2, 0.25);
+            car.add(bar);
+            const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.07), new THREE.MeshBasicMaterial({ color: 0xf7f5ea }));
+            lamp.position.set(x, EAVE + 0.12, 0);
+            car.add(lamp);
+        });
+        const desk = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.14, 0.6), darkMat);
+        desk.position.set(L / 2 - 0.2, BELT + 0.07, 0);
+        car.add(desk);
+        // L'avant : girouette bleue, phare chromé, grille, numéro 305, pare-chocs (et pareil à l'arrière)
+        const destMap = canvasTex(512, 112, (g) => {
+            g.fillStyle = '#1f3f93';
+            g.fillRect(0, 0, 512, 112);
+            g.strokeStyle = '#e8ecf4';
+            g.lineWidth = 6;
+            g.strokeRect(22, 18, 76, 76);
+            g.fillStyle = '#f6f6f0';
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.font = 'bold 66px Arial, sans-serif';
+            g.fillText('1', 60, 60);
+            g.font = 'bold 70px "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", "Noto Sans CJK JP", sans-serif';
+            g.fillText('森の町', 300, 60);
+        });
+        const numMap = canvasTex(256, 96, (g) => {
+            g.font = 'bold 74px Arial, sans-serif';
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.fillStyle = '#f4f2e6';
+            g.fillText('305', 128, 52);
+        });
+        const chrome = toon(0xd9dddb);
+        [1, -1].forEach((dir) => {
+            const fx = (dir * L) / 2;
+            const sign = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.12, 0.58), [
+                dir > 0 ? new THREE.MeshBasicMaterial({ map: destMap }) : darkMat, dir < 0 ? new THREE.MeshBasicMaterial({ map: destMap }) : darkMat,
+                darkMat, darkMat, darkMat, darkMat,
+            ]);
+            sign.position.set(fx + dir * 0.012, 1.95, 0);
+            car.add(sign);
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.64), cream);
+            frame.position.set(fx + dir * 0.004, 1.95, 0);
+            car.add(frame);
+            const lamp = new THREE.Group();
+            lamp.position.set(fx + dir * 0.02, 0.8, dir * 0.14);
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.06, 20), chrome);
+            rim.rotation.z = Math.PI / 2;
+            const lens = new THREE.Mesh(new THREE.CircleGeometry(0.062, 20), new THREE.MeshBasicMaterial({ color: dir > 0 ? 0xfff3cc : 0xd9584a }));
+            lens.position.x = dir * 0.031;
+            lens.rotation.y = (dir * Math.PI) / 2;
+            lamp.add(rim, lens);
+            lamp.userData.lens = lens;
+            car.add(lamp);
+            if (dir > 0) car.userData.headlight = lens;
+            const grille = new THREE.Group();
+            grille.position.set(fx + dir * 0.022, 0.97, dir * -0.14);
+            const gMat = toon(0x70b75c);
+            [[0, 0.1, 0.3, 0.02], [0, -0.1, 0.3, 0.02], [0, 0, 0.02, 0.2, -0.15], [0, 0, 0.02, 0.2, 0.15], [0, 0, 0.02, 0.2, 0.05], [0, 0, 0.02, 0.2, -0.05]].forEach(([, y, w, h, z = 0]) => {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(0.014, h, w), gMat);
+                b.position.set(0, y, z);
+                grille.add(b);
+            });
+            car.add(grille);
+            const num = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.09), toon(0xffffff, { map: numMap, transparent: true, alphaTest: 0.3 }));
+            num.position.set(fx + dir * 0.024, 0.6, dir * -0.2);
+            num.rotation.y = (dir * Math.PI) / 2;
+            car.add(num);
+            const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.9), darkMat);
+            bumper.position.set(fx + dir * 0.03, FLOOR + 0.02, 0);
+            car.add(bumper);
+        });
+        // Le dessous : jupes, bogies et roues
+        const underMat = toon(0x2f4532);
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(L - 0.6, 0.12, HW * 2 - 0.1), underMat);
+        skirt.position.set(0, FLOOR - 0.05, 0);
+        car.add(skirt);
+        const bogies = [];
+        [BOGIE / 2, -BOGIE / 2].forEach((x) => {
+            const b = new THREE.Group();
+            b.position.set(x, 0, 0);
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.14, 1.0), underMat);
+            frame.position.y = 0.3;
+            b.add(frame);
+            [-0.38, 0.38].forEach((wx) => {
+                [-0.37, 0.37].forEach((wz) => {
+                    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 16), toon(0x4b4f4d));
+                    w.rotation.x = Math.PI / 2;
+                    w.position.set(wx, 0.15, wz);
+                    b.add(w);
+                });
+            });
+            tram.add(b);
+            bogies.push(b);
+        });
+        // Le pantographe : un bras replié qui frotte sous le fil de contact
+        const panto = new THREE.Group();
+        const PX = 0.3;
+        panto.position.set(PX, roofY(PX, 0), 0);
+        car.add(panto);
+        const pantoMat = toon(0x6f7775);
+        const pbase = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.04, 0.5), pantoMat);
+        pbase.position.y = 0.08;
+        panto.add(pbase);
+        [[-0.18, -0.2], [-0.18, 0.2], [0.18, -0.2], [0.18, 0.2]].forEach(([x, z]) => {
+            const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.07, 8), toon(0x8a5a40));
+            ins.position.set(x, 0.035, z);
+            panto.add(ins);
+        });
+        const headY = WIRE_Y - RAIL_Y - panto.position.y - 0.016;
+        const piv = V(-0.16, 0.12, 0);
+        const head = V(0.06, headY, 0);
+        const la = 0.62;
+        const dd = piv.distanceTo(head);
+        const along = V().subVectors(head, piv).normalize();
+        const perp = V(along.y, -along.x, 0);
+        if (perp.x < 0) perp.negate();
+        const knee = piv.clone().addScaledVector(along, dd / 2).addScaledVector(perp, Math.sqrt(Math.max(0.01, la * la - (dd / 2) ** 2)));
+        const pArm = (a, b, r) => {
+            const dir = V().subVectors(b, a);
+            const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, dir.length(), 6), pantoMat);
+            m.position.copy(a).addScaledVector(dir, 0.5);
+            m.quaternion.setFromUnitVectors(UP, dir.normalize());
+            panto.add(m);
+        };
+        [-0.12, 0.12].forEach((z) => pArm(V(piv.x, piv.y, z), V(knee.x, knee.y, z * 0.4), 0.014));
+        pArm(knee, head, 0.012);
+        const bow = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.9, 8), toon(0x3d4240));
+        bow.rotation.x = Math.PI / 2;
+        bow.position.copy(head);
+        panto.add(bow);
+        [-1, 1].forEach((sd) => pArm(V(head.x, head.y, sd * 0.45), V(head.x, head.y - 0.1, sd * 0.56), 0.01));
+        const spark = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xd8f0ff, transparent: true, opacity: 0, depthWrite: false }));
+        spark.position.copy(head).add(V(0, 0.02, 0));
+        panto.add(spark);
+        const tramMeshes = [];
+        tram.traverse((m) => {
+            if (!m.isMesh) return;
+            tramMeshes.push(m);
+            if (m.userData.glass || m.material === glassMat) return;
+            m.castShadow = true;
+            m.receiveShadow = true;
+        });
+
+        // La voie, en distance le long de la courbe : où le tram s'arrête, où il sort du décor
+        function sAt(x, z) {
+            return nearest(x, z).s;
+        }
+        const STOP_S = sAt(3.39, 3.16);
+        let exitS = TRACK_LEN;
+        let enterS = 0;
+        for (let s = 0; s <= TRACK_LEN; s += 0.05) {
+            const p = pointAtS(s, tmpP);
+            const inside = Math.abs(p.x) < HX && p.z > ZB && p.z < ZF;
+            if (inside && enterS === 0) enterS = s;
+            if (inside) exitS = s;
+        }
+        // Le tram est entièrement hors du décor quand son avant est avant l'entrée, ou son arrière après la sortie
+        const IN_S = enterS - (L / 2 - BOGIE / 2) - 0.3;
+        const fr = V();
+        const re = V();
+        function placeTram(sf) {
+            const pf = pointAtS(sf, fr);
+            const pr = pointAtS(sf - BOGIE, re);
+            tram.position.set((pf.x + pr.x) / 2, RAIL_Y, (pf.z + pr.z) / 2);
+            tram.rotation.y = Math.atan2(-(pf.z - pr.z), pf.x - pr.x);
+        }
+        placeTram(STOP_S);
+
+        // ---------------- La voyageuse ----------------
+        const traveler = new THREE.Group();
+        const TPOS = V(-2.6, 0, 0.35);
+        TPOS.y = groundH(TPOS.x, TPOS.z) - 0.02;
+        traveler.position.copy(TPOS);
+        traveler.scale.setScalar(1.7);
+        const FACE_YAW = Math.atan2(-0.9, -0.42);
+        traveler.rotation.y = FACE_YAW;
+        scene.add(traveler);
+        const coatMat = toon(0x4f3e2d, { side: THREE.DoubleSide });
+        const lapelMat = toon(0xb5a06d);
+        const dressMat = toon(0x5a4b78, { side: THREE.DoubleSide });
+        const shirtMat = toon(0xe2d6b6);
+        const skinMat = toon(0xf4dccb);
+        const hairMat = toon(0xf1f3f3, { side: THREE.DoubleSide });
+        const packMat = toon(0xae8d5a);
+        const packDark = toon(0x8c6d43);
+        const shoeMat = toon(0x3a2a20);
+        const legMat = toon(0xebe4d8);
+        const lathe = (pts, mat, phiStart = 0, phiLen = Math.PI * 2) => new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), 22, phiStart, phiLen), mat);
+        const add = (m, parent = traveler) => {
+            m.castShadow = true;
+            m.receiveShadow = true;
+            parent.add(m);
+            return m;
+        };
+        [-1, 1].forEach((sd) => {
+            const leg = add(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.3, 8), legMat));
+            leg.position.set(sd * 0.045, 0.17, 0.01);
+            const shoe = add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.035, 0.09), shoeMat));
+            shoe.position.set(sd * 0.045, 0.018, 0.025);
+        });
+        add(lathe([[0.158, 0.2], [0.14, 0.3], [0.11, 0.46], [0.095, 0.56]], dressMat));
+        add(lathe([[0.172, 0.215], [0.155, 0.34], [0.128, 0.5], [0.112, 0.62], [0.118, 0.7], [0.095, 0.748], [0.05, 0.768]], coatMat, 0.32, Math.PI * 2 - 0.64));
+        const chest = add(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.3, 12), shirtMat));
+        chest.position.set(0, 0.6, 0.012);
+        [-1, 1].forEach((sd) => {
+            const lapel = add(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.17, 0.012), lapelMat));
+            lapel.position.set(sd * 0.045, 0.68, 0.098);
+            lapel.rotation.set(-0.15, 0, sd * 0.22);
+        });
+        const neck = add(new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.026, 0.06, 8), skinMat));
+        neck.position.set(0, 0.785, 0);
+        const headG = new THREE.Group();
+        headG.position.set(0, 0.8, 0);
+        traveler.add(headG);
+        const face = add(new THREE.Mesh(new THREE.SphereGeometry(0.062, 18, 14), skinMat), headG);
+        face.position.set(0, 0.05, 0.006);
+        face.scale.set(0.94, 1.08, 1);
+        const hairCap = add(new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 12, 0, Math.PI * 2, 0, 1.25), hairMat), headG);
+        hairCap.position.set(0, 0.058, -0.004);
+        const hairBob = add(new THREE.Mesh(new THREE.SphereGeometry(0.074, 20, 14, Math.PI / 2 + 0.85, Math.PI * 2 - 1.7, 0.4, 1.6), hairMat), headG);
+        hairBob.position.set(0, 0.052, -0.006);
+        const bangs = add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), hairMat), headG);
+        bangs.position.set(0, 0.092, 0.038);
+        bangs.scale.set(1.25, 0.55, 0.75);
+        // Le gros sac à dos
+        const pack = new THREE.Group();
+        pack.position.set(0, 0.6, -0.15);
+        traveler.add(pack);
+        add(new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.31, 0.15), packMat), pack);
+        const flap = add(new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.16), packDark), pack);
+        flap.position.set(0, 0.15, 0.002);
+        flap.rotation.x = 0.08;
+        const pocket = add(new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.04), packDark), pack);
+        pocket.position.set(0, -0.07, -0.09);
+        [-1, 1].forEach((sd) => {
+            const strap = add(new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.2, 0.02), packDark), pack);
+            strap.position.set(sd * 0.07, 0.06, 0.115);
+            strap.rotation.x = 0.35;
+        });
+        // Les bras : épaule, coude, main, recalculés à chaque image
+        const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 8);
+        const tmpD = V();
+        function seg(m, a, b, r) {
+            tmpD.subVectors(b, a);
+            const len = tmpD.length();
+            m.position.copy(a).addScaledVector(tmpD, 0.5);
+            m.quaternion.setFromUnitVectors(UP, tmpD.multiplyScalar(1 / len));
+            m.scale.set(r, len, r);
+        }
+        const sleeveMat = toon(0x4f3e2d);
+        const arms = [1, -1].map((sd) => ({
+            sd,
+            sh: V(sd * 0.112, 0.715, -0.005),
+            upper: add(new THREE.Mesh(unitCyl, sleeveMat)),
+            fore: add(new THREE.Mesh(unitCyl, sleeveMat)),
+            hand: add(new THREE.Mesh(new THREE.SphereGeometry(0.021, 10, 8), skinMat)),
+            elbow: V(),
+            pole: V(sd * 0.6, -1, -0.25),
+        }));
+        const ARM_A = 0.15;
+        const ARM_B = 0.15;
+        const tmpE = V();
+        const tmpF = V();
+        function solveArm(arm, hand) {
+            const d = tmpE.subVectors(hand, arm.sh);
+            const dist = clamp(d.length(), 0.05, ARM_A + ARM_B - 0.002);
+            d.normalize();
+            const x = (ARM_A * ARM_A - ARM_B * ARM_B + dist * dist) / (2 * dist);
+            const h = Math.sqrt(Math.max(0, ARM_A * ARM_A - x * x));
+            tmpF.copy(arm.pole).addScaledVector(d, -arm.pole.dot(d)).normalize();
+            arm.elbow.copy(arm.sh).addScaledVector(d, x).addScaledVector(tmpF, h);
+            const end = tmpF.copy(arm.sh).addScaledVector(d, dist);
+            seg(arm.upper, arm.sh, arm.elbow, 0.027);
+            seg(arm.fore, arm.elbow, end, 0.023);
+            arm.hand.position.copy(end);
+            return end;
+        }
+        const cig = add(new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.05, 6), toon(0xf6f3ea)));
+        const ember = new THREE.Mesh(new THREE.SphereGeometry(0.007, 6, 5), new THREE.MeshBasicMaterial({ color: 0xff8a3c }));
+        traveler.add(ember);
+        const HOLD = V(0.075, 0.76, 0.17);
+        const MOUTH = V(0.03, 0.82, 0.095);
+        const DOWN = V(-0.12, 0.38, 0.05);
+        const travelerMeshes = [];
+        traveler.traverse((m) => { if (m.isMesh) travelerMeshes.push(m); });
+
+        // ---------------- Les fleurs et les feuillages sont prêts : on les pose ----------------
+        bake(lists.forest, leafMap);
+        bake(lists.bush, bushMap);
+        bake(lists.floret, floretMap);
+        bake(lists.blossom, blossomMap);
+
+        // ---------------- Les rayons de soleil ----------------
+        const streak = canvasTex(128, 256, (g, w, h) => {
+            const rnd = mulberry32(31);
+            g.fillStyle = '#000';
+            g.fillRect(0, 0, w, h);
+            for (let i = 0; i < 26; i++) {
+                const x = rnd() * w;
+                const ww = 2 + rnd() * 16;
+                const v = 90 + rnd() * 165;
+                const gr = g.createLinearGradient(x - ww, 0, x + ww, 0);
+                gr.addColorStop(0, 'rgba(0,0,0,0)');
+                gr.addColorStop(0.5, `rgba(${v | 0},${v | 0},${v | 0},0.8)`);
+                gr.addColorStop(1, 'rgba(0,0,0,0)');
+                g.fillStyle = gr;
+                g.fillRect(x - ww, 0, ww * 2, h);
+            }
+        }, true);
+        const rays = [];
+        for (let i = 0; i < 14; i++) {
+            rays.push({
+                mid: V(rr(-6.5, 3), rr(4.2, 6.2), rr(-3.2, -0.6)),
+                w: rr(0.4, 1.6),
+                l: rr(7, 11),
+                ph: rr(0, 6.28),
+                k: rr(0.7, 1.25),
+            });
+        }
+        const rayGeo = new THREE.BufferGeometry();
+        const rp = [];
+        const ruv = [];
+        const rmid = [];
+        const rdat = [];
+        const ridx = [];
+        rays.forEach((r, i) => {
+            [[0, 0], [1, 0], [1, 1], [0, 1]].forEach(([u, v]) => {
+                rp.push(0, 0, 0);
+                ruv.push(u, v);
+                rmid.push(r.mid.x, r.mid.y, r.mid.z);
+                rdat.push(r.w, r.l, r.ph, r.k);
+            });
+            const a = i * 4;
+            ridx.push(a, a + 1, a + 2, a, a + 2, a + 3);
+        });
+        rayGeo.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3));
+        rayGeo.setAttribute('uv', new THREE.Float32BufferAttribute(ruv, 2));
+        rayGeo.setAttribute('aMid', new THREE.Float32BufferAttribute(rmid, 3));
+        rayGeo.setAttribute('aRay', new THREE.Float32BufferAttribute(rdat, 4));
+        rayGeo.setIndex(ridx);
+        const rayMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: fluffU.uTime, uCam: { value: camera.position }, uDir: { value: SUN }, uTex: { value: streak }, uFade: { value: 1 } },
+            vertexShader: `attribute vec3 aMid;
+attribute vec4 aRay;
+uniform vec3 uCam;
+uniform vec3 uDir;
+varying vec2 vUv;
+varying vec2 vDat;
+void main() {
+    vec3 side = normalize(cross(uDir, uCam - aMid));
+    vec3 p = aMid + uDir * (uv.y - 0.5) * aRay.y + side * (uv.x - 0.5) * aRay.x;
+    vUv = uv;
+    vDat = aRay.zw;
+    gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
+}`,
+            fragmentShader: `uniform float uTime;
+uniform float uFade;
+uniform sampler2D uTex;
+varying vec2 vUv;
+varying vec2 vDat;
+void main() {
+    float across = smoothstep(0.0, 0.5, 0.5 - abs(vUv.x - 0.5));
+    float along = smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.6, vUv.y);
+    float streak = texture2D(uTex, vec2(vUv.x * 0.8 + vDat.x, vUv.y * 0.2 + uTime * 0.004)).r;
+    float flick = 0.7 + 0.3 * sin(uTime * 0.45 + vDat.x * 3.0);
+    float a = across * along * (0.35 + 0.65 * streak) * flick * vDat.y * uFade;
+    gl_FragColor = vec4(vec3(1.0, 0.95, 0.72) * a, a);
+}`,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+        });
+        const rayMesh = new THREE.Mesh(rayGeo, rayMat);
+        rayMesh.frustumCulled = false;
+        rayMesh.renderOrder = 8;
+        scene.add(rayMesh);
+
+        // ---------------- Les petites choses qui volent ----------------
+        function particles(count) {
+            const pos = new Float32Array(count * 3);
+            const col = new Float32Array(count * 3);
+            const size = new Float32Array(count);
+            const alpha = new Float32Array(count);
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+            g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+            g.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+            const m = new THREE.ShaderMaterial({
+                uniforms: { uScale: pointScale },
+                vertexShader: `attribute vec3 aColor;
+attribute float aSize;
+attribute float aAlpha;
+uniform float uScale;
+varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = aSize * uScale / -mv.z;
+    vColor = aColor;
+    vAlpha = aAlpha;
+}`,
+                fragmentShader: `varying vec3 vColor;
+varying float vAlpha;
+void main() {
+    float r = length(gl_PointCoord - 0.5);
+    float a = smoothstep(0.5, 0.05, r) * vAlpha;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(vColor, a);
+}`,
+                transparent: true,
+                depthWrite: false,
+            });
+            const pts = new THREE.Points(g, m);
+            pts.frustumCulled = false;
+            pts.renderOrder = 9;
+            scene.add(pts);
+            const items = Array.from({ length: count }, () => ({}));
+            return {
+                items,
+                set(i, x, y, z, s, c, a) {
+                    pos[i * 3] = x;
+                    pos[i * 3 + 1] = y;
+                    pos[i * 3 + 2] = z;
+                    col[i * 3] = c[0];
+                    col[i * 3 + 1] = c[1];
+                    col[i * 3 + 2] = c[2];
+                    size[i] = s;
+                    alpha[i] = a;
+                },
+                update() {
+                    g.attributes.position.needsUpdate = true;
+                    g.attributes.aColor.needsUpdate = true;
+                    g.attributes.aSize.needsUpdate = true;
+                    g.attributes.aAlpha.needsUpdate = true;
+                },
+            };
+        }
+        // Les poussières dorées dans la lumière
+        const motes = particles(phone ? 40 : 80);
+        motes.items.forEach((p) => {
+            p.x = rr(-5, 5);
+            p.y = rr(0.8, 4.5);
+            p.z = rr(-2, 3);
+            p.ph = rr(0, 6.28);
+            p.s = rr(0.025, 0.05);
+        });
+        // La fumée de la cigarette
+        const smoke = particles(30);
+        smoke.items.forEach((p) => {
+            p.age = rand();
+            p.life = rr(2.6, 4);
+            p.x = 0;
+            p.y = 0;
+            p.z = 0;
+            p.puff = 0;
+        });
+        // Les feuilles claires qui volent au vent, et des pétales bleus quand on touche les hortensias
+        const NLEAF = phone ? 36 : 64;
+        const NBURST = 40;
+        const flyer = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.085, 0.055), toon(0xffffff, { map: oneLeafTex(), alphaTest: 0.4, side: THREE.DoubleSide }), NLEAF + NBURST);
+        flyer.frustumCulled = false;
+        scene.add(flyer);
+        const LEAFCOL = [0xf2f6dc, 0xe2efb8, 0xd3e89a, 0xffffff];
+        const flying = [];
+        for (let i = 0; i < NLEAF + NBURST; i++) {
+            const burst = i >= NLEAF;
+            const f = {
+                burst,
+                life: burst ? 0 : 1,
+                p: V(rr(-HX, HX), rr(0.6, 5.5), rr(-3, 5)),
+                v: V(rr(0.25, 0.5), rr(-0.08, 0.02), rr(-0.08, 0.12)),
+                axis: V(rr(-1, 1), rr(-1, 1), rr(-1, 1)).normalize(),
+                ang: rr(0, 6.28),
+                spin: rr(1.5, 4),
+                ph: rr(0, 6.28),
+                s: rr(0.7, 1.3),
+                q: new THREE.Quaternion(),
+            };
+            flying.push(f);
+            flyer.setColorAt(i, C(burst ? pick(HYDRA) : pick(LEAFCOL)));
+        }
+        // Deux papillons blancs autour des hortensias
+        const wing = new THREE.PlaneGeometry(0.075, 0.075);
+        wing.translate(0.0375, 0, 0);
+        wing.rotateX(-Math.PI / 2);
+        const wingMat = toon(0xfbfaf2, { map: wingTex(), alphaTest: 0.4, side: THREE.DoubleSide });
+        const butterflies = [[-4.4, 2.2], [-3.4, 1.6]].map(([x, z], i) => {
+            const g = new THREE.Group();
+            const wl = new THREE.Mesh(wing, wingMat);
+            const wr = new THREE.Mesh(wing, wingMat);
+            wr.scale.x = -1;
+            const bodyM = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 5), toon(0x3a3530));
+            bodyM.rotation.x = Math.PI / 2;
+            g.add(wl, wr, bodyM);
+            scene.add(g);
+            return { g, wl, wr, c: V(x, groundH(x, z) + 0.9, z), ph: i * 2.3, last: V() };
+        });
+
+        // ---------------- Caméra : à hauteur d'yeux, comme sur le fond d'écran ----------------
+        // En paysage, le cadrage du fond d'écran ; en portrait, on resserre sur les panneaux et le tram
+        const target = V(0.875, 1.91, 2.06);
+        let homeEl = 0.042;
+        const HOME_AZ = 0;
+        let az = HOME_AZ;
+        let el = homeEl;
+        let zMax = 1.3;
+        let zoom = 0.5;
+        let fit = 24;
+        let lastInput = -10;
+        let touched = false;
+        const pointers = new Map();
+        let pinch = 0;
+        let downAt = null;
+        const canvas = renderer.domElement;
+        const spread = () => {
+            const [a, b] = [...pointers.values()];
+            return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        };
+        const onDown = (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 1) downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
+            if (pointers.size === 2) pinch = spread();
+            lastInput = clock;
+            touched = true;
+        };
+        const onMove = (e) => {
+            const p = pointers.get(e.pointerId);
+            if (!p) return;
+            const dx = e.clientX - p.x;
+            const dy = e.clientY - p.y;
+            p.x = e.clientX;
+            p.y = e.clientY;
+            if (pointers.size === 1) {
+                az -= dx * 0.0065;
+                el = clamp(el + dy * 0.0045, 0.04, 1.2);
+            } else if (pointers.size === 2) {
+                const s = spread();
+                if (pinch) zoom = clamp((zoom * pinch) / s, 0.3, zMax);
+                pinch = s;
+            }
+            lastInput = clock;
+        };
+        const onUp = (e) => {
+            pointers.delete(e.pointerId);
+            pinch = 0;
+            if (downAt && pointers.size === 0) {
+                const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+                if (moved < 7 && performance.now() - downAt.t < 400) tap(e);
+            }
+            downAt = null;
+        };
+        const onWheel = (e) => {
+            e.preventDefault();
+            zoom = clamp(zoom * Math.exp(e.deltaY * 0.0012), 0.3, zMax);
+            lastInput = clock;
+        };
+        canvas.addEventListener('pointerdown', onDown);
+        canvas.addEventListener('pointermove', onMove);
+        canvas.addEventListener('pointerup', onUp);
+        canvas.addEventListener('pointercancel', onUp);
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+
+        // Toucher le tram : il sonne et part, puis revient. La voyageuse : elle se retourne.
+        // Les hortensias : une volée de pétales. Les arbres : un coup de vent.
+        const raycaster = new THREE.Raycaster();
+        const ndc = new THREE.Vector2();
+        const T = { state: 'rest', until: rr(28, 40), s: STOP_S, v: 0 };
+        const look = { until: -1 };
+        let gust = 0;
+        function ring() {
+            if (ambience.bell) ambience.bell();
+        }
+        function depart() {
+            if (T.state !== 'rest') {
+                ring();
+                return;
+            }
+            ring();
+            T.state = 'bell';
+            T.until = clock + 1.3;
+        }
+        function burstAt(p, hydra) {
+            let n = 0;
+            flying.forEach((f, i) => {
+                if (!f.burst || f.life > 0 || n >= (hydra ? 18 : 14)) return;
+                n++;
+                f.life = 1;
+                f.hydra = hydra;
+                f.p.copy(p).add(V(rr(-0.25, 0.25), rr(-0.1, 0.25), rr(-0.25, 0.25)));
+                f.v.set(rr(-0.3, 0.6), rr(0.4, 1.0), rr(-0.4, 0.4));
+                flyer.setColorAt(i, C(hydra ? pick(HYDRA) : pick(LEAFCOL.concat([0x9ccc4a, 0x7fbf45]))));
+            });
+            flyer.instanceColor.needsUpdate = true;
+        }
+        function tap(e) {
+            const r = canvas.getBoundingClientRect();
+            ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+            raycaster.setFromCamera(ndc, camera);
+            const hit = raycaster.intersectObjects([...tramMeshes, ...travelerMeshes, ...hydraProxies, ...treeProxies], false)[0];
+            if (!hit) return;
+            if (tramMeshes.includes(hit.object)) depart();
+            else if (travelerMeshes.includes(hit.object)) look.until = clock + 3.5;
+            else if (hydraProxies.includes(hit.object)) burstAt(hit.point, true);
+            else {
+                gust = 1;
+                burstAt(hit.point, false);
+            }
+        }
+
+        function resize() {
+            const w = stage.clientWidth || 1;
+            const h = stage.clientHeight || 1;
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+            const tall = camera.aspect < 0.8;
+            fit = tall ? 25 : Math.max(13 / tanV / 2, 18 / (tanV * camera.aspect) / 2);
+            zMax = tall ? 2.4 : 1.3;
+            if (tall) target.set(2.25, 2.5, 1.6); else target.set(1.15, 1.91, 2.06);
+            homeEl = tall ? 0.17 : 0.042;
+            if (!touched) {
+                zoom = tall ? 0.6 : 0.47;
+                el = homeEl;
+            }
+            camera.updateProjectionMatrix();
+            pointScale.value = (camera.projectionMatrix.elements[5] * renderer.domElement.height) / 2;
+        }
+        const ro = new ResizeObserver(resize);
+        ro.observe(stage);
+        resize();
+
+        // --- Boucle ---
+        let clock = 0;
+        let last = performance.now();
+        let raf = 0;
+        let alive = true;
+        let clockTimer = 0;
+        const ease = (cur, want, k) => cur + (want - cur) * k;
+        const want = V();
+        const handNow = HOLD.clone();
+        const handL = V();
+        const tipW = V();
+        const mouthW = V();
+        const camRight = fluffU.uRight.value;
+        const camUp = fluffU.uUp.value;
+        const smokeCol = [0.92, 0.94, 0.95];
+        const moteCol = [1, 0.95, 0.75];
+        const cig2 = { phase: 'hold', until: 4 };
+        let headYaw = 0;
+        const VMAX = 1.5;
+
+        function frame(now) {
+            if (!alive) return;
+            const real = Math.min(0.25, (now - last) / 1000);
+            const dt = Math.min(0.05, real);
+            last = now;
+            clock += dt;
+            const t = clock;
+
+            if (!still && !pointers.size) {
+                const idle = smooth(clamp((clock - lastInput - 3) / 2, 0, 1));
+                const sway = HOME_AZ + Math.sin(clock * IDLE_SPIN * 2.2) * 0.22;
+                let d = ((az - sway + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+                az -= d * Math.min(1, dt * 0.35) * idle;
+                el += (homeEl - el) * Math.min(1, dt * 0.5) * idle;
+            }
+            // Hors du cadrage de face, la caméra recule pour ne pas entrer dans la colline
+            const wrapped = Math.abs(((az - HOME_AZ + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI);
+            const zMin = lerp(0.3, 0.8, sstep(0.6, 1.5, wrapped));
+            if (zoom < zMin) zoom = ease(zoom, zMin, Math.min(1, dt * 3));
+            const dist = fit * zoom;
+            camera.position.set(target.x + dist * Math.cos(el) * Math.sin(az), target.y + dist * Math.sin(el), target.z + dist * Math.cos(el) * Math.cos(az));
+            camera.lookAt(target);
+            camera.updateMatrixWorld();
+            // Les rayons ne se voient qu'à hauteur d'yeux, depuis le devant : vus d'en haut, ils s'effacent
+            rayMat.uniforms.uFade.value = sstep(0.55, 0.2, el) * sstep(1.3, 0.5, wrapped);
+            camRight.setFromMatrixColumn(camera.matrixWorld, 0);
+            camUp.setFromMatrixColumn(camera.matrixWorld, 1);
+
+            // Le vent : une respiration lente, et les coups de vent quand on touche les arbres
+            gust = Math.max(0, gust - dt * 0.45);
+            fluffU.uTime.value = t;
+            fluffU.uWind.value = 1 + 0.35 * Math.sin(t * 0.21) + 1.8 * Math.sin(Math.min(1, gust) * Math.PI);
+
+            // L'heure sur la petite plaque
+            clockTimer -= real;
+            if (clockTimer <= 0) {
+                clockTimer = 1;
+                drawClock();
+            }
+
+            // Le tram : à l'arrêt, il sonne, part vers l'avant, sort du décor, revient par le fond et s'arrête
+            if (T.state === 'rest' && t > T.until && !still) depart();
+            if (T.state === 'bell' && t > T.until) T.state = 'go';
+            if (T.state === 'go') {
+                T.v = Math.min(VMAX, T.v + dt * 0.55);
+                T.s += T.v * dt;
+                if (T.s - BOGIE / 2 - L / 2 > exitS + 0.3) {
+                    T.state = 'away';
+                    T.until = t + rr(3, 5);
+                    tram.visible = false;
+                }
+            } else if (T.state === 'away' && t > T.until) {
+                T.state = 'come';
+                T.s = Math.min(IN_S, STOP_S - 2);
+                T.v = VMAX;
+                tram.visible = true;
+            } else if (T.state === 'come') {
+                const left = STOP_S - T.s;
+                T.v = Math.min(VMAX, Math.sqrt(Math.max(0, 2 * 0.42 * left)));
+                T.s += Math.max(0.02, T.v) * dt;
+                if (left < 0.01) {
+                    T.s = STOP_S;
+                    T.v = 0;
+                    T.state = 'rest';
+                    T.until = t + rr(35, 50);
+                }
+            }
+            if (T.state !== 'rest') placeTram(T.s);
+            const moving = T.v / VMAX;
+            car.rotation.x = Math.sin(t * 3.1) * 0.006 * moving;
+            car.position.y = Math.abs(Math.sin(t * 6.2)) * 0.004 * moving;
+            bogies.forEach((b, i) => { b.position.y = Math.abs(Math.sin(t * 7 + i)) * 0.002 * moving; });
+            car.userData.headlight.material.color.setHex(moving > 0.05 ? 0xffffff : 0xfff3cc);
+            spark.material.opacity = moving > 0.3 && Math.sin(t * 13.7) > 0.985 ? 0.9 : Math.max(0, spark.material.opacity - dt * 6);
+            ambience.set('tram', moving * (tram.visible ? 1 : 0), 0.3);
+
+            // La voyageuse : elle respire, ses cheveux bougent, elle fume tranquillement, elle regarde
+            const breath = Math.sin(t * 1.6);
+            traveler.scale.y = 1.7 * (1 + breath * 0.004);
+            hairBob.rotation.z = Math.sin(t * 1.3) * 0.04 * fluffU.uWind.value;
+            hairCap.rotation.z = Math.sin(t * 1.3 + 0.4) * 0.015;
+            if (t > cig2.until) {
+                cig2.phase = cig2.phase === 'hold' ? 'mouth' : cig2.phase === 'mouth' ? 'exhale' : 'hold';
+                cig2.until = t + (cig2.phase === 'hold' ? rr(5, 9) : cig2.phase === 'mouth' ? 1.4 : 2.6);
+                if (cig2.phase === 'exhale') smoke.items.forEach((p) => { if (p.age > 0.6 && rand() < 0.5) { p.age = 0; p.puff = 1; } });
+            }
+            want.copy(cig2.phase === 'mouth' ? MOUTH : HOLD);
+            handNow.lerp(want, Math.min(1, dt * 2.2));
+            const hL = handL.copy(solveArm(arms[0], handNow));
+            tmpP.copy(DOWN);
+            tmpP.y += breath * 0.003;
+            solveArm(arms[1], tmpP);
+            cig.position.copy(hL).add(V(0.005, 0.018, 0.02));
+            cig.rotation.set(0.9, 0, -0.35);
+            ember.position.copy(hL).add(V(0.012, 0.035, 0.04));
+            ember.material.color.setHex(cig2.phase === 'mouth' ? 0xffb066 : 0xff7a33);
+            // Elle tourne la tête : vers toi quand tu la touches, vers le tram quand il passe
+            let yawWant = 0.12 + Math.sin(t * 0.17) * 0.12;
+            if (look.until > t) {
+                const local = traveler.worldToLocal(tmpE.copy(camera.position));
+                yawWant = clamp(Math.atan2(local.x, local.z), -1.2, 1.2);
+            } else if (T.state === 'go' || T.state === 'come') {
+                const local = traveler.worldToLocal(tmpE.copy(tram.position));
+                yawWant = clamp(Math.atan2(local.x, local.z), -1.2, 1.2);
+            }
+            headYaw = ease(headYaw, yawWant, Math.min(1, dt * 2.5));
+            headG.rotation.y = headYaw;
+            headG.rotation.x = cig2.phase === 'exhale' ? -0.18 : 0.04;
+
+            // La fumée : un fil qui monte de la cigarette, une bouffée quand elle souffle
+            traveler.localToWorld(tipW.copy(ember.position));
+            headG.localToWorld(mouthW.set(0, 0.03, 0.07));
+            smoke.items.forEach((p, i) => {
+                p.age += real / p.life;
+                if (p.age >= 1) {
+                    p.age -= 1;
+                    p.puff = 0;
+                }
+                const k = p.age;
+                const src = p.puff ? mouthW : tipW;
+                const wx = (0.25 + 0.15 * fluffU.uWind.value) * k * k;
+                smoke.set(i,
+                    src.x + wx + Math.sin(t * 1.7 + i) * 0.02 * k,
+                    src.y + k * (p.puff ? 0.35 : 0.5),
+                    src.z + Math.cos(t * 1.3 + i) * 0.02 * k + wx * 0.3,
+                    (p.puff ? 0.08 : 0.03) + k * (p.puff ? 0.22 : 0.12),
+                    smokeCol,
+                    Math.sin(k * Math.PI) * (p.puff ? 0.32 : 0.17));
+            });
+            smoke.update();
+
+            // Les poussières qui flottent dans les rayons
+            motes.items.forEach((p, i) => {
+                const x = p.x + Math.sin(t * 0.13 + p.ph) * 0.6;
+                const y = p.y + Math.sin(t * 0.21 + p.ph * 2) * 0.3;
+                const z = p.z + Math.cos(t * 0.11 + p.ph) * 0.5;
+                motes.set(i, x, y, z, p.s, moteCol, 0.35 + 0.35 * Math.sin(t * 1.3 + p.ph));
+            });
+            motes.update();
+
+            // Les feuilles et les pétales
+            const wind = fluffU.uWind.value;
+            flying.forEach((f, i) => {
+                if (f.burst) {
+                    if (f.life <= 0) {
+                        m4.makeScale(0, 0, 0);
+                        flyer.setMatrixAt(i, m4);
+                        return;
+                    }
+                    f.life -= dt / 4.5;
+                    f.v.y -= dt * 0.35;
+                    f.v.x += dt * 0.25 * wind;
+                    f.v.multiplyScalar(1 - dt * 0.6);
+                } else {
+                    f.v.x = ease(f.v.x, 0.3 + 0.25 * wind, dt);
+                    f.v.y = -0.04 + Math.sin(t * 0.9 + f.ph) * 0.12;
+                    f.v.z = Math.sin(t * 0.37 + f.ph) * 0.12;
+                }
+                f.p.addScaledVector(f.v, dt);
+                if (!f.burst && (f.p.x > HX + 0.3 || f.p.y < 0.3)) {
+                    f.p.set(-HX - 0.2, rr(1.2, 5.5), rr(-3, 5));
+                }
+                f.ang += f.spin * dt * (0.6 + 0.4 * wind);
+                f.q.setFromAxisAngle(f.axis, f.ang);
+                const sc = f.s * (f.burst ? (f.hydra ? 0.55 : 0.9) * Math.min(1, f.life * 4) : 1);
+                m4.compose(f.p, f.q, tmpE.set(sc, sc, sc));
+                flyer.setMatrixAt(i, m4);
+            });
+            flyer.instanceMatrix.needsUpdate = true;
+
+            // Les papillons
+            butterflies.forEach((b) => {
+                const k = t * 0.5 + b.ph;
+                b.g.position.set(b.c.x + Math.sin(k * 0.9) * 1.1, b.c.y + Math.sin(k * 2.3) * 0.25 + Math.sin(k * 0.7) * 0.2, b.c.z + Math.cos(k * 0.6) * 0.9);
+                tmpE.subVectors(b.g.position, b.last);
+                if (tmpE.lengthSq() > 1e-6) b.g.rotation.y = Math.atan2(tmpE.x, tmpE.z);
+                b.last.copy(b.g.position);
+                const flap = 0.25 + 0.95 * Math.abs(Math.sin(t * 13 + b.ph));
+                b.wl.rotation.z = flap;
+                b.wr.rotation.z = -flap;
+            });
+
+            renderer.render(scene, camera);
+            raf = requestAnimationFrame(frame);
+        }
+        raf = requestAnimationFrame(frame);
+
+        return {
+            dispose() {
+                alive = false;
+                cancelAnimationFrame(raf);
+                ro.disconnect();
+                canvas.removeEventListener('wheel', onWheel);
+                ambience.set('tram', 0, 0.2);
+                scene.traverse((o) => {
+                    if (o.geometry) o.geometry.dispose();
+                    if (o.material) {
+                        [].concat(o.material).forEach((m) => {
+                            Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose(); });
+                            if (m.uniforms) Object.values(m.uniforms).forEach((u) => { if (u && u.value && u.value.isTexture) u.value.dispose(); });
+                            m.dispose();
+                        });
+                    }
+                });
+                proxyDepth.dispose();
+                dapple.dispose();
+                ramp.dispose();
+                renderer.dispose();
+                canvas.remove();
+            },
+        };
     }
 
     // Les fissures : un réseau de cellules (comme du verre ou de la terre qui casse)

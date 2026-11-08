@@ -2369,6 +2369,17 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="room"] .diorama-sky--room { opacity: 1; }
 
+/* Le tram d'été : une lumière de plein été, verte et dorée, qui vient d'en haut à gauche */
+.diorama-sky--tram {
+    opacity: 0;
+    background:
+        radial-gradient(55% 48% at 16% 6%, rgba(255, 248, 212, 0.95), transparent 72%),
+        radial-gradient(120% 70% at 50% 112%, rgba(30, 86, 54, 0.55), transparent 66%),
+        linear-gradient(180deg, #dbeed0 0%, #acd5a1 40%, #74b27a 74%, #3f7f58 100%);
+}
+
+.diorama-overlay[data-scene="tram"] .diorama-sky--tram { opacity: 1; }
+
 
 .diorama-canvas {
     position: absolute;
