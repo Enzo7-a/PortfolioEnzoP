@@ -2358,6 +2358,27 @@ html.diorama-open { overflow: hidden; }
 
 .diorama-overlay[data-scene="classroom"] .diorama-sky--classroom { opacity: 1; }
 
+/* La chambre, le soir : un bleu nuit profond, une lueur violette de ville vers le bas */
+.diorama-sky--room {
+    opacity: 0;
+    background:
+        radial-gradient(60% 45% at 50% 60%, rgba(255, 190, 130, 0.12), transparent),
+        radial-gradient(100% 50% at 50% 100%, rgba(110, 90, 150, 0.4), transparent),
+        linear-gradient(180deg, #121628 0%, #1d2240 50%, #2b2a48 100%);
+}
+
+.diorama-overlay[data-scene="room"] .diorama-sky--room { opacity: 1; }
+
+/* Le train : un ciel de pluie gris-vert, doux et lumineux */
+.diorama-sky--train {
+    opacity: 0;
+    background:
+        radial-gradient(70% 45% at 50% 30%, rgba(236, 240, 236, 0.6), transparent),
+        linear-gradient(180deg, #9aa7a3 0%, #b4beb8 45%, #c6cdc6 70%, #a3ad9f 100%);
+}
+
+.diorama-overlay[data-scene="train"] .diorama-sky--train { opacity: 1; }
+
 .diorama-canvas {
     position: absolute;
     inset: 0;
